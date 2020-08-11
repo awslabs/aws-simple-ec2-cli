@@ -1,0 +1,154 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "newVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "172.31.0.0/16",
+                "EnableDnsHostnames": true,
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "ez-ec2 VPC"
+                    }
+                ]
+            }
+        },
+        "newSubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "172.31.0.0/24",
+                "MapPublicIpOnLaunch":true,
+                "AvailabilityZone": {
+                    "Ref": "AZ0"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "ez-ec2 Subnet"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "newVPC"
+                }
+            }
+        },
+        "newSubnet2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "172.31.16.0/24",
+                "MapPublicIpOnLaunch":true,
+                "AvailabilityZone": {
+                    "Ref": "AZ1"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "ez-ec2 Subnet"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "newVPC"
+                }
+            }
+        },
+        "newSubnet3": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "CidrBlock": "172.31.32.0/24",
+                "MapPublicIpOnLaunch":true,
+                "AvailabilityZone": {
+                    "Ref": "AZ2"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "ez-ec2 Subnet"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "newVPC"
+                }
+            }
+        },
+        "newRouteTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "newVPC"
+                }
+            }
+        },
+        "newInternetGateway": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {}
+        },
+        "newVPCGatewayAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "newInternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "newVPC"
+                }
+            }
+        },
+        "newRoute": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "newRouteTable"
+                },
+                "GatewayId": {
+                    "Ref": "newInternetGateway"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0"
+            }
+        },
+        "newSubnetRouteTableAssociation1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "newSubnet1"
+                },
+                "RouteTableId": {
+                    "Ref": "newRouteTable"
+                }
+            }
+        },
+        "newSubnetRouteTableAssociation2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "newSubnet2"
+                },
+                "RouteTableId": {
+                    "Ref": "newRouteTable"
+                }
+            }
+        },
+        "newSubnetRouteTableAssociation3": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "newSubnet3"
+                },
+                "RouteTableId": {
+                    "Ref": "newRouteTable"
+                }
+            }
+        }
+    },
+    "Parameters":{
+        "AZ0":{
+            "Type":"String"
+        },
+        "AZ1":{
+            "Type":"String"
+        },
+        "AZ2":{
+            "Type":"String"
+        }
+    }
+}
