@@ -1,0 +1,13 @@
+---
+language: minimal
+ 
+matrix:
+  include:
+    - stage: Test
+      language: go
+      go: "1.14.x"
+      script: make unit-test
+    - stage: Test
+      language: go
+      go: "1.14.x"
+      script: make e2e-test
