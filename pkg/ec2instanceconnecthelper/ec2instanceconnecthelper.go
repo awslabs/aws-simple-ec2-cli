@@ -99,6 +99,9 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 
 	// Arguments for the ssh command
 	args := []string{
+		"-Ppassphrase",
+		"-f <(printf '%s\n' \"\")",
+		"ssh",
 		fmt.Sprintf("-i%s", *keyPath),
 		fmt.Sprintf("%s@%s", userName, instanceDnsName),
 	}
@@ -111,7 +114,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 		args = append(args, "exit")
 	}
 
-	cmd := exec.Command("ssh", args...)
+	cmd := exec.Command("sshpass", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	var errb bytes.Buffer
