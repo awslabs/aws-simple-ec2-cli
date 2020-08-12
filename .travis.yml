@@ -7,6 +7,11 @@ before_install:
   - './awscli-bundle/install -b ~/bin/aws'
   - 'export PATH=~/bin:$PATH'
 
+addons:
+  apt:
+    packages:
+    - sshpass
+
 matrix:
   include:
     - stage: Test

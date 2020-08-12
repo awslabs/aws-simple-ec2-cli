@@ -34,6 +34,7 @@ import (
 )
 
 const userName = "ec2-user"
+const passPhrase = "ez-ec2"
 
 // Push an SSH key to an EC2 instance
 func SendSSHPublicKey(sess *session.Session, availabilityZone, instanceId,
@@ -64,7 +65,12 @@ func GenerateSSHKeyPair() (publicKeyString, privateKeyString *string, err error)
 		return nil, nil, err
 	}
 
-	privateKeyPEM := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	privateKeyPEM, err := x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passPhrase), x509.PEMCipherAES256)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var private bytes.Buffer
 	if err := pem.Encode(&private, privateKeyPEM); err != nil {
 		return nil, nil, err
@@ -100,7 +106,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 	// Arguments for the ssh command
 	args := []string{
 		"-Ppassphrase",
-		"-f <(printf '%s\n' \"\")",
+		fmt.Sprintf("-p%s", passPhrase),
 		"ssh",
 		fmt.Sprintf("-i%s", *keyPath),
 		fmt.Sprintf("%s@%s", userName, instanceDnsName),
@@ -126,7 +132,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 	*/
 	err = cmd.Run()
 	if err != nil {
-		return errors.New(errb.String())
+		return errors.New(err.Error() + errb.String())
 	}
 
 	return nil
