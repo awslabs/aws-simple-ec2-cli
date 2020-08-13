@@ -103,6 +103,14 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 		return err
 	}
 
+	/*
+		This is an ugly workaround for ssh to work on TravisCI.
+		Compare to the normal version, the workaround does the following additional steps:
+		1. Add a passphrase to the key. This is not for security but just to make the key have a passphrase.
+		2. Use sshpass to wrap ssh. Note that the version of sshpass has to be 1.06+ for flag -P to work.
+		3. Always use -oStrictHostKeyChecking=no for ssh, otherwise sshpass won't work.
+	*/
+
 	// Arguments for the ssh command
 	args := []string{
 		"-Ppassphrase",
@@ -110,6 +118,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 		"ssh",
 		fmt.Sprintf("-i%s", *keyPath),
 		fmt.Sprintf("%s@%s", userName, instanceDnsName),
+		"-oStrictHostKeyChecking=no",
 	}
 
 	// Decide whether to include additional arguments or not.
