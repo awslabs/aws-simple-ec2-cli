@@ -130,7 +130,7 @@ func GetInstanceAndConnect(h *ec2helper.EC2Helper, instanceId string) error {
 		return err
 	}
 
-	err = ec2ichelper.ConnectInstance(h.Sess, instance, true, false)
+	err = ec2ichelper.ConnectInstance(h.Sess, instance, false)
 	if err != nil {
 		return err
 	}

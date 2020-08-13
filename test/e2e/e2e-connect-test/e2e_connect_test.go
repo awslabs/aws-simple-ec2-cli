@@ -124,19 +124,19 @@ func TestEstablishSSHConnection(t *testing.T) {
 	}
 
 	// Correct call
-	err = ec2ichelper.EstablishSSHConnection(*privateKey, *instanceDnsName, false, true)
+	err = ec2ichelper.EstablishSSHConnection(*privateKey, *instanceDnsName, true)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Incorrect private key
-	err = ec2ichelper.EstablishSSHConnection("fake-private-key", *instanceDnsName, false, true)
+	err = ec2ichelper.EstablishSSHConnection("fake-private-key", *instanceDnsName, true)
 	if err == nil {
 		t.Error("Wrong private key is used but no error")
 	}
 
 	// Incorrect instance DNS name
-	err = ec2ichelper.EstablishSSHConnection(*privateKey, "fake-instance-DNS-name", false, true)
+	err = ec2ichelper.EstablishSSHConnection(*privateKey, "fake-instance-DNS-name", true)
 	if err == nil {
 		t.Error("Wrong instance IP is used but no error")
 	}
