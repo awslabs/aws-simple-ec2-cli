@@ -86,8 +86,7 @@ func GenerateSSHKeyPair() (publicKeyString, privateKeyString *string, err error)
 }
 
 // Establish an SSH connection to the instance
-func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChecking,
-	exitAtOnce bool) error {
+func EstablishSSHConnection(privateKey, instanceDnsName string, exitAtOnce bool) error {
 	// Create the folder if it doesn't exist
 	ezec2Dir := os.Getenv("HOME") + "/.ez-ec2"
 	if _, err := os.Stat(ezec2Dir); os.IsNotExist(err) {
@@ -103,6 +102,14 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 		return err
 	}
 
+	/*
+		This is an ugly workaround for ssh to work on TravisCI.
+		Compare to the normal version, the workaround does the following additional steps:
+		1. Add a passphrase to the key. This is not for security but just to make the key have a passphrase.
+		2. Use sshpass to wrap ssh. Note that the version of sshpass has to be 1.06+ for flag -P to work.
+		3. Always use -oStrictHostKeyChecking=no for ssh, otherwise sshpass won't work.
+	*/
+
 	// Arguments for the ssh command
 	args := []string{
 		"-Ppassphrase",
@@ -110,12 +117,10 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 		"ssh",
 		fmt.Sprintf("-i%s", *keyPath),
 		fmt.Sprintf("%s@%s", userName, instanceDnsName),
+		"-oStrictHostKeyChecking=no",
 	}
 
 	// Decide whether to include additional arguments or not.
-	if !strictHostKeyChecking {
-		args = append(args, "-oStrictHostKeyChecking=no")
-	}
 	if exitAtOnce {
 		args = append(args, "exit")
 	}
@@ -139,8 +144,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, strictHostKeyChe
 }
 
 // Connect to an instance
-func ConnectInstance(sess *session.Session, instance *ec2.Instance, strictHostKeyChecking,
-	exitAtOnce bool) error {
+func ConnectInstance(sess *session.Session, instance *ec2.Instance, exitAtOnce bool) error {
 	instanceDnsName, err := GetInstancePublicDnsName(instance)
 	if err != nil {
 		return err
@@ -159,7 +163,7 @@ func ConnectInstance(sess *session.Session, instance *ec2.Instance, strictHostKe
 		return err
 	}
 
-	err = EstablishSSHConnection(*privateKey, *instanceDnsName, strictHostKeyChecking, exitAtOnce)
+	err = EstablishSSHConnection(*privateKey, *instanceDnsName, exitAtOnce)
 	if err != nil {
 		return err
 	}

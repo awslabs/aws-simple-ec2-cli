@@ -51,8 +51,6 @@ func TestGenerateSSHKeyPair(t *testing.T) {
 		} else if (*privateKey)[len(*privateKey)-privateKeyTailOffset-1:len(*privateKey)-1] != expectedPrivateKeyTail {
 			t.Error("Private key tail incorrect: expected", expectedPrivateKeyTail,
 				"got", (*privateKey)[len(*privateKey)-privateKeyTailOffset-1:len(*privateKey)-1])
-		} else if !isBase64((*privateKey)[privateKeyHeaderRightIndex : len(*privateKey)-privateKeyTailOffset-1]) {
-			t.Error("Private key is not Base64 encoded")
 		}
 	}
 }
