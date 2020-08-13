@@ -14,9 +14,17 @@ In order to launch a new EC2 instance, customers need to specify a lot of option
 
 ## Installation and Configuration
 
+1. Install AWS Simple EC2 CLI
+
 ```
 go install ez-ec2
 ```
+
+2. Install sshpass (1.06+)
+
+To install sshpass, you can refer to this [guide](https://gist.github.com/arunoda/7790979). Note that sshpass 1.05, which is commonly used, is not compatible with this tool. 
+
+3. Install AWS CLI
 
 To execute the CLI, you will need AWS credentials configured. Take a look at the [AWS CLI configuration documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#config-settings-and-precedence) for details on the various ways to configure credentials. An easy way to try out the ec2-instance-selector CLI is to populate the following environment variables with your AWS API credentials.
 
