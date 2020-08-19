@@ -1,14 +1,38 @@
-# AWS Simple EC2 CLI (EZ-EC2)
+<h1>AWS Simple EC2 CLI</h1>
+
+<h4>A CLI tool that simplifies the process of launching, connecting and terminating an EC2 instance.</h4>
+
+<p>
+	<a href="https://golang.org/doc/go1.14">
+	<img src="https://img.shields.io/github/go-mod/go-version/aws/amazon-ec2-metadata-mock?color=blueviolet" alt="go-version">
+	</a>
+	<a href="https://opensource.org/licenses/Apache-2.0">
+	<img src="https://img.shields.io/badge/License-Apache%202.0-ff69b4.svg?color=orange" alt="license">
+	</a>
+	<a href="https://goreportcard.com/report/github.com/awslabs/aws-simple-ec2-cli">
+	<img src="https://goreportcard.com/badge/github.com/awslabs/aws-simple-ec2-cli" alt="go-report-card">
+	</a>
+  <a href="https://travis-ci.com/awslabs/aws-simple-ec2-cli">
+	<img src="https://travis-ci.com/awslabs/aws-simple-ec2-cli.svg?branch=master" alt="build-status">
+  </a>
+</p>
+
+
+
+
+<div>
+  <hr>
+</div>
 
 ## Summary
 
-In order to launch a new EC2 instance, customers need to specify a lot of options, and it can be a slow and overwhelming task. It requires users to have an initial network stack (VPC-Id/Subnet-Id/Security-Groups), remote login, and many more . Often times, we require EC2 instance for adhoc testing for a short period of time without requiring complex networking infrastructure in place. AWS Simple EC2 CLI aims to solve this issue and make it simple for user to launch EC2 instance as simple as one-command instance. 
+In order to launch a new EC2 instance, customers need to specify a lot of options, and it can be a slow and overwhelming task. It requires users to have an initial network stack (VPC-Id/Subnet-Id/Security-Groups), remote login, and many more . Often times, we require EC2 instance for adhoc testing for a short period of time without requiring complex networking infrastructure in place. AWS Simple EC2 CLI aims to solve this issue and make it easier for users to launch, connect and terminate EC2 instances with a single command
 
 ## Major Features
 
-- Launch an instance using one command
-- Connect to an instance using one command
-- Terminate an instance using one command
+- Launch an instance using single command
+- Connect to an instance using single command
+- Terminate an instance using single command
 - Interactive mode that help users to decide parameters to use
 - Config file for more convenient launch
 
@@ -62,7 +86,7 @@ Flags:
   -s, --subnet-id string                 The subnet id in which the instance will be launched
 ```
 
-**One Command Launch**
+**Single Command Launch**
 
 ```
 $ ez-ec2 launch
@@ -85,7 +109,7 @@ Launch Instance Success!
 Instance ID: i-123example
 ```
 
-**One Command Launch With Flags**
+**Single Command Launch With Flags**
 
 ```
 $ ez-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example
@@ -248,7 +272,7 @@ Flags:
 
 ```
 
-**One Command Connect**
+**Single Command Connect**
 
 ```
 $ ez-ec2 connect -r us-east-2 -n i-123example
