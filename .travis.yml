@@ -17,9 +17,10 @@ matrix:
   include:
     - stage: Test
       language: go
-      go: "1.14.x"
+      go: "1.15.x"
       script: make unit-test
     - stage: Test
       language: go
-      go: "1.14.x"
+      go: "1.15.x"
+      if: type = push AND env(AWS_DEFAULT_REGION) IS present
       script: make e2e-test

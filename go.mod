@@ -1,6 +1,6 @@
 module ez-ec2
 
-go 1.14
+go 1.15
 
 require (
 	github.com/aws/amazon-ec2-instance-selector/v2 v2.0.1
