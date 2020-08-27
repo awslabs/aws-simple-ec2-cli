@@ -41,7 +41,7 @@ EMBED_TEMPLATE_FLAG=-ldflags '-X "${EZEC2_CLOUDFORMATION_TEMPLATE_VAR}=${EZEC2_C
 E2E_TEST_PACKAGES=ez-ec2/test/e2e/...
 
 GO_TEST=go test ${EMBED_TEMPLATE_FLAG} -bench=. ${MAKEFILE_PATH}
-DELETE_STACK=aws cloudformation delete-stack --stack-name
+DELETE_STACK=aws cloudformation delete-stack --stack-name 
 
 $(shell mkdir -p ${BUILD_DIR_PATH} && touch ${BUILD_DIR_PATH}/_go.mod)
 
