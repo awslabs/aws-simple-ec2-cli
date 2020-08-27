@@ -53,6 +53,9 @@ compile:
 
 build: clean compile
 
+version:
+	@echo ${VERSION}
+	
 build-binaries:
 	${MAKEFILE_PATH}/scripts/build-binaries -p ${SUPPORTED_PLATFORMS} -v ${VERSION}
 
