@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"time"
 
-	"ez-ec2/pkg/tag"
+	"simple-ec2/pkg/tag"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-const DefaultStackName = "ez-ec2"
+const DefaultStackName = "simple-ec2"
 const creationCheckInterval = time.Second
 const RequiredAvailabilityZones = 3
 const PostCreationWait = time.Second * 60
@@ -100,20 +100,20 @@ func (c Cfn) CreateStack(stackName, template string, zones []*ec2.AvailabilityZo
 	input := &cloudformation.CreateStackInput{
 		StackName:    aws.String(stackName),
 		TemplateBody: aws.String(template),
-		Tags:         getEzec2Tags(),
+		Tags:         getSimpleEc2Tags(),
 	}
 
 	if zones != nil && len(zones) > 0 {
 		input.Parameters = []*cloudformation.Parameter{
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ0"),
 				ParameterValue: zones[0].ZoneName,
 			},
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ1"),
 				ParameterValue: zones[1].ZoneName,
 			},
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ2"),
 				ParameterValue: zones[2].ZoneName,
 			},
@@ -213,17 +213,17 @@ func (c Cfn) DeleteStack(stackName string) error {
 	return nil
 }
 
-// Get the tags for resources created by ez-ec2
-func getEzec2Tags() []*cloudformation.Tag {
-	ezec2Tags := []*cloudformation.Tag{}
+// Get the tags for resources created by simple-ec2
+func getSimpleEc2Tags() []*cloudformation.Tag {
+	simpleEc2Tags := []*cloudformation.Tag{}
 
 	tags := tag.GetTags()
 	for key, value := range *tags {
-		ezec2Tags = append(ezec2Tags, &cloudformation.Tag{
+		simpleEc2Tags = append(simpleEc2Tags, &cloudformation.Tag{
 			Key:   aws.String(key),
 			Value: aws.String(value),
 		})
 	}
 
-	return ezec2Tags
+	return simpleEc2Tags
 }

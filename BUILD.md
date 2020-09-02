@@ -23,7 +23,7 @@ The resulting binary will be in the generated `build/` dir
 $ make build
 
 $ ls build/
-ez-ec2
+simple-ec2
 ```
 
 ## Test

@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-// Get the tags for resources created by ez-ec2
+// Get the tags for resources created by simple-ec2
 func GetTags() *map[string]string {
 	now := time.Now()
 	zone, _ := now.Zone()
@@ -26,7 +26,7 @@ func GetTags() *map[string]string {
 		now.Second(), zone)
 
 	tags := map[string]string{
-		"CreatedBy":   "ez-ec2",
+		"CreatedBy":   "simple-ec2",
 		"CreatedTime": nowString,
 	}
 

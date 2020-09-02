@@ -1,29 +1,30 @@
 package cfn_e2e
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"testing"
 
-	"ez-ec2/pkg/cfn"
+	"github.com/aws/aws-sdk-go/service/ec2"
+
+	"simple-ec2/pkg/cfn"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-const testStackName = "ez-ec2-e2e-cfn-test"
+const testStackName = "simple-ec2-e2e-cfn-test"
 const correctRegion = "us-east-2"
 
 var sess = session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 var c = cfn.New(sess)
 var testAvailabilityZones = []*ec2.AvailabilityZone{
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2a"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2b"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2c"),
 	},
 }

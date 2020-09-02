@@ -14,13 +14,14 @@
 package ec2helper_e2e
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"testing"
 
-	"ez-ec2/pkg/cfn"
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/ec2helper"
-	th "ez-ec2/test/testhelper"
+	"github.com/aws/aws-sdk-go/service/ec2"
+
+	"simple-ec2/pkg/cfn"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/ec2helper"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
 	"github.com/aws/aws-sdk-go/aws"
@@ -28,7 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-const testStackName = "ez-ec2-e2e-ec2helper-test"
+const testStackName = "simple-ec2-e2e-ec2helper-test"
 const correctRegion = "us-east-2"
 const testAmi = "ami-026dea5602e368e96"
 

@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"strings"
 
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/ec2helper"
-	ec2ichelper "ez-ec2/pkg/ec2instanceconnecthelper"
-	"ez-ec2/pkg/question"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/ec2helper"
+	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
+	"simple-ec2/pkg/question"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"

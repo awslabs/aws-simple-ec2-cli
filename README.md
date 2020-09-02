@@ -41,7 +41,7 @@ In order to launch a new EC2 instance, customers need to specify a lot of option
 1. Install AWS Simple EC2 CLI
 
 ```
-go install ez-ec2
+go install simple-ec2
 ```
 
 2. Install sshpass (1.06+)
@@ -64,12 +64,12 @@ export AWS_SECRET_ACCESS_KEY="..."
 **All CLI Options**
 
 ```
-$ ez-ec2 launch -h
+$ simple-ec2 launch -h
 Launch an Amazon EC2 instance with the default configurations. 
 	All configurations can be overridden by configurations provided by configuration files or user input
 
 Usage:
-  ez-ec2 launch [flags]
+  simple-ec2 launch [flags]
 
 Flags:
   -a, --auto-termination-timer int       The auto-termination timer for the instance in minutes
@@ -89,7 +89,7 @@ Flags:
 **Single Command Launch**
 
 ```
-$ ez-ec2 launch
+$ simple-ec2 launch
 
 Please confirm if you would like to launch instance with following options: 
 +----------------+-------------------------------------------------+
@@ -99,7 +99,7 @@ Please confirm if you would like to launch instance with following options:
 | Instance Type  | t2.micro                                        |
 | Image          | ami-123example                                  |
 | Security Group | Default SG(sg-123example)                       |
-|                | ez-ec2 SSH Security Group(sg-123example)        |
+|                | simple-ec2 SSH Security Group(sg-123example)    |
 | EBS Volumes    | /dev/xvda(gp2): 8 GiB                           |
 +----------------+-------------------------------------------------+
 [ yes / no ]
@@ -112,7 +112,7 @@ Instance ID: i-123example
 **Single Command Launch With Flags**
 
 ```
-$ ez-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example
+$ simple-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example
 
 Please confirm if you would like to launch instance with following options: 
 +----------------+-------------------------------------------------+
@@ -121,7 +121,7 @@ Please confirm if you would like to launch instance with following options:
 | Subnet         | subnet-123example                               |
 | Instance Type  | t2.micro                                        |
 | Image          | ami-123example                                  |
-| Security Group | ez-ec2 SSH Security(sg-123example)              |
+| Security Group | simple-ec2 SSH Security(sg-123example)          |
 | EBS Volumes    | /dev/xvda(gp2): 8 GiB                           |
 +----------------+-------------------------------------------------+
 [ yes / no ]
@@ -134,7 +134,7 @@ Instance ID: i-123example
 **Interactive Mode Launch**
 
 ```
-$ ez-ec2 launch -i
+$ simple-ec2 launch -i
 
 Select the region you wish to launch the instance: [default: us-east-2]
 +------------------+---------------------------+------------------+-------------------------+
@@ -211,7 +211,7 @@ What security group would you like to use?
 | OPTION |                 SECURITY GROUP                  |                      DESCRIPTION                      |
 +--------+-------------------------------------------------+-------------------------------------------------------+
 | 1.     | Default SSH SG(sg-123example)                   | launch-wizard-1 created 2020-06-07T19:45:39.448-04:00 |
-| 2.     | ez-ec2 SSH Security Group(sg-123example)        | Created by ez-ec2 for SSH connection to instances     |
+| 2.     | simple-ec2 SSH Security Group(sg-123example)    | Created by simple-ec2 for SSH connection to instances |
 | 3.     | Default SG(sg-123example)                       | default VPC security group                            |
 | 4.     | Add all available security groups               |
 | 5.     | Create a new security group that enables SSH    |
@@ -237,7 +237,7 @@ Please confirm if you would like to launch instance with following options:
 | 2.Subnet         | My Default Subnet(subnet-123example)            |
 | 3.Instance Type  | t2.nano                                         |
 | 4.Image          | ami-123example                                  |
-| 5.Security Group | ez-ec2 SSH Security Group(sg-123example)        |
+| 5.Security Group | simple-ec2 SSH Security Group(sg-123example)    |
 | EBS Volumes      | /dev/xvda(gp2): 8 GiB                           |
 +------------------+-------------------------------------------------+
 [ yes / no ]
@@ -250,7 +250,7 @@ Do you want to save the configuration above as a JSON file that can be used in n
 [ yes / no ]
 yes
 Saving config...
-Config successfully saved: /Users/$USER/.ez-ec2/ez-ec2.json
+Config successfully saved: /Users/$USER/.simple-ec2/simple-ec2.json
 ```
 
 ### Connect
@@ -258,11 +258,11 @@ Config successfully saved: /Users/$USER/.ez-ec2/ez-ec2.json
 **All CLI Options**
 
 ```
-$ ez-ec2 connect -h
+$ simple-ec2 connect -h
 Connect to an Amazon EC2 Instance, given the region and instance id
 
 Usage:
-  ez-ec2 connect [flags]
+  simple-ec2 connect [flags]
 
 Flags:
   -h, --help                 help for connect
@@ -275,7 +275,7 @@ Flags:
 **Single Command Connect**
 
 ```
-$ ez-ec2 connect -r us-east-2 -n i-123example
+$ simple-ec2 connect -r us-east-2 -n i-123example
 Last login: Wed Jul 29 21:01:45 2020 from 52.95.4.1
 
        __|  __|_  )
@@ -293,7 +293,7 @@ logout
 **Interactive Mode Connect**
 
 ```
-$ ez-ec2 connect -i
+$ simple-ec2 connect -i
 
 Select the region you wish to launch the instance: [default: us-east-2]
 +------------------+---------------------------+------------------+-------------------------+
@@ -314,9 +314,9 @@ Select the instance you want to connect to:
 +--------+---------------------+-------------+------------------------+
 | OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE        |
 +--------+---------------------+-------------+------------------------+
-| 1.     | i-123example        | CreatedBy   | ez-ec2                 |
+| 1.     | i-123example        | CreatedBy   | simple-ec2             |
 |        |                     | CreatedTime | 2020-7-29 16:38:52 EDT |
-| 2.     | i-123example        | CreatedBy   | ez-ec2                 |
+| 2.     | i-123example        | CreatedBy   | simple-ec2             |
 |        |                     | CreatedTime | 2020-7-29 16:35:48 EDT |
 +--------+---------------------+-------------+------------------------+
 2
@@ -337,11 +337,11 @@ logout
 **All CLI Options**
 
 ```
-$ ez-ec2 terminate -h
+$ simple-ec2 terminate -h
 Terminate Amazon EC2 Instances, given the region and instance ids
 
 Usage:
-  ez-ec2 terminate [flags]
+  simple-ec2 terminate [flags]
 
 Flags:
   -h, --help                   help for terminate
@@ -353,7 +353,7 @@ Flags:
 **One Command Terminate**
 
 ```
-$ ez-ec2 terminate -r us-east-2 -n i-123example
+$ simple-ec2 terminate -r us-east-2 -n i-123example
 Terminating instances
 Instances [i-123example] terminated successfully
 ```
@@ -361,7 +361,7 @@ Instances [i-123example] terminated successfully
 **Interactive Terminate**
 
 ```
-$ ez-ec2 terminate -i
+$ simple-ec2 terminate -i
 
 Select the region you wish to launch the instance: [default: us-east-2]
 +------------------+---------------------------+------------------+-------------------------+
@@ -382,9 +382,9 @@ Select the instance you want to terminate:
 +--------+---------------------+-------------+------------------------+
 | OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE        |
 +--------+---------------------+-------------+------------------------+
-| 1.     | i-123example        | CreatedBy   | ez-ec2                 |
+| 1.     | i-123example        | CreatedBy   | simple-ec2             |
 |        |                     | CreatedTime | 2020-7-29 16:38:52 EDT |
-| 2.     | i-456example        | CreatedBy   | ez-ec2                 |
+| 2.     | i-456example        | CreatedBy   | simple-ec2             |
 |        |                     | CreatedTime | 2020-7-29 16:35:48 EDT |
 +--------+---------------------+-------------+------------------------+
 1
@@ -393,7 +393,7 @@ Select the instance you want to terminate:
 +--------+--------------------------------+-------------+------------------------+
 | OPTION |            INSTANCE            |   TAG-KEY   |       TAG-VALUE        |
 +--------+--------------------------------+-------------+------------------------+
-| 1.     | i-456example                   | CreatedBy   | ez-ec2                 |
+| 1.     | i-456example                   | CreatedBy   | simple-ec2             |
 |        |                                | CreatedTime | 2020-7-29 16:35:48 EDT |
 | 2.     | Don't add any more instance id |
 +--------+--------------------------------+-------------+------------------------+

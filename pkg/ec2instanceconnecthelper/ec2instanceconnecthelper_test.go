@@ -17,8 +17,8 @@ import (
 	"encoding/base64"
 	"testing"
 
-	ec2ichelper "ez-ec2/pkg/ec2instanceconnecthelper"
-	th "ez-ec2/test/testhelper"
+	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -59,7 +59,7 @@ func TestGetInstancePublicDnsName_Success(t *testing.T) {
 	const testDnsName = "test dns name"
 	instance := &ec2.Instance{
 		NetworkInterfaces: []*ec2.InstanceNetworkInterface{
-			&ec2.InstanceNetworkInterface{
+			{
 				Association: &ec2.InstanceNetworkInterfaceAssociation{
 					PublicDnsName: aws.String(testDnsName),
 				},
@@ -89,7 +89,7 @@ func TestGetInstancePublicDnsName_NoNetworkInterface(t *testing.T) {
 func TestGetInstancePublicDnsName_NoDnsNameInNetworkInterface(t *testing.T) {
 	instance := &ec2.Instance{
 		NetworkInterfaces: []*ec2.InstanceNetworkInterface{
-			&ec2.InstanceNetworkInterface{
+			{
 				Association: &ec2.InstanceNetworkInterfaceAssociation{},
 			},
 		},

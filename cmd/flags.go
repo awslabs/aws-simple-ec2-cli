@@ -14,7 +14,7 @@
 package cmd
 
 import (
-	"ez-ec2/pkg/config"
+	"simple-ec2/pkg/config"
 )
 
 // Used for flags

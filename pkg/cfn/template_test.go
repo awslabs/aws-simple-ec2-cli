@@ -16,12 +16,12 @@ package cfn_test
 import (
 	"testing"
 
-	"ez-ec2/pkg/cfn"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/cfn"
+	th "simple-ec2/test/testhelper"
 )
 
 // Backup encoded strings
-var backupEzec2String = cfn.Ezec2CloudformationTemplateEncoded
+var backupSimpleEc2String = cfn.SimpleEc2CloudformationTemplateEncoded
 
 func TestDecodeTemplateVariables_Success(t *testing.T) {
 	err := cfn.DecodeTemplateVariables()
@@ -39,5 +39,5 @@ func TestDecodeTemplateVariables_Error(t *testing.T) {
 	}
 
 	// Restore encoded strings
-	cfn.Ezec2CloudformationTemplateEncoded = backupEzec2String
+	cfn.SimpleEc2CloudformationTemplateEncoded = backupSimpleEc2String
 }

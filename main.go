@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"os"
 
-	"ez-ec2/cmd"
-	"ez-ec2/pkg/cfn"
+	"simple-ec2/cmd"
+	"simple-ec2/pkg/cfn"
 )
 
 func main() {

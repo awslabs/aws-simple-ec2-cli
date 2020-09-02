@@ -15,17 +15,18 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ez-ec2",
-	Short: "AWS Simple EC2 CLI (ez-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances",
-	Long: `AWS Simple EC2 CLI (ez-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances.
+	Use:   "simple-ec2",
+	Short: "AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances",
+	Long: `AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances.
 	Users can easily launch an instance with or without custom configurations.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("This command cannot be used alone. Please refer to ez-ec2 --help for available command combinations")
+		fmt.Println("This command cannot be used alone. Please refer to simple-ec2 --help for available command combinations")
 	},
 }
 

@@ -16,14 +16,14 @@ package tag_test
 import (
 	"testing"
 
-	"ez-ec2/pkg/tag"
+	"simple-ec2/pkg/tag"
 )
 
 func TestGetTags(t *testing.T) {
 	tags := tag.GetTags()
 
 	createdBy, found := (*tags)["CreatedBy"]
-	if !found || createdBy != "ez-ec2" {
+	if !found || createdBy != "simple-ec2" {
 		t.Error("CreatedBy tag is not created correctly")
 	}
 

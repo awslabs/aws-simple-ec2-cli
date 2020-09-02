@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"testing"
 
-	"ez-ec2/pkg/cli"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/cli"
+	th "simple-ec2/test/testhelper"
 )
 
 func TestShowError_NoError(t *testing.T) {
