@@ -24,7 +24,7 @@ import (
 	"os"
 	"os/exec"
 
-	"ez-ec2/pkg/config"
+	"simple-ec2/pkg/config"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -34,7 +34,7 @@ import (
 )
 
 const userName = "ec2-user"
-const passPhrase = "ez-ec2"
+const passPhrase = "simple-ec2"
 
 // Push an SSH key to an EC2 instance
 func SendSSHPublicKey(sess *session.Session, availabilityZone, instanceId,
@@ -88,9 +88,9 @@ func GenerateSSHKeyPair() (publicKeyString, privateKeyString *string, err error)
 // Establish an SSH connection to the instance
 func EstablishSSHConnection(privateKey, instanceDnsName string, exitAtOnce bool) error {
 	// Create the folder if it doesn't exist
-	ezec2Dir := os.Getenv("HOME") + "/.ez-ec2"
-	if _, err := os.Stat(ezec2Dir); os.IsNotExist(err) {
-		err = os.MkdirAll(ezec2Dir, os.ModePerm)
+	simpleEc2Dir := os.Getenv("HOME") + "/.simple-ec2"
+	if _, err := os.Stat(simpleEc2Dir); os.IsNotExist(err) {
+		err = os.MkdirAll(simpleEc2Dir, os.ModePerm)
 		if err != nil {
 			return err
 		}

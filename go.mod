@@ -1,4 +1,4 @@
-module ez-ec2
+module simple-ec2
 
 go 1.15
 

@@ -25,9 +25,9 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 )
 
-const defaultConfigFileName = "ez-ec2.json"
+const defaultConfigFileName = "simple-ec2.json"
 
-var ezec2Dir = getHomeDir() + "/.ez-ec2"
+var simpleEc2Dir = getHomeDir() + "/.simple-ec2"
 
 /*
 A simple config for reading config files or flags into primitive type information.
@@ -74,7 +74,7 @@ func ReadConfig(simpleConfig *SimpleInfo, configFileName *string) error {
 		configFileName = aws.String(defaultConfigFileName)
 	}
 
-	path := ezec2Dir + "/" + *configFileName
+	path := simpleEc2Dir + "/" + *configFileName
 
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -149,15 +149,15 @@ func SaveConfig(simpleConfig *SimpleInfo, configFileName *string) error {
 // Save a file in the config folder
 func SaveInConfigFolder(fileName string, data []byte, perm os.FileMode) (*string, error) {
 	// Create the folder if it doesn't exist
-	if _, err := os.Stat(ezec2Dir); os.IsNotExist(err) {
-		err = os.MkdirAll(ezec2Dir, os.ModePerm)
+	if _, err := os.Stat(simpleEc2Dir); os.IsNotExist(err) {
+		err = os.MkdirAll(simpleEc2Dir, os.ModePerm)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	// Save the file
-	path := ezec2Dir + "/" + fileName
+	path := simpleEc2Dir + "/" + fileName
 	err := ioutil.WriteFile(path, data, perm)
 	if err != nil {
 		return nil, err

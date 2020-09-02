@@ -20,10 +20,10 @@ import (
 	"os"
 	"sort"
 
-	"ez-ec2/pkg/cfn"
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/tag"
+	"simple-ec2/pkg/cfn"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/tag"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/bytequantity"
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
@@ -718,8 +718,8 @@ func (h *EC2Helper) CreateSecurityGroupForSsh(vpcId string) (*string, error) {
 
 	// Create a new security group
 	creationInput := &ec2.CreateSecurityGroupInput{
-		Description: aws.String("Created by ez-ec2 for SSH connection to instances"),
-		GroupName:   aws.String("ez-ec2 SSH"),
+		Description: aws.String("Created by simple-ec2 for SSH connection to instances"),
+		GroupName:   aws.String("simple-ec2 SSH"),
 		VpcId:       aws.String(vpcId),
 	}
 
@@ -757,9 +757,9 @@ func (h *EC2Helper) CreateSecurityGroupForSsh(vpcId string) (*string, error) {
 	}
 
 	// Create tags
-	tags := append(getEzec2Tags(), &ec2.Tag{
+	tags := append(getSimpleEc2Tags(), &ec2.Tag{
 		Key:   aws.String("Name"),
-		Value: aws.String("ez-ec2 SSH Security Group"),
+		Value: aws.String("simple-ec2 SSH Security Group"),
 	})
 	err = h.createTags([]string{groupId}, tags)
 	if err != nil {
@@ -819,7 +819,7 @@ Empty result is allowed.
 func (h *EC2Helper) GetInstancesByState(states []string) ([]*ec2.Instance, error) {
 	input := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name:   aws.String("instance-state-name"),
 				Values: aws.StringSlice(states),
 			},
@@ -1037,11 +1037,11 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 			}
 		}
 
-		// Add ez-ec2 tags to created resources
+		// Add simple-ec2 tags to created resources
 		input.TagSpecifications = []*ec2.TagSpecification{
 			&ec2.TagSpecification{
 				ResourceType: aws.String("instance"),
-				Tags:         getEzec2Tags(),
+				Tags:         getSimpleEc2Tags(),
 			},
 		}
 		image, err := h.GetImageById(simpleConfig.ImageId)
@@ -1052,7 +1052,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 				input.TagSpecifications = append(input.TagSpecifications,
 					&ec2.TagSpecification{
 						ResourceType: aws.String("volume"),
-						Tags:         getEzec2Tags(),
+						Tags:         getSimpleEc2Tags(),
 					})
 			}
 		}
@@ -1086,7 +1086,7 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	// Retrieve resources from the stack
 	c := cfn.New(h.Sess)
 	vpcId, subnetIds, _, _, err := c.CreateStackAndGetResources(availabilityZones, nil,
-		cfn.Ezec2CloudformationTemplate)
+		cfn.SimpleEc2CloudformationTemplate)
 	if err != nil {
 		return err
 	}
@@ -1185,19 +1185,19 @@ func GetTagName(tags []*ec2.Tag) *string {
 	return nil
 }
 
-// Get the tags for resources created by ez-ec2
-func getEzec2Tags() []*ec2.Tag {
-	ezec2Tags := []*ec2.Tag{}
+// Get the tags for resources created by simple-ec2
+func getSimpleEc2Tags() []*ec2.Tag {
+	simpleEc2Tags := []*ec2.Tag{}
 
 	tags := tag.GetTags()
 	for key, value := range *tags {
-		ezec2Tags = append(ezec2Tags, &ec2.Tag{
+		simpleEc2Tags = append(simpleEc2Tags, &ec2.Tag{
 			Key:   aws.String(key),
 			Value: aws.String(value),
 		})
 	}
 
-	return ezec2Tags
+	return simpleEc2Tags
 }
 
 // Validate an image id. Used as a function interface to validate question input

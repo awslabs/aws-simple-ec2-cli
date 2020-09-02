@@ -17,9 +17,9 @@ import (
 	"errors"
 	"testing"
 
-	"ez-ec2/pkg/ec2helper"
-	"ez-ec2/pkg/table"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/table"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -267,7 +267,7 @@ func TestAppendTemplateNetworkInterfaces_ApiError(t *testing.T) {
 func TestAppendInstances(t *testing.T) {
 	correctData := [][]string{
 		[]string{"1.", "Instance 2(i-67890)", "", ""},
-		[]string{"2.", "Instance 3(i-54321)", "CreatedBy", "ez-ec2"},
+		[]string{"2.", "Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
 		[]string{"", "", "CreatedTime", "just now"},
 		[]string{"3.", "i-09876", "", ""},
 	}
@@ -309,7 +309,7 @@ func TestAppendInstances(t *testing.T) {
 				},
 				&ec2.Tag{
 					Key:   aws.String("CreatedBy"),
-					Value: aws.String("ez-ec2"),
+					Value: aws.String("simple-ec2"),
 				},
 				&ec2.Tag{
 					Key:   aws.String("CreatedTime"),

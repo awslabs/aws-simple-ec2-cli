@@ -20,15 +20,15 @@ import (
 	"strconv"
 	"testing"
 
-	"ez-ec2/pkg/config"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/config"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 )
 
 const testConfigFileName = "unit_test_config_temp.json"
 
-var testConfigFilePath = os.Getenv("HOME") + "/.ez-ec2/" + testConfigFileName
+var testConfigFilePath = os.Getenv("HOME") + "/.simple-ec2/" + testConfigFileName
 
 func TestSaveInConfigFolder(t *testing.T) {
 	testString := "unit test config"

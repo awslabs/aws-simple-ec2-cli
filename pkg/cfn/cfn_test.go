@@ -17,8 +17,8 @@ import (
 	"errors"
 	"testing"
 
-	"ez-ec2/pkg/cfn"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/cfn"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

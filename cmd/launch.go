@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/ec2helper"
-	"ez-ec2/pkg/question"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/question"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
 	"github.com/aws/aws-sdk-go/aws/session"

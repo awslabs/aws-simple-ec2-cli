@@ -18,8 +18,8 @@ import (
 	"sort"
 	"strings"
 
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/ec2helper"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/olekukonko/tablewriter"

@@ -19,7 +19,7 @@ import (
 
 // Encoded CloudFormation template strings populated by Makefile
 var (
-	Ezec2CloudformationTemplateEncoded            = "{}"
+	SimpleEc2CloudformationTemplateEncoded        = "{}"
 	E2eCfnTestCloudformationTemplateEncoded       = "{}"
 	E2eConnectTestCloudformationTemplateEncoded   = "{}"
 	E2eEc2helperTestCloudformationTemplateEncoded = "{}"
@@ -27,7 +27,7 @@ var (
 
 // Decoded CloudFormation template strings
 var (
-	Ezec2CloudformationTemplate            string
+	SimpleEc2CloudformationTemplate        string
 	E2eCfnTestCloudformationTemplate       string
 	E2eConnectTestCloudformationTemplate   string
 	E2eEc2helperTestCloudformationTemplate string
@@ -36,7 +36,7 @@ var (
 // Decode all encoded CloudFormation template strings into corresponding variables
 func DecodeTemplateVariables() (err error) {
 	templatePairs := [][]*string{
-		[]*string{&Ezec2CloudformationTemplateEncoded, &Ezec2CloudformationTemplate},
+		[]*string{&SimpleEc2CloudformationTemplateEncoded, &SimpleEc2CloudformationTemplate},
 		[]*string{&E2eCfnTestCloudformationTemplateEncoded, &E2eCfnTestCloudformationTemplate},
 		[]*string{&E2eConnectTestCloudformationTemplateEncoded, &E2eConnectTestCloudformationTemplate},
 		[]*string{&E2eEc2helperTestCloudformationTemplateEncoded, &E2eEc2helperTestCloudformationTemplate},

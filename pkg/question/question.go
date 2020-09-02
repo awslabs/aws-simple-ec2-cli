@@ -21,11 +21,11 @@ import (
 	"strconv"
 	"strings"
 
-	"ez-ec2/pkg/cfn"
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/ec2helper"
-	"ez-ec2/pkg/table"
+	"simple-ec2/pkg/cfn"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/table"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"

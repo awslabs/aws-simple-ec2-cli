@@ -19,14 +19,14 @@ COPY . .
 RUN make build
 # In case the target is build for testing:
 # $ docker build  --target=builder -t test .
-CMD ["/aws-simple-ec2-cli/build/ez-ec2"]
+CMD ["/aws-simple-ec2-cli/build/simple-ec2"]
 
 # Copy the binary into a thin image
 FROM amazonlinux:2 as amazonlinux
 FROM scratch
 WORKDIR /
-COPY --from=builder /aws-simple-ec2-cli/build/ez-ec2 .
+COPY --from=builder /aws-simple-ec2-cli/build/simple-ec2 .
 COPY --from=amazonlinux /etc/ssl/certs/ca-bundle.crt /etc/ssl/certs/
 COPY THIRD_PARTY_LICENSES .
 USER 1000
-ENTRYPOINT ["/ez-ec2"]
+ENTRYPOINT ["/simple-ec2"]

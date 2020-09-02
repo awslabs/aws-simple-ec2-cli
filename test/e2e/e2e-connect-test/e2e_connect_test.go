@@ -17,16 +17,16 @@ import (
 	"testing"
 	"time"
 
-	"ez-ec2/pkg/cfn"
-	"ez-ec2/pkg/ec2helper"
-	ec2ichelper "ez-ec2/pkg/ec2instanceconnecthelper"
+	"simple-ec2/pkg/cfn"
+	"simple-ec2/pkg/ec2helper"
+	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 )
 
-const testStackName = "ez-ec2-e2e-connect-test"
+const testStackName = "simple-ec2-e2e-connect-test"
 const correctRegion = "us-east-2"
 const availabilityZone = "us-east-2a"
 

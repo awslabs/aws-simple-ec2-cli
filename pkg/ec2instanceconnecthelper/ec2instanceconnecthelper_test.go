@@ -17,8 +17,8 @@ import (
 	"encoding/base64"
 	"testing"
 
-	ec2ichelper "ez-ec2/pkg/ec2instanceconnecthelper"
-	th "ez-ec2/test/testhelper"
+	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"

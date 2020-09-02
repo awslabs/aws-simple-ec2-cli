@@ -18,11 +18,11 @@ import (
 	"strconv"
 	"testing"
 
-	"ez-ec2/pkg/cli"
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/ec2helper"
-	"ez-ec2/pkg/question"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/question"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"

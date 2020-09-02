@@ -18,9 +18,9 @@ import (
 	"os"
 	"testing"
 
-	"ez-ec2/pkg/config"
-	"ez-ec2/pkg/ec2helper"
-	th "ez-ec2/test/testhelper"
+	"simple-ec2/pkg/config"
+	"simple-ec2/pkg/ec2helper"
+	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -1396,7 +1396,7 @@ func TestGetTagName_Success(t *testing.T) {
 		},
 		&ec2.Tag{
 			Key:   aws.String("CreatedBy"),
-			Value: aws.String("ez-ec2"),
+			Value: aws.String("simple-ec2"),
 		},
 	}
 
@@ -1414,7 +1414,7 @@ func TestGetTagName_NoResult(t *testing.T) {
 		},
 		&ec2.Tag{
 			Key:   aws.String("CreatedBy"),
-			Value: aws.String("ez-ec2"),
+			Value: aws.String("simple-ec2"),
 		},
 	}
 

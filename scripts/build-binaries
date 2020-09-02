@@ -48,13 +48,13 @@ for os_arch in "${PLATFORMS[@]}"; do
     arch=$(echo $os_arch | cut -d'/' -f2)
     container_name="extract-aeis-$os-$arch"
     repo_name="aeis-bin"
-    base_bin_name="ez-ec2"
+    base_bin_name="simple-ec2"
     bin_name="${base_bin_name}-${os}-${arch}"
 
     docker container rm $container_name || :
     $SCRIPTPATH/build-docker-images -p $os_arch -v $VERSION -r $repo_name $PASS_THRU_ARGS
     docker container create --rm --name $container_name "$repo_name:$VERSION-$os-$arch"
-    docker container cp $container_name:/ez-ec2 $BIN_DIR/$bin_name
+    docker container cp $container_name:/simple-ec2 $BIN_DIR/$bin_name
 
     cp ${BIN_DIR}/${bin_name} ${BIN_DIR}/${base_bin_name}
     tar -zcvf ${BIN_DIR}/${bin_name}.tar.gz -C ${BIN_DIR} ${base_bin_name}

@@ -9,7 +9,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "ez-ec2 VPC"
+                        "Value": "simple-ec2 VPC"
                     }
                 ]
             }
@@ -25,7 +25,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "ez-ec2 Subnet"
+                        "Value": "simple-ec2 Subnet"
                     }
                 ],
                 "VpcId": {
@@ -44,7 +44,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "ez-ec2 Subnet"
+                        "Value": "simple-ec2 Subnet"
                     }
                 ],
                 "VpcId": {
@@ -63,7 +63,7 @@
                 "Tags": [
                     {
                         "Key": "Name",
-                        "Value": "ez-ec2 Subnet"
+                        "Value": "simple-ec2 Subnet"
                     }
                 ],
                 "VpcId": {
