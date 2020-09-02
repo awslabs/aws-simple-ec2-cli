@@ -108,7 +108,7 @@ Empty result is not allowed.
 func (h *EC2Helper) GetAvailableAvailabilityZones() ([]*ec2.AvailabilityZone, error) {
 	input := &ec2.DescribeAvailabilityZonesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name:   aws.String("state"),
 				Values: aws.StringSlice([]string{ec2.AvailabilityZoneStateAvailable}),
 			},
@@ -225,7 +225,7 @@ Empty result is allowed.
 func (h *EC2Helper) GetDefaultFreeTierInstanceType() (*ec2.InstanceTypeInfo, error) {
 	input := &ec2.DescribeInstanceTypesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name: aws.String("free-tier-eligible"),
 				Values: []*string{
 					aws.String("true"),
@@ -345,26 +345,26 @@ func (h *EC2Helper) getInstanceTypes(input *ec2.DescribeInstanceTypesInput) ([]*
 
 // Define all OS and corresponding AMI name formats
 var osDescs = map[string]map[string]string{
-	"Amazon Linux": map[string]string{
+	"Amazon Linux": {
 		"ebs":            "amzn-ami-hvm-????.??.?.????????.?-x86_64-gp2",
 		"instance-store": "amzn-ami-hvm-????.??.?.????????.?-x86_64-s3",
 	},
-	"Amazon Linux 2": map[string]string{
+	"Amazon Linux 2": {
 		"ebs": "amzn2-ami-hvm-2.?.????????.?-x86_64-gp2",
 	},
-	"Red Hat": map[string]string{
+	"Red Hat": {
 		"ebs": "RHEL-?.?.?_HVM-????????-x86_64-?-Hourly2-GP2",
 	},
-	"SUSE Linux": map[string]string{
+	"SUSE Linux": {
 		"ebs": "suse-sles-??-sp?-v????????-hvm-ssd-x86_64",
 	},
 	// Ubuntu 18.04 LTS
-	"Ubuntu": map[string]string{
+	"Ubuntu": {
 		"ebs":            "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-????????",
 		"instance-store": "ubuntu/images/hvm-instance/ubuntu-bionic-18.04-amd64-server-????????",
 	},
 	// 64 bit Microsoft Windows Server with Desktop Experience Locale English AMI
-	"Windows": map[string]string{
+	"Windows": {
 		"ebs": "Windows_Server-????-English-Full-Base-????.??.??",
 	},
 }
@@ -380,19 +380,19 @@ func getDescribeImagesInputs(rootDeviceType string) *map[string]ec2.DescribeImag
 		if found {
 			imageInputs[osName] = ec2.DescribeImagesInput{
 				Filters: []*ec2.Filter{
-					&ec2.Filter{
+					{
 						Name: aws.String("name"),
 						Values: []*string{
 							aws.String(desc),
 						},
 					},
-					&ec2.Filter{
+					{
 						Name: aws.String("state"),
 						Values: []*string{
 							aws.String("available"),
 						},
 					},
-					&ec2.Filter{
+					{
 						Name: aws.String("root-device-type"),
 						Values: []*string{
 							aws.String(rootDeviceType),
@@ -484,7 +484,7 @@ Empty result is not allowed.
 func (h *EC2Helper) GetImageById(imageId string) (*ec2.Image, error) {
 	input := &ec2.DescribeImagesInput{
 		Filters: []*ec2.Filter{
-			&ec2.Filter{
+			{
 				Name: aws.String("state"),
 				Values: []*string{
 					aws.String("available"),
@@ -733,16 +733,16 @@ func (h *EC2Helper) CreateSecurityGroupForSsh(vpcId string) (*string, error) {
 	ingressInput := &ec2.AuthorizeSecurityGroupIngressInput{
 		GroupId: aws.String(groupId),
 		IpPermissions: []*ec2.IpPermission{
-			&ec2.IpPermission{
+			{
 				FromPort:   aws.Int64(22),
 				IpProtocol: aws.String("tcp"),
 				IpRanges: []*ec2.IpRange{
-					&ec2.IpRange{
+					{
 						CidrIp: aws.String("0.0.0.0/0"),
 					},
 				},
 				Ipv6Ranges: []*ec2.Ipv6Range{
-					&ec2.Ipv6Range{
+					{
 						CidrIpv6: aws.String("::/0"),
 					},
 				},
@@ -1039,7 +1039,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 
 		// Add simple-ec2 tags to created resources
 		input.TagSpecifications = []*ec2.TagSpecification{
-			&ec2.TagSpecification{
+			{
 				ResourceType: aws.String("instance"),
 				Tags:         getSimpleEc2Tags(),
 			},

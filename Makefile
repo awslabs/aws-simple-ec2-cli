@@ -81,3 +81,6 @@ e2e-ec2helper-test:
 	${DELETE_STACK}simple-ec2-e2e-ec2helper-test
 
 test: unit-test e2e-test
+
+fmt:
+	goimports -w ./ && gofmt -s -w ./

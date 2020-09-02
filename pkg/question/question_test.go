@@ -125,7 +125,7 @@ func TestAskQuestion_FunctionCheckedInput(t *testing.T) {
 	testEC2 := &ec2helper.EC2Helper{
 		Svc: &th.MockedEC2Svc{
 			Images: []*ec2.Image{
-				&ec2.Image{
+				{
 					ImageId: aws.String(testImageId),
 				},
 			},
@@ -156,13 +156,13 @@ func TestAskRegion_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Regions: []*ec2.Region{
-			&ec2.Region{
+			{
 				RegionName: aws.String(testRegion),
 			},
-			&ec2.Region{
+			{
 				RegionName: aws.String("us-west-1"),
 			},
-			&ec2.Region{
+			{
 				RegionName: aws.String("us-west-2"),
 			},
 		},
@@ -199,12 +199,12 @@ func TestAskLaunchTemplate_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplates: []*ec2.LaunchTemplate{
-			&ec2.LaunchTemplate{
+			{
 				LaunchTemplateId:    aws.String(testTemplateId),
 				LaunchTemplateName:  aws.String(testTemplateId),
 				LatestVersionNumber: aws.Int64(1),
 			},
-			&ec2.LaunchTemplate{
+			{
 				LaunchTemplateId:    aws.String("lt-67890"),
 				LaunchTemplateName:  aws.String("lt-67890"),
 				LatestVersionNumber: aws.Int64(1),
@@ -242,13 +242,13 @@ func TestAskLaunchTemplateVersion_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			&ec2.LaunchTemplateVersion{
+			{
 				LaunchTemplateId:   aws.String(testTemplateId),
 				VersionDescription: aws.String("description"),
 				VersionNumber:      aws.Int64(testVersion),
 				DefaultVersion:     aws.Bool(true),
 			},
-			&ec2.LaunchTemplateVersion{
+			{
 				LaunchTemplateId: aws.String(testTemplateId),
 				VersionNumber:    aws.Int64(2),
 				DefaultVersion:   aws.Bool(false),
@@ -289,7 +289,7 @@ func TestAskIfEnterInstanceType_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
-			&ec2.InstanceTypeInfo{
+			{
 				InstanceType:     aws.String(testInstanceType),
 				FreeTierEligible: aws.Bool(true),
 			},
@@ -327,7 +327,7 @@ func TestAskInstanceType_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
-			&ec2.InstanceTypeInfo{
+			{
 				InstanceType:     aws.String(testInstanceType),
 				FreeTierEligible: aws.Bool(true),
 			},
@@ -390,13 +390,13 @@ func TestAskImage_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
-			&ec2.InstanceTypeInfo{
+			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
 			},
 		},
 		Images: []*ec2.Image{
-			&ec2.Image{
+			{
 				ImageId:      aws.String(testImage),
 				CreationDate: aws.String("some time"),
 			},
@@ -419,7 +419,7 @@ func TestAskImage_NoImage(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
-			&ec2.InstanceTypeInfo{
+			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
 			},
@@ -456,7 +456,7 @@ func TestAskImage_DescribeImagesError(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
-			&ec2.InstanceTypeInfo{
+			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
 			},
@@ -502,18 +502,18 @@ func TestAskVpc_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Vpcs: []*ec2.Vpc{
-			&ec2.Vpc{
+			{
 				VpcId:     aws.String(testVpc),
 				CidrBlock: aws.String("some block"),
 				Tags: []*ec2.Tag{
-					&ec2.Tag{
+					{
 						Key:   aws.String("Name"),
 						Value: aws.String("test vpc"),
 					},
 				},
 				IsDefault: aws.Bool(true),
 			},
-			&ec2.Vpc{
+			{
 				VpcId:     aws.String("vpc-67890"),
 				CidrBlock: aws.String("some block"),
 				IsDefault: aws.Bool(false),
@@ -554,19 +554,19 @@ func TestAskSubnet_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
-			&ec2.Subnet{
+			{
 				SubnetId:         aws.String(testSubnet),
 				VpcId:            aws.String(testVpc),
 				CidrBlock:        aws.String("some block"),
 				AvailabilityZone: aws.String("some az"),
 				Tags: []*ec2.Tag{
-					&ec2.Tag{
+					{
 						Key:   aws.String("Name"),
 						Value: aws.String("test subnet"),
 					},
 				},
 			},
-			&ec2.Subnet{
+			{
 				SubnetId:         aws.String("subnet-67890"),
 				VpcId:            aws.String(testVpc),
 				CidrBlock:        aws.String("some block"),
@@ -607,11 +607,11 @@ func TestAskSubnetPlaceholder_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		AvailabilityZones: []*ec2.AvailabilityZone{
-			&ec2.AvailabilityZone{
+			{
 				ZoneName: aws.String(testAz),
 				ZoneId:   aws.String("some id"),
 			},
-			&ec2.AvailabilityZone{
+			{
 				ZoneName: aws.String("us-east-2"),
 				ZoneId:   aws.String("some id"),
 			},
@@ -648,30 +648,30 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 	const testGroup = "sg-12345"
 
 	testSecurityGroups := []*ec2.SecurityGroup{
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String(testGroup),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("test group"),
 				},
 			},
 			Description: aws.String("some description"),
 		},
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String("sg-67890"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("test group"),
 				},
 			},
 			Description: aws.String("some description"),
 		},
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String("sg-67890"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("test group"),
 				},
@@ -726,7 +726,7 @@ func TestAskComfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			&ec2.LaunchTemplateVersion{
+			{
 				LaunchTemplateId: aws.String(testTemplateId),
 				VersionNumber:    aws.Int64(testVersion),
 				LaunchTemplateData: &ec2.ResponseLaunchTemplateData{
@@ -761,7 +761,7 @@ func TestAskComfirmationWithTemplate_Success_Overriding(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			&ec2.LaunchTemplateVersion{
+			{
 				LaunchTemplateId: aws.String(testTemplateId),
 				VersionNumber:    aws.Int64(testVersion),
 				LaunchTemplateData: &ec2.ResponseLaunchTemplateData{
@@ -798,14 +798,14 @@ func TestAskComfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			&ec2.LaunchTemplateVersion{
+			{
 				LaunchTemplateId: aws.String(testTemplateId),
 				VersionNumber:    aws.Int64(testVersion),
 				LaunchTemplateData: &ec2.ResponseLaunchTemplateData{
 					ImageId:      aws.String("ami-12345"),
 					InstanceType: aws.String(ec2.InstanceTypeT2Micro),
 					NetworkInterfaces: []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
-						&ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
+						{
 							SubnetId: aws.String("subnet-12345"),
 						},
 					},
@@ -865,7 +865,7 @@ var testDetailedConfig = &config.DetailedInfo{
 	Image: &ec2.Image{
 		ImageId: aws.String(testSimpleConfig.ImageId),
 		BlockDeviceMappings: []*ec2.BlockDeviceMapping{
-			&ec2.BlockDeviceMapping{
+			{
 				DeviceName: aws.String("device 1"),
 				Ebs: &ec2.EbsBlockDevice{
 					VolumeType: aws.String("gp2"),
@@ -884,7 +884,7 @@ var testDetailedConfig = &config.DetailedInfo{
 	Subnet: &ec2.Subnet{
 		SubnetId: aws.String(testSimpleConfig.SubnetId),
 		Tags: []*ec2.Tag{
-			&ec2.Tag{
+			{
 				Key:   aws.String("Name"),
 				Value: aws.String("test subnet"),
 			},
@@ -893,14 +893,14 @@ var testDetailedConfig = &config.DetailedInfo{
 	Vpc: &ec2.Vpc{
 		VpcId: aws.String("vpc-12345"),
 		Tags: []*ec2.Tag{
-			&ec2.Tag{
+			{
 				Key:   aws.String("Name"),
 				Value: aws.String("test vpc"),
 			},
 		},
 	},
 	SecurityGroups: []*ec2.SecurityGroup{
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String(testSimpleConfig.SecurityGroupIds[0]),
 		},
 	},
@@ -956,10 +956,10 @@ func TestAskInstanceId_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Instances: []*ec2.Instance{
-			&ec2.Instance{
+			{
 				InstanceId: aws.String(testInstance),
 			},
-			&ec2.Instance{
+			{
 				InstanceId: aws.String("i-67890"),
 			},
 		},
@@ -1012,10 +1012,10 @@ func TestAskInstanceIds_Success(t *testing.T) {
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Instances: []*ec2.Instance{
-			&ec2.Instance{
+			{
 				InstanceId: aws.String(testInstance),
 			},
-			&ec2.Instance{
+			{
 				InstanceId: aws.String("i-67890"),
 			},
 		},
@@ -1071,7 +1071,7 @@ Instance Selector Question Tests
 const testInstanceType = ec2.InstanceTypeT2Micro
 
 var testInstanceTypeInfos = []*ec2.InstanceTypeInfo{
-	&ec2.InstanceTypeInfo{
+	{
 		InstanceType: aws.String(testInstanceType),
 		VCpuInfo: &ec2.VCpuInfo{
 			DefaultVCpus: aws.Int64(2),
@@ -1081,7 +1081,7 @@ var testInstanceTypeInfos = []*ec2.InstanceTypeInfo{
 		},
 		InstanceStorageSupported: aws.Bool(false),
 	},
-	&ec2.InstanceTypeInfo{
+	{
 		InstanceType: aws.String("t2.nano"),
 		VCpuInfo: &ec2.VCpuInfo{
 			DefaultVCpus: aws.Int64(1),

@@ -1,8 +1,9 @@
 package cfn_e2e
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/ec2"
 
 	"simple-ec2/pkg/cfn"
 
@@ -17,13 +18,13 @@ const correctRegion = "us-east-2"
 var sess = session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 var c = cfn.New(sess)
 var testAvailabilityZones = []*ec2.AvailabilityZone{
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2a"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2b"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("us-east-2c"),
 	},
 }

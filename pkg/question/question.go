@@ -847,11 +847,11 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 
 	// Get display data ready
 	data := [][]string{
-		[]string{cli.ResourceRegion, simpleConfig.Region},
-		[]string{cli.ResourceVpc, vpcInfo},
-		[]string{cli.ResourceSubnet, subnetInfo},
-		[]string{cli.ResourceInstanceType, simpleConfig.InstanceType},
-		[]string{cli.ResourceImage, simpleConfig.ImageId},
+		{cli.ResourceRegion, simpleConfig.Region},
+		{cli.ResourceVpc, vpcInfo},
+		{cli.ResourceSubnet, subnetInfo},
+		{cli.ResourceInstanceType, simpleConfig.InstanceType},
+		{cli.ResourceImage, simpleConfig.ImageId},
 	}
 
 	indexedOptions := []string{}

@@ -36,10 +36,10 @@ var (
 // Decode all encoded CloudFormation template strings into corresponding variables
 func DecodeTemplateVariables() (err error) {
 	templatePairs := [][]*string{
-		[]*string{&SimpleEc2CloudformationTemplateEncoded, &SimpleEc2CloudformationTemplate},
-		[]*string{&E2eCfnTestCloudformationTemplateEncoded, &E2eCfnTestCloudformationTemplate},
-		[]*string{&E2eConnectTestCloudformationTemplateEncoded, &E2eConnectTestCloudformationTemplate},
-		[]*string{&E2eEc2helperTestCloudformationTemplateEncoded, &E2eEc2helperTestCloudformationTemplate},
+		{&SimpleEc2CloudformationTemplateEncoded, &SimpleEc2CloudformationTemplate},
+		{&E2eCfnTestCloudformationTemplateEncoded, &E2eCfnTestCloudformationTemplate},
+		{&E2eConnectTestCloudformationTemplateEncoded, &E2eConnectTestCloudformationTemplate},
+		{&E2eEc2helperTestCloudformationTemplateEncoded, &E2eEc2helperTestCloudformationTemplate},
 	}
 
 	for _, pair := range templatePairs {

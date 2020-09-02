@@ -59,7 +59,7 @@ func TestGetInstancePublicDnsName_Success(t *testing.T) {
 	const testDnsName = "test dns name"
 	instance := &ec2.Instance{
 		NetworkInterfaces: []*ec2.InstanceNetworkInterface{
-			&ec2.InstanceNetworkInterface{
+			{
 				Association: &ec2.InstanceNetworkInterfaceAssociation{
 					PublicDnsName: aws.String(testDnsName),
 				},
@@ -89,7 +89,7 @@ func TestGetInstancePublicDnsName_NoNetworkInterface(t *testing.T) {
 func TestGetInstancePublicDnsName_NoDnsNameInNetworkInterface(t *testing.T) {
 	instance := &ec2.Instance{
 		NetworkInterfaces: []*ec2.InstanceNetworkInterface{
-			&ec2.InstanceNetworkInterface{
+			{
 				Association: &ec2.InstanceNetworkInterfaceAssociation{},
 			},
 		},

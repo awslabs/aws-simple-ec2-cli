@@ -47,43 +47,43 @@ var testSubnetIds = []string{
 }
 
 var mockedResources = []*cloudformation.StackResource{
-	&cloudformation.StackResource{
+	{
 		ResourceType:       aws.String(cfn.ResourceTypeVpc),
 		PhysicalResourceId: aws.String(testVpcId),
 	},
-	&cloudformation.StackResource{
+	{
 		ResourceType:       aws.String(cfn.ResourceTypeSubnet),
 		PhysicalResourceId: aws.String(testSubnetIds[0]),
 	},
-	&cloudformation.StackResource{
+	{
 		ResourceType:       aws.String(cfn.ResourceTypeSubnet),
 		PhysicalResourceId: aws.String(testSubnetIds[1]),
 	},
-	&cloudformation.StackResource{
+	{
 		ResourceType:       aws.String(cfn.ResourceTypeInstance),
 		PhysicalResourceId: aws.String(testInstanceId),
 	},
 }
 
 var mockedEvents = []*cloudformation.StackEvent{
-	&cloudformation.StackEvent{
+	{
 		LogicalResourceId: aws.String(cfn.DefaultStackName),
 		ResourceStatus:    aws.String(cloudformation.ResourceStatusCreateComplete),
 	},
-	&cloudformation.StackEvent{
+	{
 		LogicalResourceId: aws.String("Test Resource"),
 		ResourceStatus:    aws.String(cloudformation.ResourceStatusCreateComplete),
 	},
 }
 
 var testAzs = []*ec2.AvailabilityZone{
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("AZ1"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("AZ2"),
 	},
-	&ec2.AvailabilityZone{
+	{
 		ZoneName: aws.String("AZ3"),
 	},
 }
@@ -140,7 +140,7 @@ func TestCreateStackAndGetResources_DescribeStackResourcesError(t *testing.T) {
 func TestCreateStackAndGetResources_NoSubnet(t *testing.T) {
 	testCfn.Svc = &th.MockedCfnSvc{
 		StackResources: []*cloudformation.StackResource{
-			&cloudformation.StackResource{
+			{
 				ResourceType:       aws.String(cfn.ResourceTypeVpc),
 				PhysicalResourceId: aws.String("vpc-12345"),
 			},
@@ -157,11 +157,11 @@ func TestCreateStackAndGetResources_NoSubnet(t *testing.T) {
 func TestCreateStackAndGetResources_NoVpc(t *testing.T) {
 	testCfn.Svc = &th.MockedCfnSvc{
 		StackResources: []*cloudformation.StackResource{
-			&cloudformation.StackResource{
+			{
 				ResourceType:       aws.String(cfn.ResourceTypeSubnet),
 				PhysicalResourceId: aws.String("subnet-12345"),
 			},
-			&cloudformation.StackResource{
+			{
 				ResourceType:       aws.String(cfn.ResourceTypeSubnet),
 				PhysicalResourceId: aws.String("subnet-67890"),
 			},

@@ -38,9 +38,9 @@ func TestBuildTable(t *testing.T) {
 `
 
 	data := [][]string{
-		[]string{"Row 1", "Element 1", "Element 2"},
-		[]string{"Row 2", "Element 3", "Element 4"},
-		[]string{"Row 3", "Element 5", "Element 6"},
+		{"Row 1", "Element 1", "Element 2"},
+		{"Row 2", "Element 3", "Element 4"},
+		{"Row 3", "Element 5", "Element 6"},
 	}
 
 	header := []string{"Row Num", "Elements 1", "Elements 2"}
@@ -55,35 +55,35 @@ func TestBuildTable(t *testing.T) {
 
 func TestAppendTemplateEbs(t *testing.T) {
 	correctData := [][]string{
-		[]string{"EBS Volumes", "dev1(gp2): 16 GiB"},
-		[]string{"", "dev2(gp2)"},
-		[]string{"", "dev3: 32 GiB"},
-		[]string{"", "dev4"},
+		{"EBS Volumes", "dev1(gp2): 16 GiB"},
+		{"", "dev2(gp2)"},
+		{"", "dev3: 32 GiB"},
+		{"", "dev4"},
 	}
 
 	data := [][]string{}
 
 	mappings := []*ec2.LaunchTemplateBlockDeviceMapping{
-		&ec2.LaunchTemplateBlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev1"),
 			Ebs: &ec2.LaunchTemplateEbsBlockDevice{
 				VolumeType: aws.String("gp2"),
 				VolumeSize: aws.Int64(16),
 			},
 		},
-		&ec2.LaunchTemplateBlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev2"),
 			Ebs: &ec2.LaunchTemplateEbsBlockDevice{
 				VolumeType: aws.String("gp2"),
 			},
 		},
-		&ec2.LaunchTemplateBlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev3"),
 			Ebs: &ec2.LaunchTemplateEbsBlockDevice{
 				VolumeSize: aws.Int64(32),
 			},
 		},
-		&ec2.LaunchTemplateBlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev4"),
 		},
 	}
@@ -101,35 +101,35 @@ func TestAppendTemplateEbs(t *testing.T) {
 
 func TestAppendEbs(t *testing.T) {
 	correctData := [][]string{
-		[]string{"EBS Volumes", "dev1(gp2): 16 GiB"},
-		[]string{"", "dev2(gp2)"},
-		[]string{"", "dev3: 32 GiB"},
-		[]string{"", "dev4"},
+		{"EBS Volumes", "dev1(gp2): 16 GiB"},
+		{"", "dev2(gp2)"},
+		{"", "dev3: 32 GiB"},
+		{"", "dev4"},
 	}
 
 	data := [][]string{}
 
 	mappings := []*ec2.BlockDeviceMapping{
-		&ec2.BlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev1"),
 			Ebs: &ec2.EbsBlockDevice{
 				VolumeType: aws.String("gp2"),
 				VolumeSize: aws.Int64(16),
 			},
 		},
-		&ec2.BlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev2"),
 			Ebs: &ec2.EbsBlockDevice{
 				VolumeType: aws.String("gp2"),
 			},
 		},
-		&ec2.BlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev3"),
 			Ebs: &ec2.EbsBlockDevice{
 				VolumeSize: aws.Int64(32),
 			},
 		},
-		&ec2.BlockDeviceMapping{
+		{
 			DeviceName: aws.String("dev4"),
 		},
 	}
@@ -147,23 +147,23 @@ func TestAppendEbs(t *testing.T) {
 
 func TestAppendSecurityGroups(t *testing.T) {
 	correctData := [][]string{
-		[]string{"Security Group", "Security Group 1(sg-12345)"},
-		[]string{"", "sg-67890"},
+		{"Security Group", "Security Group 1(sg-12345)"},
+		{"", "sg-67890"},
 	}
 
 	data := [][]string{}
 
 	securityGroups := []*ec2.SecurityGroup{
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String("sg-12345"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("Security Group 1"),
 				},
 			},
 		},
-		&ec2.SecurityGroup{
+		{
 			GroupId: aws.String("sg-67890"),
 		},
 	}
@@ -180,35 +180,35 @@ func TestAppendSecurityGroups(t *testing.T) {
 }
 
 var mockedNetworkInterfaces = []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
-	&ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
+	{
 		SubnetId: aws.String("subnet-12345"),
 	},
-	&ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
+	{
 		SubnetId: aws.String("subnet-67890"),
 	},
 }
 
 func TestAppendTemplateNetworkInterfaces_Success(t *testing.T) {
 	correctData := [][]string{
-		[]string{"Subnets", "1.Subnet 1(vpc-12345:subnet-12345)"},
-		[]string{"", "2.vpc-67890:subnet-67890"},
+		{"Subnets", "1.Subnet 1(vpc-12345:subnet-12345)"},
+		{"", "2.vpc-67890:subnet-67890"},
 	}
 
 	data := [][]string{}
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
-			&ec2.Subnet{
+			{
 				SubnetId: aws.String("subnet-12345"),
 				VpcId:    aws.String("vpc-12345"),
 				Tags: []*ec2.Tag{
-					&ec2.Tag{
+					{
 						Key:   aws.String("Name"),
 						Value: aws.String("Subnet 1"),
 					},
 				},
 			},
-			&ec2.Subnet{
+			{
 				SubnetId: aws.String("subnet-67890"),
 				VpcId:    aws.String("vpc-67890"),
 			},
@@ -232,7 +232,7 @@ func TestAppendTemplateNetworkInterfaces_Success(t *testing.T) {
 
 func TestAppendTemplateNetworkInterfaces_NoNetworkInterface(t *testing.T) {
 	correctData := [][]string{
-		[]string{"Subnets", "not specified"},
+		{"Subnets", "not specified"},
 	}
 	data := [][]string{}
 
@@ -266,10 +266,10 @@ func TestAppendTemplateNetworkInterfaces_ApiError(t *testing.T) {
 
 func TestAppendInstances(t *testing.T) {
 	correctData := [][]string{
-		[]string{"1.", "Instance 2(i-67890)", "", ""},
-		[]string{"2.", "Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
-		[]string{"", "", "CreatedTime", "just now"},
-		[]string{"3.", "i-09876", "", ""},
+		{"1.", "Instance 2(i-67890)", "", ""},
+		{"2.", "Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
+		{"", "", "CreatedTime", "just now"},
+		{"3.", "i-09876", "", ""},
 	}
 	correctOptions := []string{
 		"i-67890",
@@ -282,42 +282,42 @@ func TestAppendInstances(t *testing.T) {
 	addedInstanceIds := []string{}
 
 	instances := []*ec2.Instance{
-		&ec2.Instance{
+		{
 			InstanceId: aws.String("i-12345"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("Instance 1"),
 				},
 			},
 		},
-		&ec2.Instance{
+		{
 			InstanceId: aws.String("i-67890"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("Instance 2"),
 				},
 			},
 		},
-		&ec2.Instance{
+		{
 			InstanceId: aws.String("i-54321"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("Instance 3"),
 				},
-				&ec2.Tag{
+				{
 					Key:   aws.String("CreatedBy"),
 					Value: aws.String("simple-ec2"),
 				},
-				&ec2.Tag{
+				{
 					Key:   aws.String("CreatedTime"),
 					Value: aws.String("just now"),
 				},
 			},
 		},
-		&ec2.Instance{
+		{
 			InstanceId: aws.String("i-09876"),
 		},
 	}

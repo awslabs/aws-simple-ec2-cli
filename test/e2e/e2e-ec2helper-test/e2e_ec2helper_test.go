@@ -14,8 +14,9 @@
 package ec2helper_e2e
 
 import (
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/ec2"
 
 	"simple-ec2/pkg/cfn"
 	"simple-ec2/pkg/config"

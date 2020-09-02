@@ -105,15 +105,15 @@ func (c Cfn) CreateStack(stackName, template string, zones []*ec2.AvailabilityZo
 
 	if zones != nil && len(zones) > 0 {
 		input.Parameters = []*cloudformation.Parameter{
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ0"),
 				ParameterValue: zones[0].ZoneName,
 			},
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ1"),
 				ParameterValue: zones[1].ZoneName,
 			},
-			&cloudformation.Parameter{
+			{
 				ParameterKey:   aws.String("AZ2"),
 				ParameterValue: zones[2].ZoneName,
 			},

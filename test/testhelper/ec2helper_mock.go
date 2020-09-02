@@ -50,32 +50,32 @@ type MockedEC2Svc struct {
 
 func (e *MockedEC2Svc) New() {
 	e.Subnets = []*ec2.Subnet{
-		&ec2.Subnet{
+		{
 			SubnetId: aws.String("subnet-12345"),
 			VpcId:    aws.String("vpc-12345"),
 			Tags: []*ec2.Tag{
-				&ec2.Tag{
+				{
 					Key:   aws.String("Name"),
 					Value: aws.String("Subnet 1"),
 				},
 			},
 		},
-		&ec2.Subnet{
+		{
 			SubnetId: aws.String("subnet-67890"),
 			VpcId:    aws.String("vpc-67890"),
 		},
 	}
 	e.Regions = []*ec2.Region{
-		&ec2.Region{
+		{
 			RegionName: aws.String("region-a"),
 		},
-		&ec2.Region{
+		{
 			RegionName: aws.String("region-b"),
 		},
 	}
 	e.AvailabilityZones = []*ec2.AvailabilityZone{
-		&ec2.AvailabilityZone{},
-		&ec2.AvailabilityZone{},
+		{},
+		{},
 	}
 }
 
@@ -305,7 +305,7 @@ func (e *MockedEC2Svc) AuthorizeSecurityGroupIngress(input *ec2.AuthorizeSecurit
 func (e *MockedEC2Svc) DescribeInstancesPages(input *ec2.DescribeInstancesInput, fn func(*ec2.DescribeInstancesOutput, bool) bool) error {
 	output := &ec2.DescribeInstancesOutput{
 		Reservations: []*ec2.Reservation{
-			&ec2.Reservation{
+			{
 				Instances: e.Instances,
 			},
 		},
@@ -325,7 +325,7 @@ func (e *MockedEC2Svc) CreateTags(input *ec2.CreateTagsInput) (*ec2.CreateTagsOu
 func (e *MockedEC2Svc) RunInstances(input *ec2.RunInstancesInput) (*ec2.Reservation, error) {
 	output := &ec2.Reservation{
 		Instances: []*ec2.Instance{
-			&ec2.Instance{
+			{
 				InstanceId: aws.String("i-12345"),
 			},
 		},
