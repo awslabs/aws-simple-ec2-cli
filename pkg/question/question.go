@@ -165,7 +165,7 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 	}
 
 	optionsText := table.BuildTable(data, []string{"Region", "Description", "Region", "Description"})
-	question := "Select the region you wish to launch the instance: "
+	question := "Select the region: "
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
