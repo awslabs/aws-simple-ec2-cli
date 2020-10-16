@@ -131,7 +131,7 @@ func AskQuestion(input *AskQuestionInput) string {
 func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 	defaultRegion := h.Sess.Config.Region
 	regionDescription := getRegionDescriptions()
-	const regionPerRow = 2
+	const regionPerRow = 1
 	const elementPerRegion = 2
 
 	// Get all enabled regions and make sure no error
@@ -164,7 +164,7 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 		}
 	}
 
-	optionsText := table.BuildTable(data, []string{"Region", "Description", "Region", "Description"})
+	optionsText := table.BuildTable(data, []string{"Region", "Description"})
 	question := "Select the region: "
 
 	answer := AskQuestion(&AskQuestionInput{
