@@ -37,24 +37,40 @@ In order to launch a new EC2 instance, customers need to specify a lot of option
 - Config file for more convenient launch
 
 ## Installation and Configuration
+1. Install AWS CLI
 
-1. Install AWS Simple EC2 CLI
-
-```
-go install simple-ec2
-```
-
-2. Install sshpass (1.06+)
-
-To install sshpass, you can refer to this [guide](https://gist.github.com/arunoda/7790979). Note that sshpass 1.05, which is commonly used, is not compatible with this tool. 
-
-3. Install AWS CLI
-
-To execute the CLI, you will need AWS credentials configured. Take a look at the [AWS CLI configuration documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#config-settings-and-precedence) for details on the various ways to configure credentials. An easy way to try out the ec2-instance-selector CLI is to populate the following environment variables with your AWS API credentials.
+To execute the CLI, you will need AWS credentials configured. Take a look at the [AWS CLI configuration documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#config-settings-and-precedence) for details on the various ways to configure credentials. Alternatively, you can try out the AWS Simple EC2 CLI by populating following environment variables:
 
 ```
 export AWS_ACCESS_KEY_ID="..."
 export AWS_SECRET_ACCESS_KEY="..."
+# Set default Region (optional)
+export AWS_REGION="us-east-1" 
+```
+2. Install sshpass (1.06+)
+
+To install sshpass (1.06+), you can refer to this [guide](https://gist.github.com/arunoda/7790979). Please note install sshpass version higher than 1.06. 
+
+3. Install AWS Simple EC2 CLI w/ Curl
+#### MacOS/Linux
+```
+
+curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
+chmod +x ez-ec2
+```
+
+#### ARM Linux
+```
+curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-linux-arm
+```
+
+```
+curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-linux-arm64
+```
+
+#### Windows
+```
+curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-windows-amd64.exe
 ```
 
 ## Examples
