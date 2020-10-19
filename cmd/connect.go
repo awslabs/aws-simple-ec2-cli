@@ -107,7 +107,7 @@ func connectNonInteractive(h *ec2helper.EC2Helper) {
 	}
 }
 
-// Validate flags using some simple rules. Return true if the flags are validated, false otherwise
+// Validate flags using simple rules. Return true if the flags are validated, false otherwise
 func ValidateConnectFlags() bool {
 	if !isInteractive {
 		if instanceIdConnectFlag == "" && regionFlag == "" {
