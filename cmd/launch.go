@@ -66,7 +66,7 @@ func launch(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Start a new session, with the default crendentials and config loading
+	// Start a new session, with the default credentials and config loading
 	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
@@ -290,7 +290,7 @@ func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.Si
 
 // Launch an instance with a launch template
 func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
-	confirmation, err := question.AskComfirmationWithTemplate(h, simpleConfig)
+	confirmation, err := question.AskConfirmationWithTemplate(h, simpleConfig)
 	if cli.ShowError(err, "Asking confirmation with launch template failed") {
 		return
 	}

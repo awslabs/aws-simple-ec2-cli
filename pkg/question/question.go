@@ -749,8 +749,8 @@ func AskSecurityGroupPlaceholder() string {
 	return answer
 }
 
-// Print comfirmation information for instance launch and ask for comfirmation
-func AskComfirmationWithTemplate(h *ec2helper.EC2Helper,
+// Print confirmation information for instance launch and ask for confirmation
+func AskConfirmationWithTemplate(h *ec2helper.EC2Helper,
 	simpleConfig *config.SimpleInfo) (*string, error) {
 	versions, err := h.GetLaunchTemplateVersions(simpleConfig.LaunchTemplateId,
 		&simpleConfig.LaunchTemplateVersion)
