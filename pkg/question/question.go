@@ -1035,6 +1035,9 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 
 	optionsText := table.BuildTable(data, []string{"Option", "Instance", "Tag-Key", "Tag-Value"})
 	question := "Select the instance you want to terminate: "
+	if len(addedInstanceIds) > 0 {
+		question = "If you wish to terminate multiple instance(s), add from the following: "
+	}
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
