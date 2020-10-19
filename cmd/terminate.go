@@ -50,7 +50,7 @@ func terminate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Start a new session, with the default crendentials and config loading
+	// Start a new session, with the default credentials and config loading
 	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)

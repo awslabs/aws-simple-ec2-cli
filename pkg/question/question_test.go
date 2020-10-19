@@ -719,7 +719,7 @@ func TestAskSecurityGroupPlaceholder(t *testing.T) {
 	cleanupQuestionTest()
 }
 
-func TestAskComfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
+func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
 	const testAnswer = cli.ResponseYes
@@ -744,7 +744,7 @@ func TestAskComfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 
 	initQuestionTest(t, testAnswer+"\n")
 
-	answer, err := question.AskComfirmationWithTemplate(testEC2, testSimpleConfig)
+	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
 	if err != nil {
 		t.Errorf(th.UnexpectedErrorFormat, err)
 	} else if *answer != testAnswer {
@@ -754,7 +754,7 @@ func TestAskComfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 	cleanupQuestionTest()
 }
 
-func TestAskComfirmationWithTemplate_Success_Overriding(t *testing.T) {
+func TestAskConfirmationWithTemplate_Success_Overriding(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
 	const testAnswer = cli.ResponseYes
@@ -782,7 +782,7 @@ func TestAskComfirmationWithTemplate_Success_Overriding(t *testing.T) {
 
 	initQuestionTest(t, testAnswer+"\n")
 
-	answer, err := question.AskComfirmationWithTemplate(testEC2, testSimpleConfig)
+	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
 	if err != nil {
 		t.Errorf(th.UnexpectedErrorFormat, err)
 	} else if *answer != testAnswer {
@@ -792,7 +792,7 @@ func TestAskComfirmationWithTemplate_Success_Overriding(t *testing.T) {
 	cleanupQuestionTest()
 }
 
-func TestAskComfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
+func TestAskConfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
 
@@ -822,7 +822,7 @@ func TestAskComfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 
 	initQuestionTest(t, cli.ResponseYes+"\n")
 
-	_, err := question.AskComfirmationWithTemplate(testEC2, testSimpleConfig)
+	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
 	if err == nil {
 		t.Error(th.ExpectErrorMsg)
 	}
@@ -830,7 +830,7 @@ func TestAskComfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 	cleanupQuestionTest()
 }
 
-func TestAskComfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t *testing.T) {
+func TestAskConfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeLaunchTemplateVersionsPagesError: errors.New("Test error"),
 	}
@@ -839,7 +839,7 @@ func TestAskComfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t 
 
 	initQuestionTest(t, cli.ResponseYes+"\n")
 
-	_, err := question.AskComfirmationWithTemplate(testEC2, testSimpleConfig)
+	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
 	if err == nil {
 		t.Error(th.ExpectErrorMsg)
 	}
