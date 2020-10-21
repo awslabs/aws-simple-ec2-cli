@@ -96,8 +96,12 @@ func terminateInteractive(h *ec2helper.EC2Helper) {
 		fmt.Println("No instance available to terminate in this region")
 		return
 	}
+	confirmationAnswer := question.AskTerminationConfirmation(instanceIds)
+	isConfirmed := confirmationAnswer == cli.ResponseYes
 
-	cli.ShowError(h.TerminateInstances(instanceIds), "Terminating instances failed")
+	if isConfirmed {
+		cli.ShowError(h.TerminateInstances(instanceIds), "Terminating instances failed")
+	}
 }
 
 // Terminate instances non-interactively
