@@ -41,21 +41,17 @@ func init() {
 		"The region in which the instances you want to terminate locates")
 	terminateCmd.Flags().StringSliceVarP(&instanceIdFlag, "instance-ids", "n", nil,
 		"The instance ids of the instances you want to terminate")
-	terminateCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
 }
 
 // The main function
 func terminate(cmd *cobra.Command, args []string) {
-	if !ValidateTerminateFlags() {
-		return
-	}
-
 	// Start a new session, with the default credentials and config loading
-	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
+	sess := session.Must(session.NewSessionWithOptions(
+		session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
 
-	if isInteractive {
+	if instanceIdFlag == nil {
 		terminateInteractive(h)
 	} else {
 		terminateNonInteractive(h)
@@ -113,19 +109,4 @@ func terminateNonInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	cli.ShowError(h.TerminateInstances(instanceIdFlag), "Terminating instances failed")
-}
-
-// Validate flags using some simple rules. Return true if the flags are validated, false otherwise
-func ValidateTerminateFlags() bool {
-	if !isInteractive && instanceIdFlag == nil && regionFlag == "" {
-		fmt.Println("Not in interactive mode and no flag is specified")
-		return false
-	}
-
-	if !isInteractive && instanceIdFlag == nil {
-		fmt.Println("Not in interactive mode and instance ids are not specified")
-		return false
-	}
-
-	return true
 }

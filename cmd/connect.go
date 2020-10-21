@@ -14,7 +14,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"simple-ec2/pkg/cli"
@@ -42,21 +41,18 @@ func init() {
 		"The region in which the instance you want to connect locates")
 	connectCmd.Flags().StringVarP(&instanceIdConnectFlag, "instance-id", "n", "",
 		"The instance id of the instance you want to connect to")
-	connectCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
 }
 
 // The main function
 func connect(cmd *cobra.Command, args []string) {
-	if !ValidateConnectFlags() {
-		return
-	}
-
 	// Start a new session, with the default credentials and config loading
-	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
+	sess := session.Must(session.NewSessionWithOptions(
+		session.Options{SharedConfigState: session.SharedConfigEnable}))
+
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
 
-	if isInteractive {
+	if instanceIdConnectFlag == "" {
 		connectInteractive(h)
 	} else {
 		connectNonInteractive(h)
@@ -105,22 +101,6 @@ func connectNonInteractive(h *ec2helper.EC2Helper) {
 	if cli.ShowError(err, "Connecting to instance failed") {
 		return
 	}
-}
-
-// Validate flags using simple rules. Return true if the flags are validated, false otherwise
-func ValidateConnectFlags() bool {
-	if !isInteractive {
-		if instanceIdConnectFlag == "" && regionFlag == "" {
-			fmt.Println("Not in interactive mode and no flag is specified")
-			return false
-		}
-		if instanceIdConnectFlag == "" {
-			fmt.Println("Not in interactive mode and instance id is not specified")
-			return false
-		}
-	}
-
-	return true
 }
 
 // Get the information of the instance and connect to it
