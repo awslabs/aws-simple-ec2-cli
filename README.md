@@ -13,7 +13,7 @@
 	<img src="https://goreportcard.com/badge/github.com/awslabs/aws-simple-ec2-cli" alt="go-report-card">
 	</a>
   <a href="https://travis-ci.com/awslabs/aws-simple-ec2-cli">
-	<img src="https://travis-ci.com/awslabs/aws-simple-ec2-cli.svg?branch=master" alt="build-status">
+	<img src="https://travis-ci.com/awslabs/aws-simple-ec2-cli.svg?branch=main" alt="build-status">
   </a>
 </p>
 
