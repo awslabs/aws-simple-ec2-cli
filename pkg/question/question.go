@@ -1047,3 +1047,20 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 
 	return &answer, err
 }
+
+// AskTerminationConfirmation confirms if the user wants to terminate the selected instanceIds
+func AskTerminationConfirmation(instanceIds []string) string {
+	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
+
+	optionsText := yesNoOption + "\n"
+	question := fmt.Sprintf("Are you sure you want to terminate %d instance(s): %s ", len(instanceIds), instanceIds)
+
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String(cli.ResponseNo),
+		OptionsString:  &optionsText,
+		StringOptions:  stringOptions,
+	})
+
+	return answer
+}
