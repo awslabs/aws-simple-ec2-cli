@@ -34,7 +34,6 @@ import (
 )
 
 const userName = "ec2-user"
-const passPhrase = "simple-ec2"
 
 // Push an SSH key to an EC2 instance
 func SendSSHPublicKey(sess *session.Session, availabilityZone, instanceId,
@@ -66,13 +65,9 @@ func GenerateSSHKeyPair() (publicKeyString, privateKeyString *string, err error)
 	}
 
 	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-	privateKeyPEM, err := x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, []byte(passPhrase), x509.PEMCipherAES256)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	var private bytes.Buffer
-	if err := pem.Encode(&private, privateKeyPEM); err != nil {
+	if err := pem.Encode(&private, block); err != nil {
 		return nil, nil, err
 	}
 
@@ -102,19 +97,8 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, exitAtOnce bool)
 		return err
 	}
 
-	/*
-		This is an ugly workaround for ssh to work on TravisCI.
-		Compare to the normal version, the workaround does the following additional steps:
-		1. Add a passphrase to the key. This is not for security but just to make the key have a passphrase.
-		2. Use sshpass to wrap ssh. Note that the version of sshpass has to be 1.06+ for flag -P to work.
-		3. Always use -oStrictHostKeyChecking=no for ssh, otherwise sshpass won't work.
-	*/
-
 	// Arguments for the ssh command
 	args := []string{
-		"-Ppassphrase",
-		fmt.Sprintf("-p%s", passPhrase),
-		"ssh",
 		fmt.Sprintf("-i%s", *keyPath),
 		fmt.Sprintf("%s@%s", userName, instanceDnsName),
 		"-oStrictHostKeyChecking=no",
@@ -125,7 +109,7 @@ func EstablishSSHConnection(privateKey, instanceDnsName string, exitAtOnce bool)
 		args = append(args, "exit")
 	}
 
-	cmd := exec.Command("sshpass", args...)
+	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	var errb bytes.Buffer

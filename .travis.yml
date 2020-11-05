@@ -6,12 +6,6 @@ before_install:
   - 'unzip awscli-bundle.zip'
   - './awscli-bundle/install -b ~/bin/aws'
   - 'export PATH=~/bin:$PATH'
-  - 'wget http://sourceforge.net/projects/sshpass/files/latest/download -O sshpass.tar.gz'
-  - 'tar -xvf sshpass.tar.gz'
-  - 'cd sshpass-1.06'
-  - './configure'
-  - 'sudo make install'
-  - 'cd ..'
 
 matrix:
   include:
