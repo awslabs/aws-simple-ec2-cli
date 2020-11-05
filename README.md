@@ -26,7 +26,7 @@
 
 ## Summary
 
-In order to launch a new EC2 instance, customers need to specify a lot of options, and it can be a slow and overwhelming task. It requires users to have an initial network stack (VPC-Id/Subnet-Id/Security-Groups), remote login, and many more . Often times, we require EC2 instance for adhoc testing for a short period of time without requiring complex networking infrastructure in place. AWS Simple EC2 CLI aims to solve this issue and make it easier for users to launch, connect and terminate EC2 instances with a single command
+In order to launch a new EC2 instance, customers need to specify a lot of options, and it can be a slow and overwhelming task. It requires users to have an initial network stack (VPC-Id/Subnet-Id/Security-Groups), remote login, and many more. Often times, we require EC2 instance for adhoc testing for a short period of time without requiring complex networking infrastructure in place. AWS Simple EC2 CLI aims to solve this issue and make it easier for users to launch, connect and terminate EC2 instances with a single command
 
 ## Major Features
 
@@ -54,7 +54,6 @@ To install sshpass (1.06+), you can refer to this [guide](https://gist.github.co
 3. Install AWS Simple EC2 CLI w/ Curl
 #### MacOS/Linux
 ```
-
 curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
 chmod +x ez-ec2
 ```
