@@ -33,6 +33,7 @@ import (
 )
 
 const yesNoOption = "[ yes / no ]"
+const userChoicePrompt = "Your Choice >> "
 
 type CheckInput func(*ec2helper.EC2Helper, string) bool
 
@@ -54,16 +55,16 @@ func AskQuestion(input *AskQuestionInput) string {
 
 	// Ask the question
 	fmt.Println()
-	fmt.Print(input.QuestionString)
+	fmt.Println(input.QuestionString)
 
 	/*
 		Print the specific representation of the default option. If no representation is sepcified,
 		just use default option's value
 	*/
 	if input.DefaultOptionRepr != nil {
-		fmt.Printf("[default: %s]", *input.DefaultOptionRepr)
+		fmt.Printf("[Press enter to choose default: %s]", *input.DefaultOptionRepr)
 	} else if input.DefaultOption != nil {
-		fmt.Printf("[default: %s]", *input.DefaultOption)
+		fmt.Printf("[Press enter to choose default: %s]", *input.DefaultOption)
 	}
 
 	fmt.Println()
@@ -71,6 +72,7 @@ func AskQuestion(input *AskQuestionInput) string {
 		fmt.Print(*input.OptionsString)
 	}
 
+	fmt.Printf(userChoicePrompt)
 	// Keep asking for user input until one valid input in entered
 	for {
 		// Read input from the user and convert CRLF to LF
@@ -109,7 +111,7 @@ func AskQuestion(input *AskQuestionInput) string {
 			}
 		}
 
-		// If an arbitray interger is allowed, try to parse the input as an integer
+		// If an arbitrary integer is allowed, try to parse the input as an integer
 		if input.AcceptAnyInteger {
 			_, err := strconv.Atoi(answer)
 			if err == nil {
@@ -132,7 +134,7 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 	defaultRegion := h.Sess.Config.Region
 	regionDescription := getRegionDescriptions()
 	const regionPerRow = 1
-	const elementPerRegion = 2
+	const elementPerRegion = 3
 
 	// Get all enabled regions and make sure no error
 	regions, err := h.GetEnabledRegions()
@@ -152,7 +154,8 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 			row = []string{}
 		}
 
-		row = append(row, fmt.Sprintf("%d.%s", index+1, *region.RegionName))
+		row = append(row, fmt.Sprintf("%d.", index+1))
+		row = append(row, fmt.Sprintf("%s", *region.RegionName))
 		desc, found := (*regionDescription)[*region.RegionName]
 		if found {
 			row = append(row, desc)
@@ -164,7 +167,7 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 		}
 	}
 
-	optionsText := table.BuildTable(data, []string{"Region", "Description"})
+	optionsText := table.BuildTable(data, []string{"Option", "Region", "Description"})
 	question := "Select the region: "
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -718,9 +721,9 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 	optionsText := table.BuildTable(data, []string{"Option", "Security Group", "Description"})
 
 	answer := AskQuestion(&AskQuestionInput{
-		QuestionString: question,
-		OptionsString:  &optionsText,
-		IndexedOptions: indexedOptions,
+		QuestionString: 	question,
+		OptionsString:  	&optionsText,
+		IndexedOptions:  	indexedOptions,
 	})
 
 	return answer
