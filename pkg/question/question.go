@@ -661,6 +661,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper) (*string, error) {
 func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string {
 	data := [][]string{}
 	indexedOptions := []string{}
+	var defaultOptionRepr, defaultOptionValue *string = nil, nil
 
 	// Add security groups to the data for table
 	if groups != nil {
@@ -684,6 +685,10 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 			groupTagName := ec2helper.GetTagName(group.Tags)
 			if groupTagName != nil {
 				groupName = fmt.Sprintf("%s(%s)", *groupTagName, *group.GroupId)
+			}
+
+			if *group.GroupName == "default" {
+				defaultOptionRepr, defaultOptionValue = &groupName, group.GroupId
 			}
 
 			data = append(data, []string{fmt.Sprintf("%d.", counter+1), groupName,
@@ -718,9 +723,11 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 	optionsText := table.BuildTable(data, []string{"Option", "Security Group", "Description"})
 
 	answer := AskQuestion(&AskQuestionInput{
-		QuestionString: question,
-		OptionsString:  &optionsText,
-		IndexedOptions: indexedOptions,
+		QuestionString: 	question,
+		DefaultOptionRepr: 	defaultOptionRepr,
+		DefaultOption:     	defaultOptionValue,
+		OptionsString:  	&optionsText,
+		IndexedOptions:  	indexedOptions,
 	})
 
 	return answer
