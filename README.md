@@ -47,11 +47,8 @@ export AWS_SECRET_ACCESS_KEY="..."
 # Set default Region (optional)
 export AWS_REGION="us-east-1" 
 ```
-2. Install sshpass (1.06+)
 
-To install sshpass (1.06+), you can refer to this [guide](https://gist.github.com/arunoda/7790979). AWS Simple EC2 CLI requires sshpass version to be higher than 1.06. 
-
-3. Install AWS Simple EC2 CLI w/ Curl
+2. Install AWS Simple EC2 CLI w/ Curl
 #### MacOS/Linux
 ```
 curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
