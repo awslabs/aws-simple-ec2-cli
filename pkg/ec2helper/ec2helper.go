@@ -685,6 +685,39 @@ func (h *EC2Helper) GetSecurityGroupsByIds(ids []string) ([]*ec2.SecurityGroup, 
 	return securityGroups, err
 }
 
+
+/*
+Get the default Security Group, given a VPC ID.
+Empty result is allowed.
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security-groups.html#default-security-group
+*/
+func (h *EC2Helper) getDefaultSecurityGroup(vpcId string) (*ec2.SecurityGroup, error) {
+	input := &ec2.DescribeSecurityGroupsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("vpc-id"),
+				Values: []*string{
+					aws.String(vpcId),
+				},
+			},
+			{
+				Name: aws.String("group-name"),
+				Values: []*string{
+					aws.String("default"),
+				},
+			},
+		},
+	}
+
+	// default security group cannot be deleted. So, the result here will always include a default security group.
+	defaultSg, err := h.getSecurityGroups(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return defaultSg[0], err
+}
+
 /*
 Get security groups by VPC id.
 Empty result is allowed.
@@ -998,19 +1031,12 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		subnet := subnets[0]
 		simpleConfig.SubnetId = *subnet.SubnetId
 
-		// Use all security groups
-		securityGroups, err := h.GetSecurityGroupsByVpc(*vpc.VpcId)
+		// Get the default security group
+		defaultSg, err := h.getDefaultSecurityGroup(*vpc.VpcId)
 		if err != nil {
 			return nil, err
 		}
-
-		if len(securityGroups) > 0 {
-			var securityGroupIds []string
-			for _, securityGroup := range securityGroups {
-				securityGroupIds = append(securityGroupIds, *securityGroup.GroupId)
-			}
-			simpleConfig.SecurityGroupIds = securityGroupIds
-		}
+		simpleConfig.SecurityGroupIds = []string{*defaultSg.GroupId}
 	}
 
 	return &simpleConfig, nil
