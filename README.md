@@ -51,22 +51,22 @@ export AWS_REGION="us-east-1"
 2. Install AWS Simple EC2 CLI w/ Curl
 #### MacOS/Linux
 ```
-curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
-chmod +x ez-ec2
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.6/simple-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
+chmod +x simple-ec2
 ```
 
 #### ARM Linux
 ```
-curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-linux-arm
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.6/simple-ec2-linux-arm
 ```
 
 ```
-curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-linux-arm64
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.6/simple-ec2-linux-arm64
 ```
 
 #### Windows
 ```
-curl -Lo ez-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.5.1/ez-ec2-windows-amd64.exe
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.6/simple-ec2-windows-amd64.exe
 ```
 
 ## Examples
