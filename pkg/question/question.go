@@ -346,7 +346,7 @@ func AskInstanceType(h *ec2helper.EC2Helper) (*string, error) {
 	return &answer, nil
 }
 
-// Ask the users to enter instace type vCPUs
+// Ask the users to enter instance type vCPUs
 func AskInstanceTypeVCpu() string {
 	question := "Please enter the amount of vCPUs (integer): "
 
@@ -511,7 +511,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 func AskKeepEbsVolume() string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
-	question := "Do you want to keep the EBS volume(s) after the instance is terminated?"
+	question := "Do you want to keep the EBS volume(s) after the instance is terminated? "
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -527,7 +527,7 @@ func AskKeepEbsVolume() string {
 func AskAutoTerminationTimerMinutes() string {
 	stringOptions := []string{cli.ResponseNo}
 	optionsText := "[ integer ] Auto-termination timer in minutes\n" + "[ no ] No auto-termination" + "\n"
-	question := "Do you want to set an auto-termination timer for the instance?"
+	question := "Do you want to set an auto-termination timer for the instance? "
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:   question,
@@ -574,7 +574,7 @@ func AskVpc(h *ec2helper.EC2Helper) (*string, error) {
 	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
 		fmt.Sprintf("Create new VPC with default CIDR and %d subnets", cfn.RequiredAvailabilityZones)})
 
-	question := "What VPC would you like to launch into?"
+	question := "What VPC would you like to launch into? "
 	optionsText := table.BuildTable(data, []string{"Option", "VPC", "CIDR Block"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -614,7 +614,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string) (*string, error) {
 	}
 
 	defaultOptionRepr, defaultOptionValue = &data[0][1], subnets[0].SubnetId
-	question := "What subnet would you like to launch into?"
+	question := "What subnet would you like to launch into? "
 	optionsText := table.BuildTable(data, []string{"Option", "Subnet", "Availability Zone", "CIDR Block"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -646,7 +646,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper) (*string, error) {
 	}
 	defaultOptionRepr, defaultOptionValue := &data[0][1], &data[0][1]
 
-	question := "What availability zone would you like to launch into?"
+	question := "What availability zone would you like to launch into? "
 	optionsText := table.BuildTable(data, []string{"Option", "Zone Name", "Zone ID"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -722,7 +722,7 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 			"Don't add any more security group"})
 	}
 
-	question := "What security group would you like to use?"
+	question := "What security group would you like to use? "
 	optionsText := table.BuildTable(data, []string{"Option", "Security Group", "Description"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -747,7 +747,7 @@ func AskSecurityGroupPlaceholder() string {
 	data = append(data, []string{fmt.Sprintf("%d.", 1), "Use the default security group"})
 	data = append(data, []string{fmt.Sprintf("%d.", 2), "Create and use a new security group for SSH"})
 
-	question := "What security group would you like to use?"
+	question := "What security group would you like to use? "
 	optionsText := table.BuildTable(data, []string{"Option", ""})
 
 	answer := AskQuestion(&AskQuestionInput{
