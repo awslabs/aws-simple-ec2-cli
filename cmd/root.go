@@ -23,8 +23,8 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "simple-ec2",
 	Short: "AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances",
-	Long: `AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances.
-	Users can easily launch an instance with or without custom configurations.`,
+	Long: "AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances. " +
+		"Users can easily launch an instance with or without custom configurations.",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("This command cannot be used alone. Please refer to simple-ec2 --help for available command combinations")
 	},

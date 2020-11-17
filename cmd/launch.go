@@ -30,8 +30,8 @@ import (
 var launchCmd = &cobra.Command{
 	Use:   "launch",
 	Short: "Launch an Amazon EC2 instance",
-	Long: `Launch an Amazon EC2 instance with the default configurations. 
-	All configurations can be overridden by configurations provided by configuration files or user input`,
+	Long: "Launch an Amazon EC2 instance with the default configurations. " +
+		"All configurations can be overridden by configurations provided by configuration files or user input.",
 	Run: launch,
 }
 
