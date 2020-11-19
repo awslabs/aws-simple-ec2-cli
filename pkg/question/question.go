@@ -900,7 +900,6 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 
 	// If edit is allowed, give all items a number and fill the indexed options
 	if allowEdit {
-		counter := 1
 		for i := 0; i < len(data); i++ {
 			// Skip region
 			if data[i][0] == cli.ResourceRegion {
@@ -928,8 +927,7 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 				} else {
 					indexedOptions = append(indexedOptions, data[i][0])
 				}
-				data[i][0] = fmt.Sprintf("%d.%s", counter, data[i][0])
-				counter++
+				data[i][0] = fmt.Sprintf("%s", data[i][0])
 			}
 		}
 	}
