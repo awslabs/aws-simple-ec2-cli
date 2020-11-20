@@ -662,6 +662,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper) (*string, error) {
 
 // Ask the users to select security groups
 func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string {
+	question := "What security group would you like to use? "
 	data := [][]string{}
 	indexedOptions := []string{}
 	var defaultOptionRepr, defaultOptionValue *string = nil, nil
@@ -717,12 +718,12 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 
 	// Add "done" option, if the added security group slice is not empty
 	if len(addedGroups) > 0 {
+		question = fmt.Sprintf("If you wish to add additional security group(s), add from the following:\nSecurity Group(s) already selected: %s", addedGroups)
 		indexedOptions = append(indexedOptions, cli.ResponseNo)
 		data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
 			"Don't add any more security group"})
 	}
 
-	question := "What security group would you like to use? "
 	optionsText := table.BuildTable(data, []string{"Option", "Security Group", "Description"})
 
 	answer := AskQuestion(&AskQuestionInput{
