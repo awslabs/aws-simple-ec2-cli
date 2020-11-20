@@ -1031,7 +1031,7 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 
 	// If no instance is available, simply don't ask
 	if len(data) <= 0 {
-		return nil, errors.New("No instance available to terminate")
+		return nil, errors.New("No instance available in selected region for termination")
 	}
 
 	// Add "done" option, if the added instance ids slice is not empty
