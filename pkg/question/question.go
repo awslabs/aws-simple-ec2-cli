@@ -1030,12 +1030,17 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	data, indexedOptions, finalCounter := table.AppendInstances(data, indexedOptions, instances,
 		addedInstanceIds)
 
-	// If no instance is available, simply don't ask
-	if len(data) <= 0 {
+	// There are no instances available for termination in selected region
+	if len(data) <= 0 && len(addedInstanceIds) == 0 {
 		return nil, errors.New("No instance available in selected region for termination")
 	}
+	
+	// Since no more instance(s) are available for termination, proceed with current selection
+	if len(data) == 0 && len(addedInstanceIds) > 0 {
+		return nil, nil
+	}
 
-	// Add "done" option, if the added instance ids slice is not empty
+	// Add "done" option, if instance(s) are already selected
 	if len(addedInstanceIds) > 0 {
 		indexedOptions = append(indexedOptions, cli.ResponseNo)
 		data = append(data, []string{fmt.Sprintf("%d.", finalCounter+1),
