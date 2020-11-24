@@ -197,6 +197,11 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 // Launch the instance non-interactively
 func launchNonInteractive(h *ec2helper.EC2Helper) {
 	simpleConfig := &config.SimpleInfo{}
+	if flagConfig.Region != "" {
+		simpleConfig.Region = flagConfig.Region
+	}
+
+	h.ChangeRegion(simpleConfig.Region)
 
 	// Try to get config from the config file
 	err := config.ReadConfig(simpleConfig, nil)
@@ -212,7 +217,6 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, &flagConfig)
 
-	h.ChangeRegion(simpleConfig.Region)
 
 	// When the flags specify a launch template
 	if flagConfig.LaunchTemplateId != "" {
