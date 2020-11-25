@@ -217,7 +217,6 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, &flagConfig)
 
-
 	// When the flags specify a launch template
 	if flagConfig.LaunchTemplateId != "" {
 		// If using a launch template, ignore the config file. Only read from the flags
