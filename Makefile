@@ -11,8 +11,8 @@ GOARCH ?= amd64
 GOPROXY ?= "https://proxy.golang.org,direct"
 SUPPORTED_PLATFORMS ?= "windows/amd64,darwin/amd64,linux/amd64,linux/arm64,linux/arm"
 SELECTOR_PKG_VERSION_VAR=github.com/awslabs/aws-simple-ec2-cli/v2/pkg/selector.versionID
-LATEST_RELEASE_TAG=$(shell git tag | tail -1)
-PREVIOUS_RELEASE_TAG=$(shell git tag | tail -2 | head -1)
+LATEST_RELEASE_TAG=$(shell git describe --tags --abbrev=0)
+PREVIOUS_RELEASE_TAG=$(shell git describe --abbrev=0 --tags `git rev-list --tags --skip=1  --max-count=1`)
 
 # The main CloudFormation template for creating a new stack during launch
 SIMPLE_EC2_CLOUDFORMATION_TEMPLATE_FILE=${MAKEFILE_PATH}/cloudformation_template.json
