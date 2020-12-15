@@ -727,11 +727,11 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 	optionsText := table.BuildTable(data, []string{"Option", "Security Group", "Description"})
 
 	answer := AskQuestion(&AskQuestionInput{
-		QuestionString: 	question,
-		DefaultOptionRepr: 	defaultOptionRepr,
-		DefaultOption:     	defaultOptionValue,
-		OptionsString:  	&optionsText,
-		IndexedOptions:  	indexedOptions,
+		QuestionString:    question,
+		DefaultOptionRepr: defaultOptionRepr,
+		DefaultOption:     defaultOptionValue,
+		OptionsString:     &optionsText,
+		IndexedOptions:    indexedOptions,
 	})
 
 	return answer
@@ -1034,7 +1034,7 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	if len(data) <= 0 && len(addedInstanceIds) == 0 {
 		return nil, errors.New("No instance available in selected region for termination")
 	}
-	
+
 	// Since no more instance(s) are available for termination, proceed with current selection
 	if len(data) == 0 && len(addedInstanceIds) > 0 {
 		return nil, nil

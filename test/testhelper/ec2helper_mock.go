@@ -127,7 +127,7 @@ func (e *MockedEC2Svc) DescribeLaunchTemplateVersionsPages(input *ec2.DescribeLa
 	versions := []*ec2.LaunchTemplateVersion{}
 
 	if input.Versions != nil {
-		// Find all templates with specified version ID and tempalte ID
+		// Find all templates with specified version ID and template ID
 		for _, versionId := range input.Versions {
 			for _, version := range e.LaunchTemplateVersions {
 				if strconv.FormatInt(*version.VersionNumber, 10) == *versionId && *version.LaunchTemplateId == templateId {
@@ -136,7 +136,7 @@ func (e *MockedEC2Svc) DescribeLaunchTemplateVersionsPages(input *ec2.DescribeLa
 			}
 		}
 	} else {
-		// Find all templates with specified tempalte ID
+		// Find all templates with specified template ID
 		for _, version := range e.LaunchTemplateVersions {
 			if *version.LaunchTemplateId == templateId {
 				versions = append(versions, version)

@@ -33,7 +33,7 @@ func BuildTable(data [][]string, header []string) string {
 	table.SetAlignment(tablewriter.ALIGN_LEFT)
 	table.SetAutoWrapText(false)
 	table.SetRowLine(true)
-	
+
 	// Fill the table with data
 	for _, v := range data {
 		table.Append(v)

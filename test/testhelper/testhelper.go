@@ -37,7 +37,7 @@ func StringSliceEqual(a, b []string) bool {
 
 	compareMap := map[string]int{}
 
-	// Add occurence to the map
+	// Add occurrence to the map
 	for _, element := range a {
 		// If element not present in the map, initialize counter
 		_, found := compareMap[element]
@@ -45,11 +45,11 @@ func StringSliceEqual(a, b []string) bool {
 			compareMap[element] = 0
 		}
 
-		// Add 1 occurence
+		// Add 1 occurrence
 		compareMap[element]++
 	}
 
-	// Subtract occurence from the map
+	// Subtract occurrence from the map
 	for _, element := range b {
 		// If element not present in the map, return false
 		_, found := compareMap[element]
@@ -57,7 +57,7 @@ func StringSliceEqual(a, b []string) bool {
 			return false
 		}
 
-		// Minus 1 occurence
+		// Minus 1 occurrence
 		compareMap[element]--
 	}
 

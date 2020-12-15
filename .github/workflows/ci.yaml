@@ -1,0 +1,62 @@
+name: Simple EC2 CLI CI and Release
+
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  DEFAULT_GO_VERSION: ^1.15
+  IS_PUSH: ${{ github.event_name == 'push' }}
+  GITHUB_USERNAME: ${{ secrets.EC2_BOT_GITHUB_USERNAME }}
+  GITHUB_TOKEN: ${{ secrets.EC2_BOT_GITHUB_TOKEN }}
+
+jobs:
+
+  buildAndTest:
+    name: Build and Test
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.DEFAULT_GO_VERSION }}
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Unit Tests
+      run: make unit-test
+    
+    - name: Lints
+      run: make spellcheck shellcheck
+
+    - name: Go Report Card Tests
+      run: make go-report-card-test
+    
+    - name: Brew Sync Dry run
+      run: make homebrew-sync-dry-run
+
+    - name: License Test
+      if: ${{ env.IS_PUSH == true }}
+      run: make license-test
+
+    - name: Build Binaries
+      run: make build-binaries
+
+    - name: Build Docker Images
+      run: make build-docker-images
+
+  release:
+    name: Release
+    runs-on: ubuntu-20.04
+    needs: [buildAndTest]
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.DEFAULT_GO_VERSION }}
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    
+    - name: Release Assets
+      run: make release

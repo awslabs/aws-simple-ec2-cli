@@ -685,7 +685,6 @@ func (h *EC2Helper) GetSecurityGroupsByIds(ids []string) ([]*ec2.SecurityGroup, 
 	return securityGroups, err
 }
 
-
 /*
 Get the default Security Group, given a VPC ID.
 Empty result is allowed.
