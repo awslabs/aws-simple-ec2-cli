@@ -34,7 +34,7 @@ In order to launch a new EC2 instance, customers need to specify a lot of option
 - Config file for more convenient launch
 
 ## Installation and Configuration
-1. Install AWS CLI
+### Install AWS CLI
 
 To execute the CLI, you will need AWS credentials configured. Take a look at the [AWS CLI configuration documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#config-settings-and-precedence) for details on the various ways to configure credentials. Alternatively, you can try out the AWS Simple EC2 CLI by populating following environment variables:
 
@@ -44,8 +44,14 @@ export AWS_SECRET_ACCESS_KEY="..."
 # Set default Region (optional)
 export AWS_REGION="us-east-1" 
 ```
+### Install w/ Homebrew
 
-2. Install AWS Simple EC2 CLI w/ Curl
+```
+brew tap aws/tap
+brew install aws-simple-ec2-cli
+```
+### Install w/ Curl
+
 #### MacOS/Linux
 ```
 curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.6.0/simple-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
