@@ -15,12 +15,12 @@ package cmd
 
 import (
 	"fmt"
-	"simple-ec2/pkg/iamhelper"
 	"strconv"
 
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/iamhelper"
 	"simple-ec2/pkg/question"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
@@ -57,6 +57,8 @@ func init() {
 	launchCmd.Flags().BoolVarP(&isSaveConfig, "save-config", "c", false, "Save config as a JSON config file")
 	launchCmd.Flags().BoolVarP(&flagConfig.KeepEbsVolumeAfterTermination, "keep-ebs", "k", false,
 		"Keep EBS volumes after instance termination")
+	launchCmd.Flags().IntVarP(&flagConfig.AutoTerminationTimerMinutes, "auto-termination-timer", "a", 0,
+		"The auto-termination timer for the instance in minutes")
 	launchCmd.Flags().StringVarP(&flagConfig.IamInstanceProfile, "iam-instance-profile", "p", "",
 		"The profile containing an IAM role to attach to the instance")
 }

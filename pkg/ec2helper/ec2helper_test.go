@@ -15,6 +15,7 @@ package ec2helper_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -305,7 +306,7 @@ func TestGetLaunchTemplateVersions_Success_OneVersion(t *testing.T) {
 	} else if *versions[0].VersionNumber != 1 || *versions[0].LaunchTemplateId != testLaunchTemplateId {
 		t.Errorf(th.IncorrectValueFormat,
 			"launch template version", testLaunchTemplateId+":1",
-			*versions[0].LaunchTemplateId+":"+string(*versions[0].VersionNumber))
+			*versions[0].LaunchTemplateId+":"+fmt.Sprint(*versions[0].VersionNumber))
 	}
 }
 

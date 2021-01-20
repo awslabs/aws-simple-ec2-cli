@@ -66,8 +66,9 @@ const testSubnetId = "s-12345"
 const testLaunchTemplateId = "lt-12345"
 const testLaunchTemplateVersion = "1"
 const testNewVPC = true
+const testIamProfile = "iam-profile"
 
-const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false}`
+const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile"}`
 
 var testSecurityGroup = []string{
 	"sg-12345",
@@ -84,6 +85,7 @@ func TestSaveConfig(t *testing.T) {
 		LaunchTemplateVersion: testLaunchTemplateVersion,
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
+		IamInstanceProfile:    testIamProfile,
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
@@ -117,6 +119,7 @@ func TestOverrideConfigWithFlags(t *testing.T) {
 		LaunchTemplateVersion: testLaunchTemplateVersion,
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
+		IamInstanceProfile:    testIamProfile,
 	}
 
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
@@ -166,6 +169,10 @@ func compareConfig(correctConfig, otherConfig *config.SimpleInfo, t *testing.T) 
 		t.Errorf("KeepEbsVolumeAfterTermination is not correct, expect: %s got %s",
 			strconv.FormatBool(correctConfig.KeepEbsVolumeAfterTermination), strconv.FormatBool(otherConfig.KeepEbsVolumeAfterTermination))
 	}
+	if correctConfig.IamInstanceProfile != otherConfig.IamInstanceProfile {
+		t.Errorf("IamInstanceProfile is not correct, expect: %s got %s",
+			correctConfig.IamInstanceProfile, otherConfig.IamInstanceProfile)
+	}
 }
 
 func TestReadConfig(t *testing.T) {
@@ -192,6 +199,7 @@ func TestReadConfig(t *testing.T) {
 		LaunchTemplateVersion: testLaunchTemplateVersion,
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
+		IamInstanceProfile:    testIamProfile,
 	}
 
 	compareConfig(correctConfig, simpleConfig, t)

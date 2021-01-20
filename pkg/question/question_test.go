@@ -17,16 +17,19 @@ import (
 	"errors"
 	"strconv"
 	"testing"
+	"time"
 
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/iamhelper"
 	"simple-ec2/pkg/question"
 	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 )
 
 var testEC2 = &ec2helper.EC2Helper{
@@ -42,8 +45,9 @@ AskQuestion Tests
 */
 
 const correctOutput = `
-This is a question[default: default option]
-These are the options`
+This is a question
+[Press enter to choose default: default option]
+These are the optionsYour Choice >> `
 
 var input = &question.AskQuestionInput{
 	QuestionString:    "This is a question",
@@ -64,7 +68,7 @@ func TestAskQuestion_StringOptionAnswer(t *testing.T) {
 
 	output := cleanupQuestionTest()
 	if output != correctOutput {
-		t.Errorf(th.IncorrectValueFormat, "question output", correctOutput+"\n", output)
+		t.Errorf(th.IncorrectValueFormat, "question output", correctOutput, output)
 	}
 
 	if answer != testResponse {
@@ -649,7 +653,8 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 
 	testSecurityGroups := []*ec2.SecurityGroup{
 		{
-			GroupId: aws.String(testGroup),
+			GroupName: aws.String("Group1"),
+			GroupId:   aws.String(testGroup),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -659,7 +664,8 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 			Description: aws.String("some description"),
 		},
 		{
-			GroupId: aws.String("sg-67890"),
+			GroupName: aws.String("Group2"),
+			GroupId:   aws.String("sg-67890"),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -669,7 +675,8 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 			Description: aws.String("some description"),
 		},
 		{
-			GroupId: aws.String("sg-67890"),
+			GroupName: aws.String("Group3"),
+			GroupId:   aws.String("sg-67890"),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -1159,6 +1166,53 @@ func TestAskInstanceTypeInstanceSelector_SelectorError(t *testing.T) {
 		t.Error(th.ExpectErrorMsg)
 	}
 
+	cleanupQuestionTest()
+}
+
+func TestAskIamProfile_Success(t *testing.T) {
+	testProfileName := "profile2"
+	testProfiles := []*iam.InstanceProfile{
+		{
+			InstanceProfileName: aws.String("profile1"),
+			InstanceProfileId:   aws.String("id1"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+		{
+			InstanceProfileName: aws.String("profile2"),
+			InstanceProfileId:   aws.String("id2"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+		{
+			InstanceProfileName: aws.String("profile3"),
+			InstanceProfileId:   aws.String("id3"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+	}
+	mockedIam := &th.MockedIAMSvc{
+		InstanceProfiles: testProfiles,
+	}
+	iam := &iamhelper.IAMHelper{Client: mockedIam}
+	initQuestionTest(t, "2\n")
+	answer, err := question.AskIamProfile(iam)
+	if err != nil {
+		t.Errorf(th.UnexpectedErrorFormat, err)
+	} else if answer != testProfileName {
+		t.Errorf(th.IncorrectValueFormat, "answer", testProfileName, answer)
+	}
+
+	cleanupQuestionTest()
+}
+
+func TestAskIamProfile_Error(t *testing.T) {
+	mockedIam := &th.MockedIAMSvc{
+		ListInstanceProfilesError: errors.New("Test error"),
+	}
+	iam := &iamhelper.IAMHelper{Client: mockedIam}
+	initQuestionTest(t, "1\n")
+	_, err := question.AskIamProfile(iam)
+	if err == nil {
+		t.Error(th.ExpectErrorMsg)
+	}
 	cleanupQuestionTest()
 }
 

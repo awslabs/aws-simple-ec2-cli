@@ -558,7 +558,7 @@ func AskIamProfile(i *iamhelper.IAMHelper) (string, error) {
 	data := [][]string{}
 	indexedOptions := []string{}
 	var optionsText string
-	if len(output.InstanceProfiles) > 0 {
+	if len(instanceProfiles) > 0 {
 		counter := 0
 		for _, profile := range instanceProfiles {
 			indexedOptions = append(indexedOptions, *profile.InstanceProfileName)
