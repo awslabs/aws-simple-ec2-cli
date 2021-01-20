@@ -44,6 +44,7 @@ type SimpleInfo struct {
 	NewVPC                        bool
 	AutoTerminationTimerMinutes   int
 	KeepEbsVolumeAfterTermination bool
+	IamInstanceProfile            string
 }
 
 /*
@@ -120,6 +121,9 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	}
 	if flagConfig.KeepEbsVolumeAfterTermination != false {
 		simpleConfig.KeepEbsVolumeAfterTermination = flagConfig.KeepEbsVolumeAfterTermination
+	}
+	if flagConfig.IamInstanceProfile != "" {
+		simpleConfig.IamInstanceProfile = flagConfig.IamInstanceProfile
 	}
 }
 

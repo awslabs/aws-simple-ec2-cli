@@ -287,16 +287,16 @@ func (h *EC2Helper) GetInstanceType(instanceType string) (*ec2.InstanceTypeInfo,
 }
 
 /*
-Get the inhstance types selected by instance selector.
+Get the instance types selected by instance selector.
 Empty result is allowed.
 */
 func (h *EC2Helper) GetInstanceTypesFromInstanceSelector(instanceSelector InstanceSelector, vcpus,
 	memoryGib int) ([]*ec2.InstanceTypeInfo, error) {
 	if vcpus <= 0 {
-		return nil, errors.New("Invalid vCPUs: " + string(vcpus))
+		return nil, errors.New("Invalid vCPUs: " + fmt.Sprint(vcpus))
 	}
 	if memoryGib <= 0 {
-		return nil, errors.New("Invalid memory: " + string(memoryGib))
+		return nil, errors.New("Invalid memory: " + fmt.Sprint(memoryGib))
 	}
 
 	vcpusLower, vcpusUpper := vcpus-1, vcpus+1
@@ -957,6 +957,11 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 	}
 	if simpleConfig.SecurityGroupIds != nil && len(simpleConfig.SecurityGroupIds) > 0 {
 		input.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
+	}
+	if simpleConfig.IamInstanceProfile != "" {
+		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+			Name: aws.String(simpleConfig.IamInstanceProfile),
+		}
 	}
 
 	if detailedConfig != nil {

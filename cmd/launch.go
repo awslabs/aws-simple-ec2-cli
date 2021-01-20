@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"fmt"
+	"simple-ec2/pkg/iamhelper"
 	"strconv"
 
 	"simple-ec2/pkg/cli"
@@ -56,8 +57,8 @@ func init() {
 	launchCmd.Flags().BoolVarP(&isSaveConfig, "save-config", "c", false, "Save config as a JSON config file")
 	launchCmd.Flags().BoolVarP(&flagConfig.KeepEbsVolumeAfterTermination, "keep-ebs", "k", false,
 		"Keep EBS volumes after instance termination")
-	launchCmd.Flags().IntVarP(&flagConfig.AutoTerminationTimerMinutes, "auto-termination-timer", "a", 0,
-		"The auto-termination timer for the instance in minutes")
+	launchCmd.Flags().StringVarP(&flagConfig.IamInstanceProfile, "iam-instance-profile", "p", "",
+		"The profile containing an IAM role to attach to the instance")
 }
 
 // The main function
@@ -115,7 +116,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		return
 	}
 
-	// Ask for image ID, auto-termination timer and kepping EBS volumes after instance termination
+	// Ask for image ID, auto-termination timer, and keeping EBS volumes after instance termination
 	if simpleConfig.ImageId == "" && !ReadImageId(h, simpleConfig) {
 		return
 	}
@@ -123,6 +124,11 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	// Ask for network configuration
 	if (simpleConfig.SubnetId == "" || simpleConfig.SecurityGroupIds == nil) &&
 		!ReadNetworkConfiguration(h, simpleConfig) {
+		return
+	}
+
+	// Ask for IAM profile
+	if simpleConfig.IamInstanceProfile == "" && !ReadIamProfile(h, simpleConfig) {
 		return
 	}
 
@@ -145,7 +151,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 
 		switch confirmation {
-		// Ask quetions to modify the config
+		// Ask questions to modify the config
 		case cli.ResourceVpc:
 			if !ReadNetworkConfiguration(h, simpleConfig) {
 				return
@@ -533,7 +539,7 @@ func ReadSecurityGroups(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo,
 
 /*
 Ask user input for security group placeholder.
-The user can select from provided options or create new resoureces.
+The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
 func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
@@ -543,6 +549,23 @@ func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.S
 		securityGroupPlaceholder,
 	}
 
+	return true
+}
+
+/*
+Ask user input for IAM profile. The user can select from provided options.
+Return true if the function is executed successfully, false otherwise
+*/
+func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+	// Ask for iam profile
+	iam := iamhelper.New(h.Sess)
+	iamAnswer, err := question.AskIamProfile(iam)
+	if cli.ShowError(err, "Asking IAM failed") {
+		return false
+	}
+	if iamAnswer != cli.ResponseNo {
+		simpleConfig.IamInstanceProfile = iamAnswer
+	}
 	return true
 }
 
