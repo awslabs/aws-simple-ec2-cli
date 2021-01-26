@@ -32,7 +32,9 @@ func TestBuildTable(t *testing.T) {
 | ROW NUM | ELEMENTS 1 | ELEMENTS 2 |
 +---------+------------+------------+
 | Row 1   | Element 1  | Element 2  |
++---------+------------+------------+
 | Row 2   | Element 3  | Element 4  |
++---------+------------+------------+
 | Row 3   | Element 5  | Element 6  |
 +---------+------------+------------+
 `

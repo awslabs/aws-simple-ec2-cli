@@ -25,11 +25,13 @@ import (
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/iamhelper"
 	"simple-ec2/pkg/table"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 )
 
 const yesNoOption = "[ yes / no ]"
@@ -58,7 +60,7 @@ func AskQuestion(input *AskQuestionInput) string {
 	fmt.Println(input.QuestionString)
 
 	/*
-		Print the specific representation of the default option. If no representation is sepcified,
+		Print the specific representation of the default option. If no representation is specified,
 		just use default option's value
 	*/
 	if input.DefaultOptionRepr != nil {
@@ -286,7 +288,7 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string) (
 
 // Ask whether the users want to enter instance type themselves or seek advice
 func AskIfEnterInstanceType(h *ec2helper.EC2Helper) (*string, error) {
-	// Find the deault free instance type. If no default instance type available, simply don't give default option
+	// Find the default free instance type. If no default instance type available, simply don't give default option
 	var defaultInstanceTypeText *string
 	defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
 	if err != nil {
@@ -521,6 +523,70 @@ func AskKeepEbsVolume() string {
 	})
 
 	return answer
+}
+
+// Ask if the users want to attach IAM profile to instance
+func AskIamProfile(i *iamhelper.IAMHelper) (string, error) {
+	input := &iam.ListInstanceProfilesInput{
+		MaxItems: aws.Int64(10),
+	}
+
+	output, err := i.Client.ListInstanceProfiles(input)
+	if err != nil {
+		return "", err
+	}
+
+	instanceProfiles := output.InstanceProfiles
+	for {
+		if *output.IsTruncated {
+			input = &iam.ListInstanceProfilesInput{
+				MaxItems: aws.Int64(10),
+				Marker:   aws.String(*output.Marker),
+			}
+			output, err = i.Client.ListInstanceProfiles(input)
+			if err != nil {
+				return "", err
+			}
+			if len(output.InstanceProfiles) > 0 {
+				instanceProfiles = append(instanceProfiles, output.InstanceProfiles...)
+			}
+		} else {
+			break
+		}
+	}
+
+	data := [][]string{}
+	indexedOptions := []string{}
+	var optionsText string
+	if len(instanceProfiles) > 0 {
+		counter := 0
+		for _, profile := range instanceProfiles {
+			indexedOptions = append(indexedOptions, *profile.InstanceProfileName)
+			data = append(data, []string{fmt.Sprintf("%d.", counter+1), *profile.InstanceProfileName, *profile.InstanceProfileId,
+				profile.CreateDate.String()})
+			counter++
+		}
+	} else {
+		optionsText = "No IAM Profiles available\n"
+	}
+
+	// Add the do not attach IAM profile option at the end
+	defaultOptionRepr, defaultOptionValue := "Do not attach IAM profile", cli.ResponseNo
+	indexedOptions = append(indexedOptions, defaultOptionValue)
+	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1), defaultOptionRepr, "", ""})
+	optionsText = table.BuildTable(data, []string{"Option", "PROFILE NAME", "PROFILE ID",
+		"Creation Date"})
+
+	question := "Please select an IAM Profile: "
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString:    question,
+		DefaultOptionRepr: &defaultOptionRepr,
+		DefaultOption:     &defaultOptionValue,
+		OptionsString:     &optionsText,
+		IndexedOptions:    indexedOptions,
+	})
+
+	return answer, nil
 }
 
 // Ask if the users want to set an auto-termination timer for the instance
@@ -941,6 +1007,11 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 	if detailedConfig.InstanceTypeInfo.InstanceStorageInfo != nil {
 		data = append(data, []string{"Instance Storage", fmt.Sprintf("%d GB",
 			*detailedConfig.InstanceTypeInfo.InstanceStorageInfo.TotalSizeInGB)})
+	}
+
+	// Append instance profile, if applicable
+	if simpleConfig.IamInstanceProfile != "" {
+		data = append(data, []string{cli.ResourceIamInstanceProfile, simpleConfig.IamInstanceProfile})
 	}
 
 	configText := table.BuildTable(data, nil)

@@ -37,6 +37,7 @@ const (
 	ResourceKeepEbsVolume            = "Keep EBS Volume(s) After Termination"
 	ResourceSecurityGroup            = "Security Group"
 	ResourceSecurityGroupPlaceholder = "Security Group Placeholder"
+	ResourceIamInstanceProfile       = "IAM Instance Profile"
 )
 
 // Show errors if there are any. Return true when there are errors, and false when there is none
