@@ -17,8 +17,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"sort"
+	"strings"
 
 	"simple-ec2/pkg/cfn"
 	"simple-ec2/pkg/cli"
@@ -890,6 +892,7 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 	var subnet *ec2.Subnet
 	var vpc *ec2.Vpc
 	var securityGroups []*ec2.SecurityGroup
+	var tagSpecs []*ec2.TagSpecification
 	var err error
 	if !simpleConfig.NewVPC {
 		// Decide format of vpc and subnet
@@ -909,10 +912,38 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 		}
 	}
 
+	// Add simple-ec2 tags to created resources
+	simpleEc2Tags := getSimpleEc2Tags()
+	if simpleConfig.UserTags != nil {
+		for _, rawTag := range simpleConfig.UserTags {
+			kvSlice := strings.Split(rawTag, ":")
+			if len(kvSlice) == 2 {
+				simpleEc2Tags = append(simpleEc2Tags, &ec2.Tag{
+					Key:   aws.String(kvSlice[0]),
+					Value: aws.String(kvSlice[1]),
+				})
+			}
+		}
+	}
+	tagSpecs = []*ec2.TagSpecification{
+		{
+			ResourceType: aws.String("instance"),
+			Tags:         simpleEc2Tags,
+		},
+	}
 	image, err := h.GetImageById(simpleConfig.ImageId)
 	if err != nil {
 		return nil, err
+	} else {
+		if *image.RootDeviceType == "ebs" {
+			tagSpecs = append(tagSpecs,
+				&ec2.TagSpecification{
+					ResourceType: aws.String("volume"),
+					Tags:         simpleEc2Tags,
+				})
+		}
 	}
+
 
 	instanceTypeInfo, err := h.GetInstanceType(simpleConfig.InstanceType)
 	if err != nil {
@@ -925,6 +956,7 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 		Subnet:           subnet,
 		InstanceTypeInfo: instanceTypeInfo,
 		SecurityGroups:   securityGroups,
+		TagSpecs:         tagSpecs,
 	}
 
 	return &detailedConfig, nil
@@ -964,6 +996,7 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 		}
 	}
 
+	setAutoTermination := false
 	if detailedConfig != nil {
 		// Set all EBS volumes not to be deleted, if specified
 		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
@@ -975,13 +1008,28 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 			}
 		}
 
-		// Set auto-termination timer
-		if IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0 {
+		// Set auto-termination
+		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
+		if setAutoTermination {
 			input.InstanceInitiatedShutdownBehavior = aws.String("terminate")
-			userData := []byte(fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes",
-				simpleConfig.AutoTerminationTimerMinutes))
-			input.UserData = aws.String(base64.StdEncoding.EncodeToString(userData))
 		}
+	}
+
+	if simpleConfig.UserDataFilePath != "" {
+		userDataRaw, _ := ioutil.ReadFile(simpleConfig.UserDataFilePath)
+		if setAutoTermination {
+			autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
+				simpleConfig.AutoTerminationTimerMinutes)
+			userDataLines := strings.Split(string(userDataRaw), "\n")
+			//if #!/bin/bash is first, then replace first line otherwise, prepend termination
+			if len(userDataLines) > 1 && userDataLines[0] == "#!/bin/bash" {
+				userDataLines[0] = autoTermCmd
+			} else {
+				userDataLines = append([]string{autoTermCmd}, userDataLines...)
+			}
+			userDataRaw = []byte(strings.Join(userDataLines, "\n"))
+		}
+		input.UserData = aws.String(base64.StdEncoding.EncodeToString(userDataRaw))
 	}
 
 	return input
@@ -1067,25 +1115,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 			}
 		}
 
-		// Add simple-ec2 tags to created resources
-		input.TagSpecifications = []*ec2.TagSpecification{
-			{
-				ResourceType: aws.String("instance"),
-				Tags:         getSimpleEc2Tags(),
-			},
-		}
-		image, err := h.GetImageById(simpleConfig.ImageId)
-		if err != nil {
-			return nil, err
-		} else {
-			if *image.RootDeviceType == "ebs" {
-				input.TagSpecifications = append(input.TagSpecifications,
-					&ec2.TagSpecification{
-						ResourceType: aws.String("volume"),
-						Tags:         getSimpleEc2Tags(),
-					})
-			}
-		}
+		input.TagSpecifications = detailedConfig.TagSpecs
 
 		resp, err := h.Svc.RunInstances(input)
 		if err != nil {
@@ -1234,6 +1264,23 @@ func getSimpleEc2Tags() []*ec2.Tag {
 func ValidateImageId(h *EC2Helper, imageId string) bool {
 	image, _ := h.GetImageById(imageId)
 	return image != nil
+}
+
+// Validate a filepath. Used as a function interface to validate question input
+func ValidateFilepath(h *EC2Helper, userFilePath string) bool {
+	_, err := os.Stat(userFilePath)
+	return err == nil
+}
+
+// Validate user's tag input. Used as a function interface to validate question input
+func ValidateTags(h *EC2Helper, userTags string) bool {
+	//tag1:val1,tag2:val2
+	for _, rawTag := range strings.Split(userTags, ",") { //[tag1:val1, tag2:val2]
+		if len(strings.Split(rawTag, ":")) != 2 { //[tag1,val1]
+			return false
+		}
+	}
+	return true
 }
 
 // Given an AWS platform string, tell if it's a Linux platform

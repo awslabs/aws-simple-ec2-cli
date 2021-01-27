@@ -67,13 +67,12 @@ const testLaunchTemplateId = "lt-12345"
 const testLaunchTemplateVersion = "1"
 const testNewVPC = true
 const testIamProfile = "iam-profile"
+const testUserDataFilePath = "some/path/to/userdata"
 
-const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile"}`
+var testTags = []string{"testedBy:BRYAN", "brokenBy:CBASKIN"}
+var testSecurityGroup = []string{"sg-12345", "sg-67890"}
 
-var testSecurityGroup = []string{
-	"sg-12345",
-	"sg-67890",
-}
+const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile","UserDataFilePath":"some/path/to/userdata","UserTags":["testedBy:BRYAN","brokenBy:CBASKIN"]}`
 
 func TestSaveConfig(t *testing.T) {
 	testConfig := &config.SimpleInfo{
@@ -86,6 +85,8 @@ func TestSaveConfig(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		UserDataFilePath:      testUserDataFilePath,
+		UserTags:              testTags,
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
@@ -103,6 +104,7 @@ func TestSaveConfig(t *testing.T) {
 	if expectedJson != string(readData) {
 		t.Errorf("Config file content incorrect, expect: \"%s\" got: \"%s\"",
 			expectedJson, string(readData))
+
 	}
 
 	os.Remove(testConfigFilePath)
@@ -120,6 +122,8 @@ func TestOverrideConfigWithFlags(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		UserDataFilePath:      testUserDataFilePath,
+		UserTags:              testTags,
 	}
 
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
@@ -173,6 +177,14 @@ func compareConfig(correctConfig, otherConfig *config.SimpleInfo, t *testing.T) 
 		t.Errorf("IamInstanceProfile is not correct, expect: %s got %s",
 			correctConfig.IamInstanceProfile, otherConfig.IamInstanceProfile)
 	}
+	if correctConfig.UserDataFilePath != otherConfig.UserDataFilePath {
+		t.Errorf("UserDataFilePath is not correct, expect: %s got %s",
+			correctConfig.UserDataFilePath, otherConfig.UserDataFilePath)
+	}
+	if !th.StringSliceEqual(correctConfig.UserTags, otherConfig.UserTags) {
+		t.Errorf("UserTags is not correct, expect: %s got %s",
+			correctConfig.UserTags, otherConfig.UserTags)
+	}
 }
 
 func TestReadConfig(t *testing.T) {
@@ -200,9 +212,10 @@ func TestReadConfig(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		UserDataFilePath:      testUserDataFilePath,
+		UserTags:              testTags,
 	}
 
 	compareConfig(correctConfig, simpleConfig, t)
-
 	os.Remove(testConfigFilePath)
 }

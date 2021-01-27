@@ -45,6 +45,8 @@ type SimpleInfo struct {
 	AutoTerminationTimerMinutes   int
 	KeepEbsVolumeAfterTermination bool
 	IamInstanceProfile            string
+	UserDataFilePath              string
+	UserTags                      []string
 }
 
 /*
@@ -57,6 +59,7 @@ type DetailedInfo struct {
 	Subnet           *ec2.Subnet
 	InstanceTypeInfo *ec2.InstanceTypeInfo
 	SecurityGroups   []*ec2.SecurityGroup
+	TagSpecs         []*ec2.TagSpecification
 }
 
 // Get the home directory
@@ -124,6 +127,12 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	}
 	if flagConfig.IamInstanceProfile != "" {
 		simpleConfig.IamInstanceProfile = flagConfig.IamInstanceProfile
+	}
+	if flagConfig.UserDataFilePath != "" {
+		simpleConfig.UserDataFilePath = flagConfig.UserDataFilePath
+	}
+	if flagConfig.UserTags != nil {
+		simpleConfig.UserTags = flagConfig.UserTags
 	}
 }
 

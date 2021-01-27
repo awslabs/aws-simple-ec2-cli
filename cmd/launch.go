@@ -15,7 +15,9 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/config"
@@ -61,6 +63,10 @@ func init() {
 		"The auto-termination timer for the instance in minutes")
 	launchCmd.Flags().StringVarP(&flagConfig.IamInstanceProfile, "iam-instance-profile", "p", "",
 		"The profile containing an IAM role to attach to the instance")
+	launchCmd.Flags().StringVarP(&flagConfig.UserDataFilePath, "boot-script", "b", "",
+		"The absolute filepath to a bash script passed to the instance and executed after the instance starts (user data)")
+	launchCmd.Flags().StringSliceVar(&flagConfig.UserTags, "tags", nil,
+		"The tags applied to instances and volumes at launch")
 }
 
 // The main function
@@ -131,6 +137,16 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 	// Ask for IAM profile
 	if simpleConfig.IamInstanceProfile == "" && !ReadIamProfile(h, simpleConfig) {
+		return
+	}
+
+	// Ask for user boot data
+	if simpleConfig.UserDataFilePath == "" && !ReadUserData(h, simpleConfig) {
+		return
+	}
+
+	// Ask for tags
+	if simpleConfig.UserTags == nil && !ReadUserTags(h, simpleConfig) {
 		return
 	}
 
@@ -260,7 +276,21 @@ func ValidateLaunchFlags(flags *config.SimpleInfo) bool {
 		fmt.Println("Error: You can't define the version without launch template")
 		return false
 	}
-
+	if flags.UserDataFilePath != "" {
+		_, err := os.Stat(flags.UserDataFilePath)
+		if err != nil {
+			fmt.Println("Error: Boot script file path invalid or does not exist")
+			return false
+		}
+	}
+	if flags.UserTags != nil {
+		for _, rawTag := range flags.UserTags { //[tag1:val1, tag2:val2]
+			if len(strings.Split(rawTag, ":")) != 2 { //[tag1,val1]
+				fmt.Println("Error: Tags must follow tag1:val1,tag2:val2 format")
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -567,6 +597,31 @@ func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) boo
 	}
 	if iamAnswer != cli.ResponseNo {
 		simpleConfig.IamInstanceProfile = iamAnswer
+	}
+	return true
+}
+
+/*
+Ask user input for filepath containing boot script.
+Return true if the function is executed successfully, false otherwise
+*/
+func ReadUserData(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+	userDataAnswer := question.AskUserData(h)
+	if userDataAnswer != cli.ResponseNo {
+		simpleConfig.UserDataFilePath = userDataAnswer
+	}
+	return true
+}
+
+/*
+Ask user input for tags applied to launched instances and volumes.
+Return true if the function is executed successfully, false otherwise
+*/
+func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+	userTagsAnswer := question.AskUserTags(h)
+	if userTagsAnswer != cli.ResponseNo {
+		//convert user input tag1:val1,tag2:val2 to [tag1:val1, tag2:val2]
+		simpleConfig.UserTags = strings.Split(userTagsAnswer, ",")
 	}
 	return true
 }

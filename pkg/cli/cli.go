@@ -38,6 +38,8 @@ const (
 	ResourceSecurityGroup            = "Security Group"
 	ResourceSecurityGroupPlaceholder = "Security Group Placeholder"
 	ResourceIamInstanceProfile       = "IAM Instance Profile"
+	ResourceUserDataFilePath         = "Boot Script Filepath"
+	ResourceUserTags                 = "Tag Specification"
 )
 
 // Show errors if there are any. Return true when there are errors, and false when there is none
@@ -46,6 +48,5 @@ func ShowError(err error, message string) bool {
 		fmt.Println(message+":", err)
 		return true
 	}
-
 	return false
 }

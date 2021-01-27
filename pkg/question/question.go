@@ -1014,6 +1014,13 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 		data = append(data, []string{cli.ResourceIamInstanceProfile, simpleConfig.IamInstanceProfile})
 	}
 
+	if simpleConfig.UserDataFilePath != "" {
+		data = append(data, []string{cli.ResourceUserDataFilePath, simpleConfig.UserDataFilePath})
+	}
+	if simpleConfig.UserTags != nil {
+		data = append(data, []string{cli.ResourceUserTags, strings.Join(simpleConfig.UserTags, "\n")})
+	}
+
 	configText := table.BuildTable(data, nil)
 
 	optionsText := configText + yesNoOption + "\n"
@@ -1131,6 +1138,31 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	})
 
 	return &answer, err
+}
+
+// AskUserData prompts the user for a filepath to an optional boot script
+func AskUserData(h *ec2helper.EC2Helper) string {
+	question := "Add filepath to instance boot script? " + "\n" + "format: absolute file path"
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String(cli.ResponseNo),
+		EC2Helper:      h,
+		Fns:            []CheckInput{ec2helper.ValidateFilepath},
+	})
+	return answer
+}
+
+// AskUserTags prompts the user for optional tags
+func AskUserTags(h *ec2helper.EC2Helper) string {
+	question := "Add tags to instances and persisted volumes? " + "\n" + "format: tag1:val1,tag2:val2"
+
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String(cli.ResponseNo),
+		EC2Helper:      h,
+		Fns:            []CheckInput{ec2helper.ValidateTags},
+	})
+	return answer
 }
 
 // AskTerminationConfirmation confirms if the user wants to terminate the selected instanceIds
