@@ -38,8 +38,8 @@ const (
 	ResourceSecurityGroup            = "Security Group"
 	ResourceSecurityGroupPlaceholder = "Security Group Placeholder"
 	ResourceIamInstanceProfile       = "IAM Instance Profile"
-	ResourceUserDataFilePath         = "Boot Script Filepath"
-	ResourceUserTags                 = "Tag Specification"
+	ResourceBootScriptFilePath       = "Boot Script Filepath"
+	ResourceUserTags                 = "Tag Specification(key|value)"
 )
 
 // Show errors if there are any. Return true when there are errors, and false when there is none

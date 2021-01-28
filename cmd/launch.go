@@ -63,15 +63,15 @@ func init() {
 		"The auto-termination timer for the instance in minutes")
 	launchCmd.Flags().StringVarP(&flagConfig.IamInstanceProfile, "iam-instance-profile", "p", "",
 		"The profile containing an IAM role to attach to the instance")
-	launchCmd.Flags().StringVarP(&flagConfig.UserDataFilePath, "boot-script", "b", "",
+	launchCmd.Flags().StringVarP(&flagConfig.BootScriptFilePath, "boot-script", "b", "",
 		"The absolute filepath to a bash script passed to the instance and executed after the instance starts (user data)")
-	launchCmd.Flags().StringSliceVar(&flagConfig.UserTags, "tags", nil,
-		"The tags applied to instances and volumes at launch")
+	launchCmd.Flags().StringToStringVar(&flagConfig.UserTags, "tags", nil,
+		"The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2)")
 }
 
 // The main function
 func launch(cmd *cobra.Command, args []string) {
-	if !ValidateLaunchFlags(&flagConfig) {
+	if !ValidateLaunchFlags(flagConfig) {
 		return
 	}
 
@@ -90,10 +90,9 @@ func launch(cmd *cobra.Command, args []string) {
 // Launch the instance interactively
 func launchInteractive(h *ec2helper.EC2Helper) {
 	var err error
-
-	simpleConfig := &config.SimpleInfo{}
+	simpleConfig := config.NewSimpleInfo()
 	// Override config with flags if applicable
-	config.OverrideConfigWithFlags(simpleConfig, &flagConfig)
+	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
 	if simpleConfig.Region == "" {
 		// Ask Region
@@ -141,12 +140,12 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Ask for user boot data
-	if simpleConfig.UserDataFilePath == "" && !ReadUserData(h, simpleConfig) {
+	if simpleConfig.BootScriptFilePath == "" && !ReadBootScript(h, simpleConfig) {
 		return
 	}
 
 	// Ask for tags
-	if simpleConfig.UserTags == nil && !ReadUserTags(h, simpleConfig) {
+	if len(simpleConfig.UserTags) == 0 && !ReadUserTags(h, simpleConfig) {
 		return
 	}
 
@@ -220,7 +219,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 // Launch the instance non-interactively
 func launchNonInteractive(h *ec2helper.EC2Helper) {
-	simpleConfig := &config.SimpleInfo{}
+	simpleConfig := config.NewSimpleInfo()
 	if flagConfig.Region != "" {
 		simpleConfig.Region = flagConfig.Region
 	}
@@ -239,12 +238,12 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Override config with flags if applicable
-	config.OverrideConfigWithFlags(simpleConfig, &flagConfig)
+	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
 	// When the flags specify a launch template
 	if flagConfig.LaunchTemplateId != "" {
 		// If using a launch template, ignore the config file. Only read from the flags
-		UseLaunchTemplateWithConfig(h, &flagConfig)
+		UseLaunchTemplateWithConfig(h, flagConfig)
 		return
 	}
 
@@ -276,19 +275,11 @@ func ValidateLaunchFlags(flags *config.SimpleInfo) bool {
 		fmt.Println("Error: You can't define the version without launch template")
 		return false
 	}
-	if flags.UserDataFilePath != "" {
-		_, err := os.Stat(flags.UserDataFilePath)
+	if flags.BootScriptFilePath != "" {
+		_, err := os.Stat(flags.BootScriptFilePath)
 		if err != nil {
 			fmt.Println("Error: Boot script file path invalid or does not exist")
 			return false
-		}
-	}
-	if flags.UserTags != nil {
-		for _, rawTag := range flags.UserTags { //[tag1:val1, tag2:val2]
-			if len(strings.Split(rawTag, ":")) != 2 { //[tag1,val1]
-				fmt.Println("Error: Tags must follow tag1:val1,tag2:val2 format")
-				return false
-			}
 		}
 	}
 	return true
@@ -605,10 +596,10 @@ func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) boo
 Ask user input for filepath containing boot script.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadUserData(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
-	userDataAnswer := question.AskUserData(h)
-	if userDataAnswer != cli.ResponseNo {
-		simpleConfig.UserDataFilePath = userDataAnswer
+func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+	bootScriptAnswer := question.AskBootScript(h)
+	if bootScriptAnswer != cli.ResponseNo {
+		simpleConfig.BootScriptFilePath = bootScriptAnswer
 	}
 	return true
 }
@@ -620,8 +611,12 @@ Return true if the function is executed successfully, false otherwise
 func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
 	userTagsAnswer := question.AskUserTags(h)
 	if userTagsAnswer != cli.ResponseNo {
-		//convert user input tag1:val1,tag2:val2 to [tag1:val1, tag2:val2]
-		simpleConfig.UserTags = strings.Split(userTagsAnswer, ",")
+		//convert user input tag1|val1,tag2|val2 to map
+		tags := strings.Split(userTagsAnswer, ",") //[tag1|val1, tag2|val2]
+		for _, tag := range tags {
+			kv := strings.Split(tag, "|") //[tag1, val1]
+			simpleConfig.UserTags[kv[0]] = kv[1]
+		}
 	}
 	return true
 }

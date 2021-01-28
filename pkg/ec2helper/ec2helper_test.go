@@ -1478,15 +1478,15 @@ func TestValidateFilepath_False(t *testing.T) {
 }
 
 func TestValidateTags_True(t *testing.T) {
-	testUserInput := "tag1:val1,tag2:val2"
+	testUserInput := "tag1|val1,tag2|val2"
 	result := ec2helper.ValidateTags(testEC2, testUserInput)
 	if !result {
-		t.Errorf("Incorrect image validation, expect: %t, got: %t", true, result)
+		t.Errorf("Incorrect tag validation, expect: %t, got: %t", true, result)
 	}
 }
 
 func TestValidateTags_False(t *testing.T) {
-	testUserInput := "tag1:val1,tag2:val2,tag3"
+	testUserInput := "tag1|val1,tag2|val2,tag3"
 	result := ec2helper.ValidateTags(testEC2, testUserInput)
 	if result {
 		t.Errorf("Incorrect image validation, expect: %t, got: %t", false, result)

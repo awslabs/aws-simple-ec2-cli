@@ -913,22 +913,19 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 	}
 
 	// Add simple-ec2 tags to created resources
-	simpleEc2Tags := getSimpleEc2Tags()
-	if simpleConfig.UserTags != nil {
-		for _, rawTag := range simpleConfig.UserTags {
-			kvSlice := strings.Split(rawTag, ":")
-			if len(kvSlice) == 2 {
-				simpleEc2Tags = append(simpleEc2Tags, &ec2.Tag{
-					Key:   aws.String(kvSlice[0]),
-					Value: aws.String(kvSlice[1]),
-				})
-			}
+	resourceTags := getSimpleEc2Tags()
+	if len(simpleConfig.UserTags) > 0 {
+		for k, v := range simpleConfig.UserTags {
+			resourceTags = append(resourceTags, &ec2.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			})
 		}
 	}
 	tagSpecs = []*ec2.TagSpecification{
 		{
 			ResourceType: aws.String("instance"),
-			Tags:         simpleEc2Tags,
+			Tags:         resourceTags,
 		},
 	}
 	image, err := h.GetImageById(simpleConfig.ImageId)
@@ -939,11 +936,10 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 			tagSpecs = append(tagSpecs,
 				&ec2.TagSpecification{
 					ResourceType: aws.String("volume"),
-					Tags:         simpleEc2Tags,
+					Tags:         resourceTags,
 				})
 		}
 	}
-
 
 	instanceTypeInfo, err := h.GetInstanceType(simpleConfig.InstanceType)
 	if err != nil {
@@ -1007,37 +1003,39 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 				}
 			}
 		}
-
-		// Set auto-termination
 		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
-		if setAutoTermination {
-			input.InstanceInitiatedShutdownBehavior = aws.String("terminate")
-		}
 	}
 
-	if simpleConfig.UserDataFilePath != "" {
-		userDataRaw, _ := ioutil.ReadFile(simpleConfig.UserDataFilePath)
-		if setAutoTermination {
-			autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
-				simpleConfig.AutoTerminationTimerMinutes)
-			userDataLines := strings.Split(string(userDataRaw), "\n")
+	if setAutoTermination {
+		input.InstanceInitiatedShutdownBehavior = aws.String("terminate")
+		autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
+			simpleConfig.AutoTerminationTimerMinutes)
+		if simpleConfig.BootScriptFilePath == "" {
+			input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
+		} else {
+			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+			bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
 			//if #!/bin/bash is first, then replace first line otherwise, prepend termination
-			if len(userDataLines) > 1 && userDataLines[0] == "#!/bin/bash" {
-				userDataLines[0] = autoTermCmd
+			if len(bootScriptLines) >= 1 && bootScriptLines[0] == "#!/bin/bash" {
+				bootScriptLines[0] = autoTermCmd
 			} else {
-				userDataLines = append([]string{autoTermCmd}, userDataLines...)
+				bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
 			}
-			userDataRaw = []byte(strings.Join(userDataLines, "\n"))
+			bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
+			input.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
 		}
-		input.UserData = aws.String(base64.StdEncoding.EncodeToString(userDataRaw))
+	} else {
+		if simpleConfig.BootScriptFilePath != "" {
+			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+			input.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+		}
 	}
-
 	return input
 }
 
 // Get the default string config
 func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
-	simpleConfig := config.SimpleInfo{}
+	simpleConfig := config.NewSimpleInfo()
 	simpleConfig.Region = *h.Sess.Config.Region
 
 	// get info about the instance type
@@ -1091,7 +1089,7 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		simpleConfig.SecurityGroupIds = []string{*defaultSg.GroupId}
 	}
 
-	return &simpleConfig, nil
+	return simpleConfig, nil
 }
 
 // Launch instances based on input and confirmation. Returning an error means failure, otherwise success
@@ -1249,14 +1247,13 @@ func GetTagName(tags []*ec2.Tag) *string {
 func getSimpleEc2Tags() []*ec2.Tag {
 	simpleEc2Tags := []*ec2.Tag{}
 
-	tags := tag.GetTags()
+	tags := tag.GetSimpleEc2Tags()
 	for key, value := range *tags {
 		simpleEc2Tags = append(simpleEc2Tags, &ec2.Tag{
 			Key:   aws.String(key),
 			Value: aws.String(value),
 		})
 	}
-
 	return simpleEc2Tags
 }
 
@@ -1274,9 +1271,9 @@ func ValidateFilepath(h *EC2Helper, userFilePath string) bool {
 
 // Validate user's tag input. Used as a function interface to validate question input
 func ValidateTags(h *EC2Helper, userTags string) bool {
-	//tag1:val1,tag2:val2
-	for _, rawTag := range strings.Split(userTags, ",") { //[tag1:val1, tag2:val2]
-		if len(strings.Split(rawTag, ":")) != 2 { //[tag1,val1]
+	//tag1|val1,tag2|val2
+	for _, rawTag := range strings.Split(userTags, ",") { //[tag1|val1, tag2|val2]
+		if len(strings.Split(rawTag, "|")) != 2 { //[tag1,val1]
 			return false
 		}
 	}

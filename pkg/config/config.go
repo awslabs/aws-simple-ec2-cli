@@ -45,8 +45,8 @@ type SimpleInfo struct {
 	AutoTerminationTimerMinutes   int
 	KeepEbsVolumeAfterTermination bool
 	IamInstanceProfile            string
-	UserDataFilePath              string
-	UserTags                      []string
+	BootScriptFilePath            string
+	UserTags                      map[string]string
 }
 
 /*
@@ -60,6 +60,12 @@ type DetailedInfo struct {
 	InstanceTypeInfo *ec2.InstanceTypeInfo
 	SecurityGroups   []*ec2.SecurityGroup
 	TagSpecs         []*ec2.TagSpecification
+}
+
+func NewSimpleInfo() *SimpleInfo {
+	var s SimpleInfo
+	s.UserTags = make(map[string]string)
+	return &s
 }
 
 // Get the home directory
@@ -128,8 +134,8 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	if flagConfig.IamInstanceProfile != "" {
 		simpleConfig.IamInstanceProfile = flagConfig.IamInstanceProfile
 	}
-	if flagConfig.UserDataFilePath != "" {
-		simpleConfig.UserDataFilePath = flagConfig.UserDataFilePath
+	if flagConfig.BootScriptFilePath != "" {
+		simpleConfig.BootScriptFilePath = flagConfig.BootScriptFilePath
 	}
 	if flagConfig.UserTags != nil {
 		simpleConfig.UserTags = flagConfig.UserTags
