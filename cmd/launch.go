@@ -387,8 +387,6 @@ Return true if the function is executed successfully, false otherwise
 */
 func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
 	// Get the image ID
-	fmt.Println()
-	fmt.Println("Loading images. This might take up to 1 minute. Please be patient. ")
 	image, err := question.AskImage(h, simpleConfig.InstanceType)
 	if cli.ShowError(err, "Asking image failed") {
 		return false
