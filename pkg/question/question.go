@@ -20,6 +20,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"simple-ec2/pkg/cfn"
 	"simple-ec2/pkg/cli"
@@ -32,10 +33,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/briandowns/spinner"
 )
 
 const yesNoOption = "[ yes / no ]"
-const userChoicePrompt = "Your Choice >> "
 
 type CheckInput func(*ec2helper.EC2Helper, string) bool
 
@@ -54,27 +55,19 @@ type AskQuestionInput struct {
 
 // Ask a question on CLI, with a default input and a list of valid inputs.
 func AskQuestion(input *AskQuestionInput) string {
-
-	// Ask the question
-	fmt.Println()
-	fmt.Println(input.QuestionString)
-
-	/*
-		Print the specific representation of the default option. If no representation is specified,
-		just use default option's value
-	*/
-	if input.DefaultOptionRepr != nil {
-		fmt.Printf("[Press enter to choose default: %s]", *input.DefaultOptionRepr)
-	} else if input.DefaultOption != nil {
-		fmt.Printf("[Press enter to choose default: %s]", *input.DefaultOption)
-	}
-
 	fmt.Println()
 	if input.OptionsString != nil {
 		fmt.Print(*input.OptionsString)
 	}
 
-	fmt.Printf(userChoicePrompt)
+	if input.DefaultOptionRepr != nil {
+		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
+	} else if input.DefaultOption != nil {
+		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOption)
+	} else {
+		fmt.Printf(input.QuestionString + ": ")
+	}
+
 	// Keep asking for user input until one valid input in entered
 	for {
 		// Read input from the user and convert CRLF to LF
@@ -170,7 +163,7 @@ func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 	}
 
 	optionsText := table.BuildTable(data, []string{"Option", "Region", "Description"})
-	question := "Select the region: "
+	question := "Region"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -228,7 +221,7 @@ func AskLaunchTemplate(h *ec2helper.EC2Helper) *string {
 	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1), defaultOptionRepr})
 
 	optionsText := table.BuildTable(data, []string{"Option", "Launch Template", "Latest Version"})
-	question := "Select the launch template you wish to use: "
+	question := "Launch Template"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:    question,
@@ -274,7 +267,7 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string) (
 	}
 
 	optionsText := table.BuildTable(data, []string{"Option(Version Number)", "Description"})
-	question := "Select the launch template version you wish to use: "
+	question := "Launch Template Version"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -301,7 +294,7 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper) (*string, error) {
 	indexedOptions := []string{cli.ResponseYes, cli.ResponseNo}
 
 	optionsText := "1. I will enter the instance type\n2. I need advice given vCPUs and memory\n"
-	question := "Please confirm if you would like to launch instance with following options: "
+	question := "Instance Select Method"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -337,7 +330,7 @@ func AskInstanceType(h *ec2helper.EC2Helper) (*string, error) {
 		stringOptions = append(stringOptions, *instanceTypeInfo.InstanceType)
 	}
 
-	question := "Please enter the instance type (eg. m5.xlarge, c5.xlarge): "
+	question := "Instance Type (eg. m5.xlarge, c5.xlarge)"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -350,7 +343,7 @@ func AskInstanceType(h *ec2helper.EC2Helper) (*string, error) {
 
 // Ask the users to enter instance type vCPUs
 func AskInstanceTypeVCpu() string {
-	question := "Please enter the amount of vCPUs (integer): "
+	question := "vCPUs (integer)"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:   question,
@@ -362,7 +355,7 @@ func AskInstanceTypeVCpu() string {
 
 // Ask the users to enter instace type memory
 func AskInstanceTypeMemory() string {
-	question := "Please enter the amount of memory in GiB (integer): "
+	question := "memory in GiB (integer)"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:   question,
@@ -415,7 +408,7 @@ func AskInstanceTypeInstanceSelector(h *ec2helper.EC2Helper, instanceSelector ec
 		return nil, errors.New("No suggested instance types available. Please enter vCPUs and memory again. ")
 	}
 
-	question := "Please select an instance type: "
+	question := "Instance Type"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -443,10 +436,15 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 		rootDeviceType = "instance-store"
 	}
 
+	s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+	s.Suffix = " fetching images"
+	s.Color("blue", "bold")
+	s.Start()
 	defaultImages, err := h.GetLatestImages(&rootDeviceType)
 	if err != nil {
 		return nil, err
 	}
+	s.Stop()
 
 	data := [][]string{}
 	indexedOptions := []string{}
@@ -485,7 +483,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 	// Add the option to enter an image id
 	optionsText += "[ any image id ]: Select the image id\n"
 
-	question := "Please select or enter the AMI: "
+	question := "AMI"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:    question,
@@ -513,7 +511,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 func AskKeepEbsVolume() string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
-	question := "Do you want to keep the EBS volume(s) after the instance is terminated? "
+	question := "Persist EBS volume(s) after the instance is terminated?"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
@@ -577,7 +575,7 @@ func AskIamProfile(i *iamhelper.IAMHelper) (string, error) {
 	optionsText = table.BuildTable(data, []string{"Option", "PROFILE NAME", "PROFILE ID",
 		"Creation Date"})
 
-	question := "Please select an IAM Profile: "
+	question := "IAM Profile"
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:    question,
 		DefaultOptionRepr: &defaultOptionRepr,
@@ -593,7 +591,7 @@ func AskIamProfile(i *iamhelper.IAMHelper) (string, error) {
 func AskAutoTerminationTimerMinutes() string {
 	stringOptions := []string{cli.ResponseNo}
 	optionsText := "[ integer ] Auto-termination timer in minutes\n" + "[ no ] No auto-termination" + "\n"
-	question := "Do you want to set an auto-termination timer for the instance? "
+	question := "Auto-termination timer"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:   question,
@@ -640,7 +638,7 @@ func AskVpc(h *ec2helper.EC2Helper) (*string, error) {
 	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
 		fmt.Sprintf("Create new VPC with default CIDR and %d subnets", cfn.RequiredAvailabilityZones)})
 
-	question := "What VPC would you like to launch into? "
+	question := "VPC"
 	optionsText := table.BuildTable(data, []string{"Option", "VPC", "CIDR Block"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -680,7 +678,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string) (*string, error) {
 	}
 
 	defaultOptionRepr, defaultOptionValue = &data[0][1], subnets[0].SubnetId
-	question := "What subnet would you like to launch into? "
+	question := "Subnet"
 	optionsText := table.BuildTable(data, []string{"Option", "Subnet", "Availability Zone", "CIDR Block"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -712,7 +710,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper) (*string, error) {
 	}
 	defaultOptionRepr, defaultOptionValue := &data[0][1], &data[0][1]
 
-	question := "What availability zone would you like to launch into? "
+	question := "Availability Zone"
 	optionsText := table.BuildTable(data, []string{"Option", "Zone Name", "Zone ID"})
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -728,7 +726,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper) (*string, error) {
 
 // Ask the users to select security groups
 func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string {
-	question := "What security group would you like to use? "
+	question := "Security Group(s)"
 	data := [][]string{}
 	indexedOptions := []string{}
 	var defaultOptionRepr, defaultOptionValue *string = nil, nil
@@ -814,7 +812,7 @@ func AskSecurityGroupPlaceholder() string {
 	data = append(data, []string{fmt.Sprintf("%d.", 1), "Use the default security group"})
 	data = append(data, []string{fmt.Sprintf("%d.", 2), "Create and use a new security group for SSH"})
 
-	question := "What security group would you like to use? "
+	question := "Security Group(s)"
 	optionsText := table.BuildTable(data, []string{"Option", ""})
 
 	answer := AskQuestion(&AskQuestionInput{

@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/aws/amazon-ec2-instance-selector/v2 v2.0.1
 	github.com/aws/aws-sdk-go v1.31.12
+	github.com/briandowns/spinner v1.12.0
 	github.com/google/go-cmp v0.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.4

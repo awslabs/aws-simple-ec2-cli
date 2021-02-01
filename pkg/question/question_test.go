@@ -45,9 +45,7 @@ AskQuestion Tests
 */
 
 const correctOutput = `
-This is a question
-[Press enter to choose default: default option]
-These are the optionsYour Choice >> `
+These are the optionsThis is a question [default option]:  `
 
 var input = &question.AskQuestionInput{
 	QuestionString:    "This is a question",
