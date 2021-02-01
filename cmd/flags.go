@@ -26,4 +26,4 @@ var (
 	instanceIdFlag        []string
 )
 
-var flagConfig = config.SimpleInfo{}
+var flagConfig = config.NewSimpleInfo()

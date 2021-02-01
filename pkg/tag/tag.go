@@ -19,7 +19,7 @@ import (
 )
 
 // Get the tags for resources created by simple-ec2
-func GetTags() *map[string]string {
+func GetSimpleEc2Tags() *map[string]string {
 	now := time.Now()
 	zone, _ := now.Zone()
 	nowString := fmt.Sprintf("%d-%d-%d %d:%d:%d %s", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(),
@@ -29,6 +29,5 @@ func GetTags() *map[string]string {
 		"CreatedBy":   "simple-ec2",
 		"CreatedTime": nowString,
 	}
-
 	return &tags
 }

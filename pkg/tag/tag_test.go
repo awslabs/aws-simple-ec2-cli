@@ -20,7 +20,7 @@ import (
 )
 
 func TestGetTags(t *testing.T) {
-	tags := tag.GetTags()
+	tags := tag.GetSimpleEc2Tags()
 
 	createdBy, found := (*tags)["CreatedBy"]
 	if !found || createdBy != "simple-ec2" {

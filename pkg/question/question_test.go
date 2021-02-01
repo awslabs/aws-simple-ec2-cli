@@ -842,7 +842,7 @@ func TestAskConfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t 
 		DescribeLaunchTemplateVersionsPagesError: errors.New("Test error"),
 	}
 
-	testSimpleConfig := &config.SimpleInfo{}
+	testSimpleConfig := config.NewSimpleInfo()
 
 	initQuestionTest(t, cli.ResponseYes+"\n")
 

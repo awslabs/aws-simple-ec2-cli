@@ -16,6 +16,7 @@ package ec2helper_test
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
@@ -1032,6 +1033,7 @@ const testSubnetId = "subnet-12345"
 const testVpcId = "vpc-12345"
 const testImageId = "ami-12345"
 const testInstanceType = "t2.micro"
+const testDeviceType = "ebs"
 
 var testSecurityGroupIds = []string{
 	"sg-12345",
@@ -1058,7 +1060,8 @@ var parseConfigSvc = &th.MockedEC2Svc{
 	},
 	Images: []*ec2.Image{
 		{
-			ImageId: aws.String(testImageId),
+			ImageId:        aws.String(testImageId),
+			RootDeviceType: aws.String(testDeviceType),
 		},
 	},
 	InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -1426,7 +1429,7 @@ func TestGetTagName_NoResult(t *testing.T) {
 }
 
 /*
-Image Validation Tests
+Validation Tests
 */
 
 func TestValidateImageId_True(t *testing.T) {
@@ -1450,6 +1453,41 @@ func TestValidateImageId_False(t *testing.T) {
 	}
 
 	result := ec2helper.ValidateImageId(testEC2, testImageId)
+	if result {
+		t.Errorf("Incorrect image validation, expect: %t, got: %t", false, result)
+	}
+}
+
+func TestValidateFilepath_True(t *testing.T) {
+	tmpFile, err := ioutil.TempFile("", "mocked_filepath")
+	defer os.Remove(tmpFile.Name())
+	if err != nil {
+		t.Errorf("There was an error creating tempfile: %v", err)
+	}
+	result := ec2helper.ValidateFilepath(testEC2, tmpFile.Name())
+	if !result {
+		t.Errorf("Incorrect filepath validation, expect: %t, got: %t", true, result)
+	}
+}
+
+func TestValidateFilepath_False(t *testing.T) {
+	result := ec2helper.ValidateFilepath(testEC2, "file/does/not/exist")
+	if result {
+		t.Errorf("Incorrect filepath validation, expect: %t, got: %t", false, result)
+	}
+}
+
+func TestValidateTags_True(t *testing.T) {
+	testUserInput := "tag1|val1,tag2|val2"
+	result := ec2helper.ValidateTags(testEC2, testUserInput)
+	if !result {
+		t.Errorf("Incorrect tag validation, expect: %t, got: %t", true, result)
+	}
+}
+
+func TestValidateTags_False(t *testing.T) {
+	testUserInput := "tag1|val1,tag2|val2,tag3"
+	result := ec2helper.ValidateTags(testEC2, testUserInput)
 	if result {
 		t.Errorf("Incorrect image validation, expect: %t, got: %t", false, result)
 	}

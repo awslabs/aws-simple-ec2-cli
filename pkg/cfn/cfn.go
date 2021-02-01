@@ -217,7 +217,7 @@ func (c Cfn) DeleteStack(stackName string) error {
 func getSimpleEc2Tags() []*cloudformation.Tag {
 	simpleEc2Tags := []*cloudformation.Tag{}
 
-	tags := tag.GetTags()
+	tags := tag.GetSimpleEc2Tags()
 	for key, value := range *tags {
 		simpleEc2Tags = append(simpleEc2Tags, &cloudformation.Tag{
 			Key:   aws.String(key),

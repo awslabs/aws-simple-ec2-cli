@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -67,13 +68,12 @@ const testLaunchTemplateId = "lt-12345"
 const testLaunchTemplateVersion = "1"
 const testNewVPC = true
 const testIamProfile = "iam-profile"
+const testBootScriptFilePath = "some/path/to/bootscript"
 
-const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile"}`
+var testTags = map[string]string{"testedBy": "BRYAN", "brokenBy": "CBASKIN"}
+var testSecurityGroup = []string{"sg-12345", "sg-67890"}
 
-var testSecurityGroup = []string{
-	"sg-12345",
-	"sg-67890",
-}
+const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile","BootScriptFilePath":"some/path/to/bootscript","UserTags":{"brokenBy":"CBASKIN","testedBy":"BRYAN"}}`
 
 func TestSaveConfig(t *testing.T) {
 	testConfig := &config.SimpleInfo{
@@ -86,6 +86,8 @@ func TestSaveConfig(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		BootScriptFilePath:    testBootScriptFilePath,
+		UserTags:              testTags,
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
@@ -103,13 +105,14 @@ func TestSaveConfig(t *testing.T) {
 	if expectedJson != string(readData) {
 		t.Errorf("Config file content incorrect, expect: \"%s\" got: \"%s\"",
 			expectedJson, string(readData))
+
 	}
 
 	os.Remove(testConfigFilePath)
 }
 
 func TestOverrideConfigWithFlags(t *testing.T) {
-	simpleConfig := &config.SimpleInfo{}
+	simpleConfig := config.NewSimpleInfo()
 	flagConfig := &config.SimpleInfo{
 		Region:                testRegion,
 		ImageId:               testImageId,
@@ -120,6 +123,8 @@ func TestOverrideConfigWithFlags(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		BootScriptFilePath:    testBootScriptFilePath,
+		UserTags:              testTags,
 	}
 
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
@@ -173,6 +178,14 @@ func compareConfig(correctConfig, otherConfig *config.SimpleInfo, t *testing.T) 
 		t.Errorf("IamInstanceProfile is not correct, expect: %s got %s",
 			correctConfig.IamInstanceProfile, otherConfig.IamInstanceProfile)
 	}
+	if correctConfig.BootScriptFilePath != otherConfig.BootScriptFilePath {
+		t.Errorf("BootScriptFilePath is not correct, expect: %s got %s",
+			correctConfig.BootScriptFilePath, otherConfig.BootScriptFilePath)
+	}
+	if !reflect.DeepEqual(correctConfig.UserTags, otherConfig.UserTags) {
+		t.Errorf("UserTags is not correct, expect: %s got %s",
+			correctConfig.UserTags, otherConfig.UserTags)
+	}
 }
 
 func TestReadConfig(t *testing.T) {
@@ -182,7 +195,7 @@ func TestReadConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	simpleConfig := &config.SimpleInfo{}
+	simpleConfig := config.NewSimpleInfo()
 	err = config.ReadConfig(simpleConfig, aws.String(testConfigFileName))
 	if err != nil {
 		os.Remove(testConfigFilePath)
@@ -200,9 +213,10 @@ func TestReadConfig(t *testing.T) {
 		SecurityGroupIds:      testSecurityGroup,
 		NewVPC:                testNewVPC,
 		IamInstanceProfile:    testIamProfile,
+		BootScriptFilePath:    testBootScriptFilePath,
+		UserTags:              testTags,
 	}
 
 	compareConfig(correctConfig, simpleConfig, t)
-
 	os.Remove(testConfigFilePath)
 }

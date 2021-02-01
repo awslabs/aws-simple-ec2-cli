@@ -1014,6 +1014,17 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 		data = append(data, []string{cli.ResourceIamInstanceProfile, simpleConfig.IamInstanceProfile})
 	}
 
+	if simpleConfig.BootScriptFilePath != "" {
+		data = append(data, []string{cli.ResourceBootScriptFilePath, simpleConfig.BootScriptFilePath})
+	}
+	if simpleConfig.UserTags != nil {
+		var tags []string
+		for k, v := range simpleConfig.UserTags {
+			tags = append(tags, fmt.Sprintf("%s|%s", k, v))
+		}
+		data = append(data, []string{cli.ResourceUserTags, strings.Join(tags, "\n")})
+	}
+
 	configText := table.BuildTable(data, nil)
 
 	optionsText := configText + yesNoOption + "\n"
@@ -1131,6 +1142,30 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	})
 
 	return &answer, err
+}
+
+// AskBootScript prompts the user for a filepath to an optional boot script
+func AskBootScript(h *ec2helper.EC2Helper) string {
+	question := "Add filepath to instance boot script? " + "\n" + "format: absolute file path"
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String(cli.ResponseNo),
+		EC2Helper:      h,
+		Fns:            []CheckInput{ec2helper.ValidateFilepath},
+	})
+	return answer
+}
+
+// AskUserTags prompts the user for optional tags
+func AskUserTags(h *ec2helper.EC2Helper) string {
+	question := "Add tags to instances and persisted volumes? " + "\n" + "format: tag1|val1,tag2|val2"
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String(cli.ResponseNo),
+		EC2Helper:      h,
+		Fns:            []CheckInput{ec2helper.ValidateTags},
+	})
+	return answer
 }
 
 // AskTerminationConfirmation confirms if the user wants to terminate the selected instanceIds
