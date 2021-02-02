@@ -871,6 +871,31 @@ func (h *EC2Helper) GetInstancesByState(states []string) ([]*ec2.Instance, error
 	return instances, nil
 }
 
+func (h *EC2Helper) GetInstancesByFilter(instanceIds []string, filters []*ec2.Filter) ([]string, error) {
+	input := &ec2.DescribeInstancesInput{}
+	if len(instanceIds) > 0 {
+		input.InstanceIds = aws.StringSlice(instanceIds)
+	}
+	if len(filters) > 0 {
+		input.Filters = filters
+	}
+
+	instances, err := h.getInstances(input)
+	if err != nil {
+		return nil, err
+	}
+	if len(instances) <= 0 {
+		return nil, nil
+	}
+
+	var result []string
+	for _, instance := range instances {
+		result = append(result, *instance.InstanceId)
+	}
+
+	return result, nil
+}
+
 // Create tags for the resources specified
 func (h *EC2Helper) createTags(resources []string, tags []*ec2.Tag) error {
 	input := &ec2.CreateTagsInput{
@@ -1239,7 +1264,6 @@ func GetTagName(tags []*ec2.Tag) *string {
 			return tag.Value
 		}
 	}
-
 	return nil
 }
 

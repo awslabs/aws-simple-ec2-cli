@@ -14,10 +14,14 @@
 package tag_test
 
 import (
+	"fmt"
+	"regexp"
 	"testing"
 
 	"simple-ec2/pkg/tag"
 )
+
+const createTimeRegex = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2} [0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2} [A-Z]{3}"
 
 func TestGetTags(t *testing.T) {
 	tags := tag.GetSimpleEc2Tags()
@@ -27,8 +31,38 @@ func TestGetTags(t *testing.T) {
 		t.Error("CreatedBy tag is not created correctly")
 	}
 
-	_, found = (*tags)["CreatedTime"]
+	createdTime, found := (*tags)["CreatedTime"]
+	matched, _ := regexp.MatchString(createTimeRegex, createdTime)
+	if !matched {
+		t.Error("CreatedTime tag was not created/formatted correctly")
+	}
 	if !found {
 		t.Error("CreatedTime tag is not created correctly")
+	}
+}
+
+func TestGetTagAsFilter(t *testing.T) {
+	tags := tag.GetSimpleEc2Tags()
+	actualTagFilter, err := tag.GetTagAsFilter(*tags)
+	if err != nil {
+		t.Error("GetTagAsFilter encountered an error: " + err.Error())
+	}
+
+	if len(actualTagFilter) != 2 {
+		t.Error("TagFilters length should be 2 but is " + fmt.Sprint(len(actualTagFilter)))
+	}
+	for _, tfilter := range actualTagFilter {
+		if *tfilter.Name != "tag:CreatedBy" && *tfilter.Name != "tag:CreatedTime" {
+			t.Error("TagFilters does not contain tag:CreatedBy or tag:CreatedTime")
+		}
+		if *tfilter.Name == "tag:CreatedBy" && *tfilter.Values[0] != "simple-ec2" {
+			t.Error("CreatedBy tag was not converted to filter correctly")
+		}
+		if *tfilter.Name == "tag:CreatedTime" {
+			matched, _ := regexp.MatchString(createTimeRegex, *tfilter.Values[0])
+			if !matched {
+				t.Error("CreatedTime tag was not converted to filter correctly")
+			}
+		}
 	}
 }

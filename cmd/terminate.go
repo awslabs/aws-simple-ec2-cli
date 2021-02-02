@@ -20,6 +20,7 @@ import (
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/ec2helper"
 	"simple-ec2/pkg/question"
+	"simple-ec2/pkg/tag"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ import (
 var terminateCmd = &cobra.Command{
 	Use:   "terminate",
 	Short: "Terminate Amazon EC2 Instances",
-	Long:  `Terminate Amazon EC2 Instances, given the region and instance ids`,
+	Long:  `Terminate Amazon EC2 Instances, given the region and instance ids or tag values`,
 	Run:   terminate,
 }
 
@@ -42,6 +43,8 @@ func init() {
 	terminateCmd.Flags().StringSliceVarP(&instanceIdFlag, "instance-ids", "n", nil,
 		"The instance ids of the instances you want to terminate")
 	terminateCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
+	terminateCmd.Flags().StringToStringVar(&flagConfig.UserTags, "tags", nil,
+		"Terminate instances containing EXACT tag key-pair (Example: CreatedBy=simple-ec2)")
 }
 
 // The main function
@@ -111,20 +114,21 @@ func terminateNonInteractive(h *ec2helper.EC2Helper) {
 		instanceIdFlag[i] = strings.TrimSpace(instanceIdFlag[i])
 	}
 
-	cli.ShowError(h.TerminateInstances(instanceIdFlag), "Terminating instances failed")
+	instFilters, err := tag.GetTagAsFilter(flagConfig.UserTags)
+	instancesToTerm, err := h.GetInstancesByFilter(instanceIdFlag, instFilters)
+	if err != nil {
+		cli.ShowError(err, "Finding instances with filters failed")
+		return
+	}
+
+	cli.ShowError(h.TerminateInstances(instancesToTerm), "Terminating instances failed")
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
 func ValidateTerminateFlags() bool {
-	if !isInteractive && instanceIdFlag == nil && regionFlag == "" {
-		fmt.Println("Not in interactive mode and no flag is specified")
+	if !isInteractive && instanceIdFlag == nil && len(flagConfig.UserTags) == 0 {
+		fmt.Println("Specify instanceIds, tags, or use interactive mode")
 		return false
 	}
-
-	if !isInteractive && instanceIdFlag == nil {
-		fmt.Println("Not in interactive mode and instance ids are not specified")
-		return false
-	}
-
 	return true
 }

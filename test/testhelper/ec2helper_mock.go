@@ -15,6 +15,7 @@ package testhelper
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -303,10 +304,33 @@ func (e *MockedEC2Svc) AuthorizeSecurityGroupIngress(input *ec2.AuthorizeSecurit
 }
 
 func (e *MockedEC2Svc) DescribeInstancesPages(input *ec2.DescribeInstancesInput, fn func(*ec2.DescribeInstancesOutput, bool) bool) error {
+	var instances []*ec2.Instance
+	// mock filtering
+	for _, inst := range e.Instances {
+		addToInstances := true
+		for _, filter := range input.Filters {
+			// supports tag:<key> filter
+			if strings.Contains(*filter.Name, "tag:") {
+				tagName := strings.Split(*filter.Name, ":")[1]
+				tagVal := *filter.Values[0]
+				if len(inst.Tags) == 0 {
+					addToInstances = false
+					break
+				}
+				if *inst.Tags[0].Key != tagName || *inst.Tags[0].Value != tagVal {
+					addToInstances = false
+					break
+				}
+			}
+		}
+		if addToInstances {
+			instances = append(instances, inst)
+		}
+	}
 	output := &ec2.DescribeInstancesOutput{
 		Reservations: []*ec2.Reservation{
 			{
-				Instances: e.Instances,
+				Instances: instances,
 			},
 		},
 	}

@@ -1015,7 +1015,7 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 	if simpleConfig.BootScriptFilePath != "" {
 		data = append(data, []string{cli.ResourceBootScriptFilePath, simpleConfig.BootScriptFilePath})
 	}
-	if simpleConfig.UserTags != nil {
+	if len(simpleConfig.UserTags) != 0 {
 		var tags []string
 		for k, v := range simpleConfig.UserTags {
 			tags = append(tags, fmt.Sprintf("%s|%s", k, v))

@@ -16,6 +16,9 @@ package tag
 import (
 	"fmt"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 // Get the tags for resources created by simple-ec2
@@ -30,4 +33,15 @@ func GetSimpleEc2Tags() *map[string]string {
 		"CreatedTime": nowString,
 	}
 	return &tags
+}
+
+// Convert tag map to Filter
+func GetTagAsFilter(userTags map[string]string) (filters []*ec2.Filter, err error) {
+	for k, v := range userTags {
+		filters = append(filters, &ec2.Filter{
+			Name:   aws.String("tag:" + k), //prepend tag: for exact matching
+			Values: aws.StringSlice([]string{v}),
+		})
+	}
+	return filters, nil
 }
