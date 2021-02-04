@@ -121,7 +121,10 @@ func terminateNonInteractive(h *ec2helper.EC2Helper) {
 		return
 	}
 
-	cli.ShowError(h.TerminateInstances(instancesToTerm), "Terminating instances failed")
+	err = h.TerminateInstances(instancesToTerm)
+	if err != nil {
+		cli.ShowError(err, "Terminating instances failed")
+	}
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
