@@ -21,69 +21,7 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 )
-
-// For more consistent error messages
-const (
-	ExpectErrorMsg               = "Expect an error but none is found"
-	UnexpectedErrorFormat        = "No error is expected but an error is thrown: %s"
-	IncorrectElementNumberFormat = "Incorrect number of %s, expected: %d, got: %d"
-	IncorrectValueFormat         = "Incorrect %s, expected: %s, got: %s"
-)
-
-// Compare two string slice and decide if they have the exact same elements without order
-func StringSliceEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	compareMap := map[string]int{}
-
-	// Add occurrence to the map
-	for _, element := range a {
-		// If element not present in the map, initialize counter
-		_, found := compareMap[element]
-		if !found {
-			compareMap[element] = 0
-		}
-
-		// Add 1 occurrence
-		compareMap[element]++
-	}
-
-	// Subtract occurrence from the map
-	for _, element := range b {
-		// If element not present in the map, return false
-		_, found := compareMap[element]
-		if !found {
-			return false
-		}
-
-		// Minus 1 occurrence
-		compareMap[element]--
-	}
-
-	// Check if all elements in the map has value 0
-	for _, value := range compareMap {
-		if value != 0 {
-			return false
-		}
-	}
-
-	return true
-}
-
-// Compare if two objects are equal using package cmp. Ignores unexported fields.
-func Equal(x, y, objectType interface{}) bool {
-	opts := cmp.Options{
-		cmpopts.IgnoreUnexported(objectType),
-	}
-
-	return cmp.Equal(x, y, opts)
-}
 
 var reader, writer, oldStdout *os.File
 

@@ -33,9 +33,7 @@ var testCfn = &cfn.Cfn{}
 func TestNew(t *testing.T) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	c := cfn.New(sess)
-	if c == nil {
-		t.Error("Cfn is not created successfully")
-	}
+	th.Assert(t, c != nil, "Cfn was not created successfully")
 }
 
 const testVpcId = "vpc-12345"
@@ -95,19 +93,10 @@ func TestCreateStackAndGetResources_Success(t *testing.T) {
 	}
 
 	vpcId, subnetIds, instanceId, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else {
-		if *vpcId != testVpcId {
-			t.Errorf(th.IncorrectValueFormat, "VPC ID", testVpcId, *vpcId)
-		}
-		if !th.StringSliceEqual(subnetIds, testSubnetIds) {
-			t.Errorf(th.IncorrectValueFormat, "subnet IDs", testSubnetIds, subnetIds)
-		}
-		if *instanceId != testInstanceId {
-			t.Errorf(th.IncorrectValueFormat, "instance ID", testInstanceId, *instanceId)
-		}
-	}
+	th.Ok(t, err)
+	th.Equals(t, testVpcId, *vpcId)
+	th.Equals(t, testSubnetIds, subnetIds)
+	th.Equals(t, testInstanceId, *instanceId)
 }
 
 func TestCreateStackAndGetResources_DescribeStackEventsPagesError(t *testing.T) {
@@ -118,9 +107,7 @@ func TestCreateStackAndGetResources_DescribeStackEventsPagesError(t *testing.T) 
 	}
 
 	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStackAndGetResources_DescribeStackResourcesError(t *testing.T) {
@@ -132,9 +119,7 @@ func TestCreateStackAndGetResources_DescribeStackResourcesError(t *testing.T) {
 	}
 
 	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStackAndGetResources_NoSubnet(t *testing.T) {
@@ -149,9 +134,7 @@ func TestCreateStackAndGetResources_NoSubnet(t *testing.T) {
 	}
 
 	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStackAndGetResources_NoVpc(t *testing.T) {
@@ -170,9 +153,7 @@ func TestCreateStackAndGetResources_NoVpc(t *testing.T) {
 	}
 
 	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStack_Success(t *testing.T) {
@@ -186,9 +167,7 @@ func TestCreateStack_Success(t *testing.T) {
 	}
 
 	_, err := testCfn.CreateStack(testStackName, "", testAzs)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestCreateStack_CreateStackError(t *testing.T) {
@@ -200,9 +179,7 @@ func TestCreateStack_CreateStackError(t *testing.T) {
 	}
 
 	_, err := testCfn.CreateStack(testStackName, "", testAzs)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStack_DescribeStackEventsPagesError(t *testing.T) {
@@ -214,9 +191,7 @@ func TestCreateStack_DescribeStackEventsPagesError(t *testing.T) {
 	}
 
 	_, err := testCfn.CreateStack(testStackName, "", testAzs)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateStack_EventError(t *testing.T) {
@@ -230,9 +205,7 @@ func TestCreateStack_EventError(t *testing.T) {
 	}
 
 	_, err := testCfn.CreateStack(testStackName, "", testAzs)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetStackResources_Success(t *testing.T) {
@@ -240,12 +213,9 @@ func TestGetStackResources_Success(t *testing.T) {
 		StackResources: mockedResources,
 	}
 
-	resources, err := testCfn.GetStackResources("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(resources, mockedResources, cloudformation.StackResource{}) {
-		t.Error("Incorrect resources")
-	}
+	actualResources, err := testCfn.GetStackResources("")
+	th.Ok(t, err)
+	th.Equals(t, mockedResources, actualResources)
 }
 
 func TestGetStackResources_DescribeStackResourcesError(t *testing.T) {
@@ -255,9 +225,7 @@ func TestGetStackResources_DescribeStackResourcesError(t *testing.T) {
 	}
 
 	_, err := testCfn.GetStackResources("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetStackResources_NoResult(t *testing.T) {
@@ -266,9 +234,7 @@ func TestGetStackResources_NoResult(t *testing.T) {
 	}
 
 	_, err := testCfn.GetStackResources("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetStackEventsByName_Success(t *testing.T) {
@@ -276,12 +242,9 @@ func TestGetStackEventsByName_Success(t *testing.T) {
 		StackEvents: mockedEvents,
 	}
 
-	events, err := testCfn.GetStackEventsByName("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(events, mockedEvents[1:], cloudformation.StackEvent{}) {
-		t.Error("Incorrect stack events")
-	}
+	actualEvents, err := testCfn.GetStackEventsByName("")
+	th.Ok(t, err)
+	th.Equals(t, mockedEvents[1:], actualEvents)
 }
 
 func TestGetStackEventsByName_DescribeStackEventsPagesError(t *testing.T) {
@@ -291,9 +254,7 @@ func TestGetStackEventsByName_DescribeStackEventsPagesError(t *testing.T) {
 	}
 
 	_, err := testCfn.GetStackEventsByName("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetStackEventsByName_NoResult(t *testing.T) {
@@ -302,18 +263,14 @@ func TestGetStackEventsByName_NoResult(t *testing.T) {
 	}
 
 	_, err := testCfn.GetStackEventsByName("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestDeleteStack_Success(t *testing.T) {
 	testCfn.Svc = &th.MockedCfnSvc{}
 
 	err := testCfn.DeleteStack("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestDeleteStack_DeleteStackError(t *testing.T) {
@@ -322,7 +279,5 @@ func TestDeleteStack_DeleteStackError(t *testing.T) {
 	}
 
 	err := testCfn.DeleteStack("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }

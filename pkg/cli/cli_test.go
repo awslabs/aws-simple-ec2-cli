@@ -23,9 +23,8 @@ import (
 )
 
 func TestShowError_NoError(t *testing.T) {
-	if cli.ShowError(nil, "Test error shown") {
-		t.Error("No error but returns true")
-	}
+	actualShowError := cli.ShowError(nil, "Test error shown")
+	th.Assert(t, actualShowError == false, "No error from cli but returns true")
 }
 
 func TestShowError_Error(t *testing.T) {
@@ -33,17 +32,12 @@ func TestShowError_Error(t *testing.T) {
 	errMsg := "Test error"
 	correctOutput := fmt.Sprintf("%s: %s\n", preErrMsg, errMsg)
 	err := th.TakeOverStdout()
-	if err != nil {
-		t.Error(err)
-	}
+	th.Ok(t, err)
 
 	testErr := errors.New(errMsg)
 	isError := cli.ShowError(testErr, preErrMsg)
 	output := th.ReadStdout()
 
-	if !isError {
-		t.Error("There is an error but returns false")
-	} else if output != correctOutput {
-		t.Errorf("Output incorrect, expect: %s, got: %s", correctOutput, output)
-	}
+	th.Equals(t, true, isError)
+	th.Equals(t, correctOutput, output)
 }

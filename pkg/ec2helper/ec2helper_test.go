@@ -15,7 +15,6 @@ package ec2helper_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -33,9 +32,7 @@ var testEC2 = &ec2helper.EC2Helper{}
 
 func TestNew(t *testing.T) {
 	testEC2 = ec2helper.New(session.Must(session.NewSession()))
-	if testEC2 == nil {
-		t.Error("EC2Helper is not created successfully")
-	}
+	th.Assert(t, testEC2 != nil, "EC2Helper was not created successfully")
 }
 
 /*
@@ -46,11 +43,8 @@ const testRegion = "Test Region"
 
 func TestChangeRegion(t *testing.T) {
 	testEC2.Sess = session.Must(session.NewSession())
-
 	testEC2.ChangeRegion(testRegion)
-	if *testEC2.Sess.Config.Region != testRegion {
-		t.Errorf("Region incorrect, expected: %s, got: %s", testRegion, *testEC2.Sess.Config.Region)
-	}
+	th.Equals(t, testRegion, *testEC2.Sess.Config.Region)
 }
 
 func TestGetDefaultRegion_Env(t *testing.T) {
@@ -60,14 +54,11 @@ func TestGetDefaultRegion_Env(t *testing.T) {
 	os.Setenv(ec2helper.RegionEnv, testRegion)
 	testEC2.Sess = session.Must(session.NewSession())
 	testEC2.Sess.Config.Region = nil
-
 	ec2helper.GetDefaultRegion(testEC2.Sess)
-	if *testEC2.Sess.Config.Region != testRegion {
-		t.Errorf("Region incorrect, expect: %s, got: %s", testRegion, *testEC2.Sess.Config.Region)
-	}
 
-	// Restore environment variable
+	// Restore environment variable here in case assert fails
 	os.Setenv(ec2helper.RegionEnv, backupEnv)
+	th.Equals(t, testRegion, *testEC2.Sess.Config.Region)
 }
 
 func TestGetDefaultRegion_Default(t *testing.T) {
@@ -77,18 +68,15 @@ func TestGetDefaultRegion_Default(t *testing.T) {
 	os.Setenv(ec2helper.RegionEnv, "")
 	testEC2.Sess = session.Must(session.NewSession())
 	testEC2.Sess.Config.Region = nil
-
 	ec2helper.GetDefaultRegion(testEC2.Sess)
-	if *testEC2.Sess.Config.Region != ec2helper.DefaultRegion {
-		t.Errorf("Region incorrect, expect: %s, got: %s", ec2helper.DefaultRegion, *testEC2.Sess.Config.Region)
-	}
 
 	// Restore environment variable
 	os.Setenv(ec2helper.RegionEnv, backupEnv)
+	th.Equals(t, ec2helper.DefaultRegion, *testEC2.Sess.Config.Region)
 }
 
 func TestGetEnabledRegions_Success(t *testing.T) {
-	testRegions := []*ec2.Region{
+	expectedRegions := []*ec2.Region{
 		{
 			RegionName: aws.String("region-b"),
 		},
@@ -97,16 +85,12 @@ func TestGetEnabledRegions_Success(t *testing.T) {
 		},
 	}
 	testEC2.Svc = &th.MockedEC2Svc{
-		Regions: testRegions,
+		Regions: expectedRegions,
 	}
 
-	regions, err := testEC2.GetEnabledRegions()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
-	if !th.Equal(regions, testRegions, ec2.Region{}) {
-		t.Error("Incorrect regions")
-	}
+	actualRegions, err := testEC2.GetEnabledRegions()
+	th.Ok(t, err)
+	th.Equals(t, expectedRegions, actualRegions)
 }
 
 func TestGetEnabledRegions_DescribeRegionsError(t *testing.T) {
@@ -115,18 +99,14 @@ func TestGetEnabledRegions_DescribeRegionsError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetEnabledRegions()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetEnabledRegions_NoResult(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{}
 
 	_, err := testEC2.GetEnabledRegions()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -134,7 +114,7 @@ Availability Zone Tests
 */
 
 func TestGetAvailableAvailabilityZones_Success(t *testing.T) {
-	testZones := []*ec2.AvailabilityZone{
+	expectedZones := []*ec2.AvailabilityZone{
 		{
 			ZoneName: aws.String("us-east-1a"),
 		},
@@ -142,17 +122,13 @@ func TestGetAvailableAvailabilityZones_Success(t *testing.T) {
 			ZoneName: aws.String("us-east-1b"),
 		},
 	}
-
 	testEC2.Svc = &th.MockedEC2Svc{
-		AvailabilityZones: testZones,
+		AvailabilityZones: expectedZones,
 	}
 
-	zones, err := testEC2.GetAvailableAvailabilityZones()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(zones, testZones, ec2.AvailabilityZone{}) {
-		t.Error("Incorrect availability zones")
-	}
+	actualZones, err := testEC2.GetAvailableAvailabilityZones()
+	th.Ok(t, err)
+	th.Equals(t, expectedZones, actualZones)
 }
 
 func TestGetAvailableAvailabilityZones_DescribeAvailabilityZonesError(t *testing.T) {
@@ -161,18 +137,14 @@ func TestGetAvailableAvailabilityZones_DescribeAvailabilityZonesError(t *testing
 	}
 
 	_, err := testEC2.GetAvailableAvailabilityZones()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetAvailableAvailabilityZones_NoResult(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{}
 
 	_, err := testEC2.GetAvailableAvailabilityZones()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -180,7 +152,7 @@ Launch Template Tests
 */
 
 func TestGetLaunchTemplatesInRegion_Success(t *testing.T) {
-	testLaunchTemplates := []*ec2.LaunchTemplate{
+	expectedTemplates := []*ec2.LaunchTemplate{
 		{
 			LaunchTemplateId: aws.String("lt-12345"),
 		},
@@ -189,15 +161,12 @@ func TestGetLaunchTemplatesInRegion_Success(t *testing.T) {
 		},
 	}
 	testEC2.Svc = &th.MockedEC2Svc{
-		LaunchTemplates: testLaunchTemplates,
+		LaunchTemplates: expectedTemplates,
 	}
 
-	templates, err := testEC2.GetLaunchTemplatesInRegion()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(templates, testLaunchTemplates, ec2.LaunchTemplate{}) {
-		t.Error("Incorrect launch templates")
-	}
+	actualTemplates, err := testEC2.GetLaunchTemplatesInRegion()
+	th.Ok(t, err)
+	th.Equals(t, expectedTemplates, actualTemplates)
 }
 
 func TestGetLaunchTemplatesInRegion_NoResult(t *testing.T) {
@@ -206,9 +175,7 @@ func TestGetLaunchTemplatesInRegion_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLaunchTemplatesInRegion()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 func TestGetLaunchTemplatesInRegion_DescribeLaunchTemplatesPagesError(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{
@@ -216,9 +183,7 @@ func TestGetLaunchTemplatesInRegion_DescribeLaunchTemplatesPagesError(t *testing
 	}
 
 	_, err := testEC2.GetLaunchTemplatesInRegion()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 const testLaunchTemplateId = "lt-12345"
@@ -236,13 +201,9 @@ func TestGetLaunchTemplateById_Success(t *testing.T) {
 		LaunchTemplates: testLaunchTemplates,
 	}
 
-	template, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *template.LaunchTemplateId != testLaunchTemplateId {
-		t.Errorf(th.IncorrectValueFormat,
-			"launch template ID", testLaunchTemplateId, *template.LaunchTemplateId)
-	}
+	actualLaunchTemplates, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
+	th.Ok(t, err)
+	th.Equals(t, testLaunchTemplateId, *actualLaunchTemplates.LaunchTemplateId)
 }
 
 func TestGetLaunchTemplateById_NoResult(t *testing.T) {
@@ -251,9 +212,7 @@ func TestGetLaunchTemplateById_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
@@ -262,9 +221,7 @@ func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -272,7 +229,7 @@ Launch Template Version Tests
 */
 
 func TestGetLaunchTemplateVersions_Success_AllVersions(t *testing.T) {
-	testLaunchTemplateVersions := []*ec2.LaunchTemplateVersion{
+	expectedVersions := []*ec2.LaunchTemplateVersion{
 		{
 			LaunchTemplateId: aws.String(testLaunchTemplateId),
 			VersionNumber:    aws.Int64(1),
@@ -283,32 +240,24 @@ func TestGetLaunchTemplateVersions_Success_AllVersions(t *testing.T) {
 		},
 	}
 	testEC2.Svc = &th.MockedEC2Svc{
-		LaunchTemplateVersions: append(testLaunchTemplateVersions, &ec2.LaunchTemplateVersion{
+		LaunchTemplateVersions: append(expectedVersions, &ec2.LaunchTemplateVersion{
 			LaunchTemplateId: aws.String("lt-67890"),
 			VersionNumber:    aws.Int64(1),
 		}),
 	}
 
-	versions, err := testEC2.GetLaunchTemplateVersions(testLaunchTemplateId, nil)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(versions, testLaunchTemplateVersions, ec2.LaunchTemplateVersion{}) {
-		t.Error("Incorrect launch template versions")
-	}
+	actualVersions, err := testEC2.GetLaunchTemplateVersions(testLaunchTemplateId, nil)
+	th.Ok(t, err)
+	th.Equals(t, expectedVersions, actualVersions)
 }
 
 func TestGetLaunchTemplateVersions_Success_OneVersion(t *testing.T) {
 	versions, err := testEC2.GetLaunchTemplateVersions(testLaunchTemplateId, aws.String("1"))
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if len(versions) != 1 {
-		t.Errorf(th.IncorrectElementNumberFormat,
-			"launch template versions", 1, len(versions))
-	} else if *versions[0].VersionNumber != 1 || *versions[0].LaunchTemplateId != testLaunchTemplateId {
-		t.Errorf(th.IncorrectValueFormat,
-			"launch template version", testLaunchTemplateId+":1",
-			*versions[0].LaunchTemplateId+":"+fmt.Sprint(*versions[0].VersionNumber))
-	}
+
+	th.Ok(t, err)
+	th.Equals(t, 1, len(versions))
+	th.Equals(t, 1, int(*versions[0].VersionNumber))
+	th.Equals(t, testLaunchTemplateId, *versions[0].LaunchTemplateId)
 }
 
 func TestGetLaunchTemplateVersions_NoResult(t *testing.T) {
@@ -317,9 +266,7 @@ func TestGetLaunchTemplateVersions_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLaunchTemplateVersions(testLaunchTemplateId, nil)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetLaunchTemplateVersions_DescribeLaunchTemplateVersionsPagesError(t *testing.T) {
@@ -328,9 +275,7 @@ func TestGetLaunchTemplateVersions_DescribeLaunchTemplateVersionsPagesError(t *t
 	}
 
 	_, err := testEC2.GetLaunchTemplateVersions(testLaunchTemplateId, nil)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -356,11 +301,8 @@ func TestGetDefaultFreeTierInstanceType_Success(t *testing.T) {
 	}
 
 	instanceType, err := testEC2.GetDefaultFreeTierInstanceType()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *instanceType.InstanceType != freeInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "instance type", freeInstanceType, *instanceType.InstanceType)
-	}
+	th.Ok(t, err)
+	th.Equals(t, freeInstanceType, *instanceType.InstanceType)
 }
 
 func TestGetDefaultFreeTierInstanceType_NoResult(t *testing.T) {
@@ -369,9 +311,7 @@ func TestGetDefaultFreeTierInstanceType_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetDefaultFreeTierInstanceType()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetDefaultFreeTierInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
@@ -380,9 +320,7 @@ func TestGetDefaultFreeTierInstanceType_DescribeInstanceTypesPagesError(t *testi
 	}
 
 	_, err := testEC2.GetDefaultFreeTierInstanceType()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceTypesInRegion_Success(t *testing.T) {
@@ -390,12 +328,9 @@ func TestGetInstanceTypesInRegion_Success(t *testing.T) {
 		InstanceTypes: testInstanceTypes,
 	}
 
-	instanceTypes, err := testEC2.GetInstanceTypesInRegion()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(instanceTypes, testInstanceTypes, ec2.InstanceTypeInfo{}) {
-		t.Error("Incorrect instance types")
-	}
+	actualInstanceTypes, err := testEC2.GetInstanceTypesInRegion()
+	th.Ok(t, err)
+	th.Equals(t, testInstanceTypes, actualInstanceTypes)
 }
 
 func TestGetInstanceTypesInRegion_NoResult(t *testing.T) {
@@ -404,9 +339,7 @@ func TestGetInstanceTypesInRegion_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceTypesInRegion()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceTypesInRegion_DescribeInstanceTypesPagesError(t *testing.T) {
@@ -415,9 +348,7 @@ func TestGetInstanceTypesInRegion_DescribeInstanceTypesPagesError(t *testing.T) 
 	}
 
 	_, err := testEC2.GetInstanceTypesInRegion()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceType_Success(t *testing.T) {
@@ -427,11 +358,8 @@ func TestGetInstanceType_Success(t *testing.T) {
 	}
 
 	instanceType, err := testEC2.GetInstanceType(testInstanceType)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *instanceType.InstanceType != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "instance type", testInstanceType, *instanceType.InstanceType)
-	}
+	th.Ok(t, err)
+	th.Equals(t, testInstanceType, *instanceType.InstanceType)
 }
 
 func TestGetInstanceType_NoResult(t *testing.T) {
@@ -440,9 +368,7 @@ func TestGetInstanceType_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceType(testInstanceType)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
@@ -451,9 +377,7 @@ func TestGetInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceType(testInstanceType)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -473,26 +397,19 @@ var selector = &th.MockedSelector{
 }
 
 func TestGetInstanceTypesFromInstanceSelector_Success(t *testing.T) {
-	instanceTypes, err := testEC2.GetInstanceTypesFromInstanceSelector(selector, 2, 4)
-	if err != nil {
-		t.Fatalf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(instanceTypes, testInstanceTypeInfos, ec2.InstanceTypeInfo{}) {
-		t.Error("Incorrect instance types")
-	}
+	actualInstanceTypes, err := testEC2.GetInstanceTypesFromInstanceSelector(selector, 2, 4)
+	th.Ok(t, err)
+	th.Equals(t, testInstanceTypeInfos, actualInstanceTypes)
 }
 
 func TestGetInstanceTypesFromInstanceSelector_BadVCpus(t *testing.T) {
 	_, err := testEC2.GetInstanceTypesFromInstanceSelector(selector, -1, 4)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceTypesFromInstanceSelector_BadMemory(t *testing.T) {
 	_, err := testEC2.GetInstanceTypesFromInstanceSelector(selector, 2, -1)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceTypesFromInstanceSelector_SelectorError(t *testing.T) {
@@ -502,9 +419,7 @@ func TestGetInstanceTypesFromInstanceSelector_SelectorError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceTypesFromInstanceSelector(selector, 2, 4)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -540,21 +455,15 @@ func TestGetLatestImages_Success_Ebs(t *testing.T) {
 		Images: testImages,
 	}
 
-	images, err := testEC2.GetLatestImages(nil)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(*images, testMapEbs, ec2.Image{}) {
-		t.Error("Incorrect images")
-	}
+	actualImages, err := testEC2.GetLatestImages(nil)
+	th.Ok(t, err)
+	th.Equals(t, testMapEbs, *actualImages)
 }
 
 func TestGetLatestImages_Success_InstanceStore(t *testing.T) {
-	images, err := testEC2.GetLatestImages(aws.String("instance-store"))
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(*images, testMapInstanceStore, ec2.Image{}) {
-		t.Error("Incorrect images")
-	}
+	actualImages, err := testEC2.GetLatestImages(aws.String("instance-store"))
+	th.Ok(t, err)
+	th.Equals(t, testMapInstanceStore, *actualImages)
 }
 
 func TestGetLatestImages_NoResult(t *testing.T) {
@@ -563,9 +472,7 @@ func TestGetLatestImages_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLatestImages(nil)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetLatestImages_DescribeImagesError(t *testing.T) {
@@ -574,9 +481,7 @@ func TestGetLatestImages_DescribeImagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetLatestImages(nil)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultImage_Success(t *testing.T) {
@@ -584,12 +489,9 @@ func TestGetDefaultImage_Success(t *testing.T) {
 		Images: testImages,
 	}
 
-	image, err := testEC2.GetDefaultImage(nil)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *image.ImageId != *lastImage.ImageId {
-		t.Errorf(th.IncorrectValueFormat, "image ID", *lastImage.ImageId, *image.ImageId)
-	}
+	actualImage, err := testEC2.GetDefaultImage(nil)
+	th.Ok(t, err)
+	th.Equals(t, *lastImage.ImageId, *actualImage.ImageId)
 }
 
 func TestGetDefaultImage_NoResult(t *testing.T) {
@@ -598,9 +500,7 @@ func TestGetDefaultImage_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetDefaultImage(nil)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultImage_DescribeImagesError(t *testing.T) {
@@ -609,9 +509,7 @@ func TestGetDefaultImage_DescribeImagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetDefaultImage(nil)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetImageById_Success(t *testing.T) {
@@ -620,12 +518,9 @@ func TestGetImageById_Success(t *testing.T) {
 		Images: testImages,
 	}
 
-	image, err := testEC2.GetImageById(testAmi)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *image.ImageId != *testImages[0].ImageId {
-		t.Errorf(th.IncorrectValueFormat, "image ID", *testImages[0].ImageId, *image.ImageId)
-	}
+	actualImage, err := testEC2.GetImageById(testAmi)
+	th.Ok(t, err)
+	th.Equals(t, *testImages[0].ImageId, *actualImage.ImageId)
 }
 
 func TestGetImageById_NoResult(t *testing.T) {
@@ -634,9 +529,7 @@ func TestGetImageById_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetImageById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetImageById_DescribeImagesError(t *testing.T) {
@@ -645,9 +538,7 @@ func TestGetImageById_DescribeImagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetImageById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -668,12 +559,9 @@ func TestGetAllVpcs_Success(t *testing.T) {
 		Vpcs: testVpcs,
 	}
 
-	vpcs, err := testEC2.GetAllVpcs()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(vpcs, testVpcs, ec2.Vpc{}) {
-		t.Error("Incorrect VPCs")
-	}
+	actualVpcs, err := testEC2.GetAllVpcs()
+	th.Ok(t, err)
+	th.Equals(t, testVpcs, actualVpcs)
 }
 
 func TestGetAllVpcs_NoResult(t *testing.T) {
@@ -682,9 +570,8 @@ func TestGetAllVpcs_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetAllVpcs()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	//TODO: some _NoResult apis return error; some don't
+	th.Ok(t, err)
 }
 
 func TestGetAllVpcs_DescribeVpcsPagesError(t *testing.T) {
@@ -693,9 +580,7 @@ func TestGetAllVpcs_DescribeVpcsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetAllVpcs()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetVpcById_Success(t *testing.T) {
@@ -704,12 +589,9 @@ func TestGetVpcById_Success(t *testing.T) {
 		Vpcs: testVpcs,
 	}
 
-	vpc, err := testEC2.GetVpcById(testVpcId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *vpc.VpcId != testVpcId {
-		t.Errorf(th.IncorrectValueFormat, "VPC ID", testVpcId, *vpc.VpcId)
-	}
+	actualVpc, err := testEC2.GetVpcById(testVpcId)
+	th.Ok(t, err)
+	th.Equals(t, testVpcId, *actualVpc.VpcId)
 }
 
 func TestGetVpcById_NoResult(t *testing.T) {
@@ -718,9 +600,7 @@ func TestGetVpcById_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetVpcById(testVpcId)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetVpcById_DescribeVpcsPagesError(t *testing.T) {
@@ -729,9 +609,7 @@ func TestGetVpcById_DescribeVpcsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetVpcById(testVpcId)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -754,12 +632,9 @@ func TestGetSubnetsByVpc_Success(t *testing.T) {
 		Subnets: testSubnets,
 	}
 
-	subnets, err := testEC2.GetSubnetsByVpc(testVpcId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(subnets, testSubnets, ec2.Subnet{}) {
-		t.Error("Incorrect subnets")
-	}
+	actualSubnets, err := testEC2.GetSubnetsByVpc(testVpcId)
+	th.Ok(t, err)
+	th.Equals(t, testSubnets, actualSubnets)
 }
 
 func TestGetSubnetsByVpc_DescribeSubnetsPagesError(t *testing.T) {
@@ -768,9 +643,7 @@ func TestGetSubnetsByVpc_DescribeSubnetsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSubnetsByVpc("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSubnetsByVpc_NoResult(t *testing.T) {
@@ -779,9 +652,7 @@ func TestGetSubnetsByVpc_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSubnetsByVpc("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSubnetById_Success(t *testing.T) {
@@ -795,12 +666,9 @@ func TestGetSubnetById_Success(t *testing.T) {
 		Subnets: testSubnets,
 	}
 
-	subnet, err := testEC2.GetSubnetById(testSubnetId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *subnet.SubnetId != testSubnetId {
-		t.Errorf(th.IncorrectValueFormat, "subnet ID", testSubnetId, *subnet.SubnetId)
-	}
+	actualSubnet, err := testEC2.GetSubnetById(testSubnetId)
+	th.Ok(t, err)
+	th.Equals(t, testSubnetId, *actualSubnet.SubnetId)
 }
 
 func TestGetSubnetById_DescribeSubnetsPagesError(t *testing.T) {
@@ -809,9 +677,7 @@ func TestGetSubnetById_DescribeSubnetsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSubnetById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSubnetById_NoResult(t *testing.T) {
@@ -820,9 +686,7 @@ func TestGetSubnetById_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSubnetById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -843,12 +707,9 @@ func TestGetSecurityGroupsByIds_Success(t *testing.T) {
 		SecurityGroups: testSecurityGroups,
 	}
 
-	securityGroups, err := testEC2.GetSecurityGroupsByIds([]string{})
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(securityGroups, testSecurityGroups, ec2.SecurityGroup{}) {
-		t.Error("Incorrect security groups")
-	}
+	actualSecurityGroups, err := testEC2.GetSecurityGroupsByIds([]string{})
+	th.Ok(t, err)
+	th.Equals(t, testSecurityGroups, actualSecurityGroups)
 }
 
 func TestGetSecurityGroupsByIds_DescribeSecurityGroupsPagesError(t *testing.T) {
@@ -857,9 +718,7 @@ func TestGetSecurityGroupsByIds_DescribeSecurityGroupsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSecurityGroupsByIds([]string{})
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSecurityGroupsByIds_NoResult(t *testing.T) {
@@ -868,9 +727,7 @@ func TestGetSecurityGroupsByIds_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSecurityGroupsByIds([]string{})
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSecurityGroupsByVpc_Success(t *testing.T) {
@@ -878,12 +735,9 @@ func TestGetSecurityGroupsByVpc_Success(t *testing.T) {
 		SecurityGroups: testSecurityGroups,
 	}
 
-	securityGroups, err := testEC2.GetSecurityGroupsByVpc("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(securityGroups, testSecurityGroups, ec2.SecurityGroup{}) {
-		t.Error("Incorrect security groups")
-	}
+	actualSecurityGroups, err := testEC2.GetSecurityGroupsByVpc("")
+	th.Ok(t, err)
+	th.Equals(t, testSecurityGroups, actualSecurityGroups)
 }
 
 func TestGetSecurityGroupsByVpc_DescribeSecurityGroupsPagesError(t *testing.T) {
@@ -892,9 +746,7 @@ func TestGetSecurityGroupsByVpc_DescribeSecurityGroupsPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSecurityGroupsByVpc("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetSecurityGroupsByVpc_NoResult(t *testing.T) {
@@ -903,16 +755,12 @@ func TestGetSecurityGroupsByVpc_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetSecurityGroupsByVpc("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestCreateSecurityGroupForSsh_Success(t *testing.T) {
 	_, err := testEC2.CreateSecurityGroupForSsh("")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestCreateSecurityGroupForSsh_CreateSecurityGroupError(t *testing.T) {
@@ -921,9 +769,7 @@ func TestCreateSecurityGroupForSsh_CreateSecurityGroupError(t *testing.T) {
 	}
 
 	_, err := testEC2.CreateSecurityGroupForSsh("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateSecurityGroupForSsh_AuthorizeSecurityGroupIngressError(t *testing.T) {
@@ -932,9 +778,7 @@ func TestCreateSecurityGroupForSsh_AuthorizeSecurityGroupIngressError(t *testing
 	}
 
 	_, err := testEC2.CreateSecurityGroupForSsh("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestCreateSecurityGroupForSsh_CreateTagsError(t *testing.T) {
@@ -943,9 +787,7 @@ func TestCreateSecurityGroupForSsh_CreateTagsError(t *testing.T) {
 	}
 
 	_, err := testEC2.CreateSecurityGroupForSsh("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -963,12 +805,9 @@ func TestGetInstanceById_Success(t *testing.T) {
 		Instances: testInstances,
 	}
 
-	instance, err := testEC2.GetInstanceById(testInstanceId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *instance.InstanceId != testInstanceId {
-		t.Errorf(th.IncorrectValueFormat, "instance ID", testInstanceId, *instance.InstanceId)
-	}
+	actualInstance, err := testEC2.GetInstanceById(testInstanceId)
+	th.Ok(t, err)
+	th.Equals(t, testInstanceId, *actualInstance.InstanceId)
 }
 
 func TestGetInstanceById_DescribeInstancesPagesError(t *testing.T) {
@@ -977,9 +816,7 @@ func TestGetInstanceById_DescribeInstancesPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstanceById_NoResult(t *testing.T) {
@@ -988,9 +825,7 @@ func TestGetInstanceById_NoResult(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstanceById("")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstancesByState_Success(t *testing.T) {
@@ -1006,12 +841,9 @@ func TestGetInstancesByState_Success(t *testing.T) {
 		Instances: testInstances,
 	}
 
-	instances, err := testEC2.GetInstancesByState([]string{})
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if !th.Equal(instances, testInstances, ec2.Instance{}) {
-		t.Error("Incorrect instances")
-	}
+	actualInstances, err := testEC2.GetInstancesByState([]string{})
+	th.Ok(t, err)
+	th.Equals(t, testInstances, actualInstances)
 }
 
 func TestGetInstancesByFilter_Success(t *testing.T) {
@@ -1039,11 +871,11 @@ func TestGetInstancesByFilter_Success(t *testing.T) {
 			Values: aws.StringSlice([]string{"meh"}),
 		},
 	}
-	actualInstances, err := testEC2.GetInstancesByFilter([]string{"i-12345", "i-67890"}, testFilters)
 
+	actualInstances, err := testEC2.GetInstancesByFilter([]string{"i-12345", "i-67890"}, testFilters)
 	th.Ok(t, err)
-	th.Assert(t, len(actualInstances) == 1, "Incorrect instance(s) returned after filtering")
-	th.Assert(t, actualInstances[0] == "i-12345", "Incorrect instance(s) returned after filtering")
+	th.Equals(t, 1, len(actualInstances))
+	th.Equals(t, "i-12345", actualInstances[0])
 }
 
 func TestGetInstancesByFilter_NoResults(t *testing.T) {
@@ -1068,7 +900,7 @@ func TestGetInstancesByFilter_NoResults(t *testing.T) {
 
 	actualInstances, err := testEC2.GetInstancesByFilter([]string{"i-12345", "i-67890"}, testFilters)
 	th.Ok(t, err)
-	th.Assert(t, len(actualInstances) == 0, "Instances should NOT have been returned after filtering")
+	th.Equals(t, 0, len(actualInstances))
 }
 
 func TestGetInstancesByState_DescribeInstancesPagesError(t *testing.T) {
@@ -1077,9 +909,7 @@ func TestGetInstancesByState_DescribeInstancesPagesError(t *testing.T) {
 	}
 
 	_, err := testEC2.GetInstancesByState([]string{})
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -1139,67 +969,47 @@ var parseConfigSvc = &th.MockedEC2Svc{
 func TestParseConfig_Success(t *testing.T) {
 	testEC2.Svc = parseConfigSvc
 
-	detailedConfig, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
-	if *detailedConfig.Image.ImageId != testImageId {
-		t.Errorf(th.IncorrectValueFormat, "image ID", testImageId, *detailedConfig.Image.ImageId)
-	}
-	if *detailedConfig.Vpc.VpcId != testVpcId {
-		t.Errorf(th.IncorrectValueFormat, "VPC ID", testVpcId, *detailedConfig.Vpc.VpcId)
-	}
-	if *detailedConfig.Subnet.SubnetId != testSubnetId {
-		t.Errorf(th.IncorrectValueFormat, "subnet ID", testSubnetId, *detailedConfig.Subnet.SubnetId)
-	}
-	if *detailedConfig.InstanceTypeInfo.InstanceType != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "instance type", testInstanceType, *detailedConfig.InstanceTypeInfo.InstanceType)
-	}
+	actualDetailedConfig, err := testEC2.ParseConfig(&testSimpleConfig)
+	th.Ok(t, err)
+	th.Equals(t, testImageId, *actualDetailedConfig.Image.ImageId)
+	th.Equals(t, testVpcId, *actualDetailedConfig.Vpc.VpcId)
+	th.Equals(t, testSubnetId, *actualDetailedConfig.Subnet.SubnetId)
+	th.Equals(t, testInstanceType, *actualDetailedConfig.InstanceTypeInfo.InstanceType)
 }
 
 func TestParseConfig_DescribeInstanceTypesPagesError(t *testing.T) {
 	parseConfigSvc.DescribeInstanceTypesPagesError = errors.New("Test error")
 
 	_, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestParseConfig_DescribeImagesError(t *testing.T) {
 	parseConfigSvc.DescribeImagesError = errors.New("Test error")
 
 	_, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestParseConfig_DescribeSecurityGroupsPagesError(t *testing.T) {
 	parseConfigSvc.DescribeSecurityGroupsPagesError = errors.New("Test error")
 
 	_, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestParseConfig_DescribeVpcsPagesError(t *testing.T) {
 	parseConfigSvc.DescribeVpcsPagesError = errors.New("Test error")
 
 	_, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestParseConfig_DescribeSubnetsPagesError(t *testing.T) {
 	parseConfigSvc.DescribeSubnetsPagesError = errors.New("Test error")
 
 	_, err := testEC2.ParseConfig(&testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 var defaultConfigSvc = &th.MockedEC2Svc{
@@ -1240,82 +1050,60 @@ var defaultConfigSvc = &th.MockedEC2Svc{
 func TestGetDefaultSimpleConfig_Success(t *testing.T) {
 	testEC2.Svc = defaultConfigSvc
 
-	simpleConfig, err := testEC2.GetDefaultSimpleConfig()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
-	if simpleConfig.ImageId != testImageId {
-		t.Errorf(th.IncorrectValueFormat, "image ID", testImageId, simpleConfig.ImageId)
-	}
-	if simpleConfig.SubnetId != testSubnetId {
-		t.Errorf(th.IncorrectValueFormat, "subnet ID", testSubnetId, simpleConfig.SubnetId)
-	}
-	if simpleConfig.InstanceType != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "instance type", testInstanceType, simpleConfig.InstanceType)
-	}
+	actualSimpleConfig, err := testEC2.GetDefaultSimpleConfig()
+	th.Ok(t, err)
+	th.Equals(t, testImageId, actualSimpleConfig.ImageId)
+	th.Equals(t, testSubnetId, actualSimpleConfig.SubnetId)
+	th.Equals(t, testInstanceType, actualSimpleConfig.InstanceType)
 }
 
 func TestGetDefaultSimpleConfig_DescribeSecurityGroupsPagesError(t *testing.T) {
 	defaultConfigSvc.DescribeSecurityGroupsPagesError = errors.New("Test error")
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_DescribeSubnetsPagesError(t *testing.T) {
 	defaultConfigSvc.DescribeSubnetsPagesError = errors.New("Test error")
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_NoDefaultVpc(t *testing.T) {
 	defaultConfigSvc.Vpcs[0].SetIsDefault(false)
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_NoVpc(t *testing.T) {
 	defaultConfigSvc.Vpcs = []*ec2.Vpc{}
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_DescribeVpcsPagesError(t *testing.T) {
 	defaultConfigSvc.DescribeVpcsPagesError = errors.New("Test error")
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_DescribeImagesError(t *testing.T) {
 	defaultConfigSvc.DescribeImagesError = errors.New("Test error")
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetDefaultSimpleConfig_DescribeInstanceTypesPagesError(t *testing.T) {
 	defaultConfigSvc.DescribeInstanceTypesPagesError = errors.New("Test error")
 
 	_, err := testEC2.GetDefaultSimpleConfig()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -1372,9 +1160,7 @@ func TestLaunchInstance_Success_NoTemplate(t *testing.T) {
 	testSimpleConfig.KeepEbsVolumeAfterTermination = true
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestLaunchInstance_Success_Template(t *testing.T) {
@@ -1383,41 +1169,31 @@ func TestLaunchInstance_Success_Template(t *testing.T) {
 	testEC2.Svc = launchSvc
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestLaunchInstance_Abort(t *testing.T) {
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, false)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestLaunchInstance_NoConfig(t *testing.T) {
 	_, err := testEC2.LaunchInstance(nil, nil, true)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestLaunchInstance_RunInstancesError(t *testing.T) {
 	launchSvc.RunInstancesError = errors.New("Test error")
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestLaunchInstance_DescribeImagesError(t *testing.T) {
 	launchSvc.DescribeImagesError = errors.New("Test error")
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -1428,9 +1204,7 @@ func TestTerminateInstances_Success(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{}
 
 	err := testEC2.TerminateInstances([]string{})
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestTerminateInstances_TerminateInstancesError(t *testing.T) {
@@ -1439,9 +1213,7 @@ func TestTerminateInstances_TerminateInstancesError(t *testing.T) {
 	}
 
 	err := testEC2.TerminateInstances([]string{})
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 /*
@@ -1461,10 +1233,8 @@ func TestGetTagName_Success(t *testing.T) {
 		},
 	}
 
-	name := ec2helper.GetTagName(testTags)
-	if *name != testName {
-		t.Errorf(th.IncorrectValueFormat, "tag name", testName, *name)
-	}
+	actualName := ec2helper.GetTagName(testTags)
+	th.Equals(t, testName, *actualName)
 }
 
 func TestGetTagName_NoResult(t *testing.T) {
@@ -1479,10 +1249,8 @@ func TestGetTagName_NoResult(t *testing.T) {
 		},
 	}
 
-	name := ec2helper.GetTagName(testTags)
-	if name != nil {
-		t.Errorf(th.IncorrectValueFormat, "tag name", "nil", *name)
-	}
+	actualName := ec2helper.GetTagName(testTags)
+	th.Equals(t, (*string)(nil), actualName)
 }
 
 /*
@@ -1499,9 +1267,7 @@ func TestValidateImageId_True(t *testing.T) {
 	}
 
 	result := ec2helper.ValidateImageId(testEC2, testImageId)
-	if !result {
-		t.Errorf("Incorrect image validation, expect: %t, got: %t", true, result)
-	}
+	th.Equals(t, true, result)
 }
 
 func TestValidateImageId_False(t *testing.T) {
@@ -1510,9 +1276,7 @@ func TestValidateImageId_False(t *testing.T) {
 	}
 
 	result := ec2helper.ValidateImageId(testEC2, testImageId)
-	if result {
-		t.Errorf("Incorrect image validation, expect: %t, got: %t", false, result)
-	}
+	th.Equals(t, false, result)
 }
 
 func TestValidateFilepath_True(t *testing.T) {
@@ -1522,44 +1286,34 @@ func TestValidateFilepath_True(t *testing.T) {
 		t.Errorf("There was an error creating tempfile: %v", err)
 	}
 	result := ec2helper.ValidateFilepath(testEC2, tmpFile.Name())
-	if !result {
-		t.Errorf("Incorrect filepath validation, expect: %t, got: %t", true, result)
-	}
+	th.Equals(t, true, result)
 }
 
 func TestValidateFilepath_False(t *testing.T) {
 	result := ec2helper.ValidateFilepath(testEC2, "file/does/not/exist")
-	if result {
-		t.Errorf("Incorrect filepath validation, expect: %t, got: %t", false, result)
-	}
+	th.Equals(t, false, result)
 }
 
 func TestValidateTags_True(t *testing.T) {
 	testUserInput := "tag1|val1,tag2|val2"
 	result := ec2helper.ValidateTags(testEC2, testUserInput)
-	if !result {
-		t.Errorf("Incorrect tag validation, expect: %t, got: %t", true, result)
-	}
+	th.Equals(t, true, result)
 }
 
 func TestValidateTags_False(t *testing.T) {
 	testUserInput := "tag1|val1,tag2|val2,tag3"
 	result := ec2helper.ValidateTags(testEC2, testUserInput)
-	if result {
-		t.Errorf("Incorrect image validation, expect: %t, got: %t", false, result)
-	}
+	th.Equals(t, false, result)
 }
 
 func TestIsLinux_True(t *testing.T) {
-	if !ec2helper.IsLinux(ec2.CapacityReservationInstancePlatformLinuxUnix) {
-		t.Errorf(th.IncorrectValueFormat, "IsLinux result", "true", "false")
-	}
+	actualIsLinux := ec2helper.IsLinux(ec2.CapacityReservationInstancePlatformLinuxUnix)
+	th.Equals(t, true, actualIsLinux)
 }
 
 func TestIsLinux_False(t *testing.T) {
-	if ec2helper.IsLinux(ec2.CapacityReservationInstancePlatformWindows) {
-		t.Errorf(th.IncorrectValueFormat, "IsLinux result", "false", "true")
-	}
+	actualIsLinux := ec2helper.IsLinux(ec2.CapacityReservationInstancePlatformWindows)
+	th.Equals(t, false, actualIsLinux)
 }
 
 func TestHasEbsVolume_True(t *testing.T) {
@@ -1571,9 +1325,8 @@ func TestHasEbsVolume_True(t *testing.T) {
 		},
 	}
 
-	if !ec2helper.HasEbsVolume(testImage) {
-		t.Errorf(th.IncorrectValueFormat, "TestHasEbsVolume result", "true", "false")
-	}
+	actualHasEbsVolume := ec2helper.HasEbsVolume(testImage)
+	th.Equals(t, true, actualHasEbsVolume)
 }
 
 func TestHasEbsVolume_False(t *testing.T) {
@@ -1583,7 +1336,6 @@ func TestHasEbsVolume_False(t *testing.T) {
 		},
 	}
 
-	if ec2helper.HasEbsVolume(testImage) {
-		t.Errorf(th.IncorrectValueFormat, "TestHasEbsVolume result", "false", "true")
-	}
+	actualHasEbsVolume := ec2helper.HasEbsVolume(testImage)
+	th.Equals(t, false, actualHasEbsVolume)
 }

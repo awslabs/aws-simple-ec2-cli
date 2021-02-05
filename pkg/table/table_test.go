@@ -28,7 +28,7 @@ import (
 var testEC2 = &ec2helper.EC2Helper{}
 
 func TestBuildTable(t *testing.T) {
-	correctTable := `+---------+------------+------------+
+	expectedTable := `+---------+------------+------------+
 | ROW NUM | ELEMENTS 1 | ELEMENTS 2 |
 +---------+------------+------------+
 | Row 1   | Element 1  | Element 2  |
@@ -48,15 +48,11 @@ func TestBuildTable(t *testing.T) {
 	header := []string{"Row Num", "Elements 1", "Elements 2"}
 
 	builtTable := table.BuildTable(data, header)
-
-	if builtTable != correctTable {
-		t.Errorf("Table built is not correct. \nexpect:\n%s\ngot:\n%s",
-			correctTable, builtTable)
-	}
+	th.Equals(t, expectedTable, builtTable)
 }
 
 func TestAppendTemplateEbs(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"EBS Volumes", "dev1(gp2): 16 GiB"},
 		{"", "dev2(gp2)"},
 		{"", "dev3: 32 GiB"},
@@ -91,18 +87,11 @@ func TestAppendTemplateEbs(t *testing.T) {
 	}
 
 	data = table.AppendTemplateEbs(data, mappings)
-
-	for i := 0; i < len(correctData); i++ {
-		if !th.StringSliceEqual(correctData[i], data[i]) {
-			t.Errorf("Appended template ebs data incorrect.\nexpect:%s\ngot:%s",
-				correctData, data)
-			break
-		}
-	}
+	th.Equals(t, expectedData, data)
 }
 
 func TestAppendEbs(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"EBS Volumes", "dev1(gp2): 16 GiB"},
 		{"", "dev2(gp2)"},
 		{"", "dev3: 32 GiB"},
@@ -137,18 +126,11 @@ func TestAppendEbs(t *testing.T) {
 	}
 
 	data = table.AppendEbs(data, mappings)
-
-	for i := 0; i < len(correctData); i++ {
-		if !th.StringSliceEqual(correctData[i], data[i]) {
-			t.Errorf("Appended Ebs data incorrect.\nexpect:%s\ngot:%s",
-				correctData, data)
-			break
-		}
-	}
+	th.Equals(t, expectedData, data)
 }
 
 func TestAppendSecurityGroups(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"Security Group", "Security Group 1(sg-12345)"},
 		{"", "sg-67890"},
 	}
@@ -171,14 +153,7 @@ func TestAppendSecurityGroups(t *testing.T) {
 	}
 
 	data = table.AppendSecurityGroups(data, securityGroups)
-
-	for i := 0; i < len(correctData); i++ {
-		if !th.StringSliceEqual(correctData[i], data[i]) {
-			t.Errorf("Appended security group data incorrect.\nexpect:%s\ngot:%s",
-				correctData, data)
-			break
-		}
-	}
+	th.Equals(t, expectedData, data)
 }
 
 var mockedNetworkInterfaces = []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecification{
@@ -191,12 +166,10 @@ var mockedNetworkInterfaces = []*ec2.LaunchTemplateInstanceNetworkInterfaceSpeci
 }
 
 func TestAppendTemplateNetworkInterfaces_Success(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"Subnets", "1.Subnet 1(vpc-12345:subnet-12345)"},
 		{"", "2.vpc-67890:subnet-67890"},
 	}
-
-	data := [][]string{}
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
@@ -217,63 +190,38 @@ func TestAppendTemplateNetworkInterfaces_Success(t *testing.T) {
 		},
 	}
 
-	var err error
-	data, err = table.AppendTemplateNetworkInterfaces(testEC2, data, mockedNetworkInterfaces)
-	if err != nil {
-		t.Error(err)
-	} else {
-		for i := 0; i < len(correctData); i++ {
-			if !th.StringSliceEqual(correctData[i], data[i]) {
-				t.Errorf("Appended network interfaces incorrect when network interfaces are specified.\nexpect:%s\ngot:%s",
-					correctData, data)
-				break
-			}
-		}
-	}
+	data, err := table.AppendTemplateNetworkInterfaces(testEC2, [][]string{}, mockedNetworkInterfaces)
+	th.Ok(t, err)
+	th.Equals(t, expectedData, data)
 }
 
 func TestAppendTemplateNetworkInterfaces_NoNetworkInterface(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"Subnets", "not specified"},
 	}
-	data := [][]string{}
 
-	var err error
-	data, err = table.AppendTemplateNetworkInterfaces(testEC2, data, nil)
-	if err != nil {
-		t.Error(err)
-	} else {
-		for i := 0; i < len(correctData); i++ {
-			if !th.StringSliceEqual(correctData[i], data[i]) {
-				t.Errorf("Appended network interfaces incorrect when network interfaces are not specified.\nexpect:%s\ngot:%s",
-					correctData, data)
-				break
-			}
-		}
-	}
+	data, err := table.AppendTemplateNetworkInterfaces(testEC2, [][]string{}, nil)
+	th.Ok(t, err)
+	th.Equals(t, expectedData, data)
 }
 
 func TestAppendTemplateNetworkInterfaces_ApiError(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeSubnetsPagesError: errors.New("Test error"),
 	}
-	data := [][]string{}
 
-	var err error
-	data, err = table.AppendTemplateNetworkInterfaces(testEC2, data, mockedNetworkInterfaces)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	_, err := table.AppendTemplateNetworkInterfaces(testEC2, [][]string{}, mockedNetworkInterfaces)
+	th.Nok(t, err)
 }
 
 func TestAppendInstances(t *testing.T) {
-	correctData := [][]string{
+	expectedData := [][]string{
 		{"1.", "Instance 2(i-67890)", "", ""},
 		{"2.", "Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
 		{"", "", "CreatedTime", "just now"},
 		{"3.", "i-09876", "", ""},
 	}
-	correctOptions := []string{
+	expectedOptions := []string{
 		"i-67890",
 		"i-54321",
 		"i-09876",
@@ -325,21 +273,7 @@ func TestAppendInstances(t *testing.T) {
 	}
 
 	addedInstanceIds = append(addedInstanceIds, *instances[0].InstanceId)
-
 	data, indexedOptions, _ = table.AppendInstances(data, indexedOptions, instances, addedInstanceIds)
-
-	// Check appended data
-	for i := 0; i < len(correctData); i++ {
-		if !th.StringSliceEqual(correctData[i], data[i]) {
-			t.Errorf("Appended instance data incorrect.\nexpect:%s\ngot:%s",
-				correctData, data)
-			break
-		}
-	}
-
-	// Check options
-	if !th.StringSliceEqual(correctOptions, indexedOptions) {
-		t.Errorf("Appended instance options incorrect.\nexpect:%s\ngot:%s",
-			correctOptions, indexedOptions)
-	}
+	th.Equals(t, expectedData, data)
+	th.Equals(t, expectedOptions, indexedOptions)
 }
