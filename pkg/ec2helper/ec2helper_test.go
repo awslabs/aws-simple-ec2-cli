@@ -963,7 +963,7 @@ func TestGetInstanceById_Success(t *testing.T) {
 		Instances: testInstances,
 	}
 
-	instance, err := testEC2.GetInstanceById("")
+	instance, err := testEC2.GetInstanceById(testInstanceId)
 	if err != nil {
 		t.Errorf(th.UnexpectedErrorFormat, err)
 	} else if *instance.InstanceId != testInstanceId {
@@ -1012,6 +1012,63 @@ func TestGetInstancesByState_Success(t *testing.T) {
 	} else if !th.Equal(instances, testInstances, ec2.Instance{}) {
 		t.Error("Incorrect instances")
 	}
+}
+
+func TestGetInstancesByFilter_Success(t *testing.T) {
+	testTags := []*ec2.Tag{
+		{
+			Key:   aws.String("TestedBy"),
+			Value: aws.String("meh"),
+		},
+	}
+	testInstances := []*ec2.Instance{
+		{
+			InstanceId: aws.String("i-12345"),
+			Tags:       testTags,
+		},
+		{
+			InstanceId: aws.String("i-67890"),
+		},
+	}
+	testEC2.Svc = &th.MockedEC2Svc{
+		Instances: testInstances,
+	}
+	testFilters := []*ec2.Filter{
+		{
+			Name:   aws.String("tag:TestedBy"),
+			Values: aws.StringSlice([]string{"meh"}),
+		},
+	}
+	actualInstances, err := testEC2.GetInstancesByFilter([]string{"i-12345", "i-67890"}, testFilters)
+
+	th.Ok(t, err)
+	th.Assert(t, len(actualInstances) == 1, "Incorrect instance(s) returned after filtering")
+	th.Assert(t, actualInstances[0] == "i-12345", "Incorrect instance(s) returned after filtering")
+}
+
+func TestGetInstancesByFilter_NoResults(t *testing.T) {
+	testInstances := []*ec2.Instance{
+		{
+			InstanceId: aws.String("i-12345"),
+		},
+		{
+			InstanceId: aws.String("i-67890"),
+		},
+	}
+	testEC2.Svc = &th.MockedEC2Svc{
+		Instances: testInstances,
+	}
+
+	testFilters := []*ec2.Filter{
+		{
+			Name:   aws.String("tag:TestedBy"),
+			Values: aws.StringSlice([]string{"meh"}),
+		},
+	}
+
+	actualInstances, err := testEC2.GetInstancesByFilter([]string{"i-12345", "i-67890"}, testFilters)
+	th.Ok(t, err)
+	th.Assert(t, len(actualInstances) == 0, "Instances should NOT have been returned after filtering")
 }
 
 func TestGetInstancesByState_DescribeInstancesPagesError(t *testing.T) {
