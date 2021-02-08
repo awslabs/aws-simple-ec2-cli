@@ -80,15 +80,16 @@ curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/downl
 
 ```
 $ simple-ec2 launch -h
-Launch an Amazon EC2 instance with the default configurations. 
-	All configurations can be overridden by configurations provided by configuration files or user input
+Launch an Amazon EC2 instance with the default configurations. All configurations can be overridden by configurations provided by configuration files or user input.
 
 Usage:
   simple-ec2 launch [flags]
 
 Flags:
   -a, --auto-termination-timer int       The auto-termination timer for the instance in minutes
+  -b, --boot-script string               The absolute filepath to a bash script passed to the instance and executed after the instance starts (user data)
   -h, --help                             help for launch
+  -p, --iam-instance-profile string      The profile containing an IAM role to attach to the instance
   -m, --image-id string                  The image id of the AMI used to launch the instance
   -t, --instance-type string             The instance type of the instance
   -i, --interactive                      Interactive mode
@@ -99,6 +100,7 @@ Flags:
   -c, --save-config                      Save config as a JSON config file
   -g, --security-group-ids strings       The security groups with which the instance will be launched
   -s, --subnet-id string                 The subnet id in which the instance will be launched
+      --tags stringToString              The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2) (default [])
 ```
 
 **Single Command Launch**
@@ -106,19 +108,28 @@ Flags:
 ```
 $ simple-ec2 launch
 
-Please confirm if you would like to launch instance with following options: 
-+----------------+-------------------------------------------------+
-| Region         | us-east-2                                       |
-| VPC            | My Default VPC(vpc-123example)                  |
-| Subnet         | subnet-123example                               |
-| Instance Type  | t2.micro                                        |
-| Image          | ami-123example                                  |
-| Security Group | Default SG(sg-123example)                       |
-|                | simple-ec2 SSH Security Group(sg-123example)    |
-| EBS Volumes    | /dev/xvda(gp2): 8 GiB                           |
-+----------------+-------------------------------------------------+
++--------------------------------------+--------------------------+
+| Region                               | us-east-1                |
++--------------------------------------+--------------------------+
+| VPC                                  | vpc-example              |
++--------------------------------------+--------------------------+
+| Subnet                               | subnet-example 	  |
++--------------------------------------+--------------------------+
+| Instance Type                        | t1.micro                 |
++--------------------------------------+--------------------------+
+| Image                                | ami-047a51fa27710816e    |
++--------------------------------------+--------------------------+
+| Security Group                       | sg-example               |
++--------------------------------------+--------------------------+
+| Keep EBS Volume(s) After Termination | false                    |
++--------------------------------------+--------------------------+
+| Auto Termination Timer in Minutes    | None                     |
++--------------------------------------+--------------------------+
+| EBS Volumes                          | /dev/xvda(gp2): 8 GiB    |
++--------------------------------------+--------------------------+
 [ yes / no ]
-yes
+Please confirm if you would like to launch instance with following options: yes
+
 Options confirmed! Launching instance...
 Launch Instance Success!
 Instance ID: i-123example
@@ -129,18 +140,27 @@ Instance ID: i-123example
 ```
 $ simple-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example
 
-Please confirm if you would like to launch instance with following options: 
-+----------------+-------------------------------------------------+
-| Region         | us-east-2                                       |
-| VPC            | My Default VPC(vpc-123example)                  |
-| Subnet         | subnet-123example                               |
-| Instance Type  | t2.micro                                        |
-| Image          | ami-123example                                  |
-| Security Group | simple-ec2 SSH Security(sg-123example)          |
-| EBS Volumes    | /dev/xvda(gp2): 8 GiB                           |
-+----------------+-------------------------------------------------+
++--------------------------------------+--------------------------+
+| Region                               | us-east-2                |
++--------------------------------------+--------------------------+
+| VPC                                  | vpc-example              |
++--------------------------------------+--------------------------+
+| Subnet                               | subnet-123example	  |
++--------------------------------------+--------------------------+
+| Instance Type                        | t1.micro                 |
++--------------------------------------+--------------------------+
+| Image                                | ami-123example	          |
++--------------------------------------+--------------------------+
+| Security Group                       | sg-123example            |
++--------------------------------------+--------------------------+
+| Keep EBS Volume(s) After Termination | false                    |
++--------------------------------------+--------------------------+
+| Auto Termination Timer in Minutes    | None                     |
++--------------------------------------+--------------------------+
+| EBS Volumes                          | /dev/xvda(gp2): 8 GiB    |
++--------------------------------------+--------------------------+
 [ yes / no ]
-yes
+Please confirm if you would like to launch instance with following options: yes
 Options confirmed! Launching instance...
 Launch Instance Success!
 Instance ID: i-123example
@@ -151,119 +171,189 @@ Instance ID: i-123example
 ```
 $ simple-ec2 launch -i
 
-Select the region you wish to launch the instance: [default: us-east-2]
-+------------------+---------------------------+------------------+-------------------------+
-|      REGION      |        DESCRIPTION        |      REGION      |       DESCRIPTION       |
-+------------------+---------------------------+------------------+-------------------------+
-| 1.ap-northeast-1 | Asia Pacific (Tokyo)      | 2.ap-northeast-2 | Asia Pacific (Seoul)    |
-| 3.ap-northeast-3 | Asia Pacific (Osaka)      | 4.ap-south-1     | Asia Pacific (Mumbai)   |
-| 5.ap-southeast-1 | Asia Pacific (Singapore)  | 6.ap-southeast-2 | Asia Pacific (Sydney)   |
-| 7.ca-central-1   | Canada (Central)          | 8.eu-central-1   | Europe (Frankfurt)      |
-| 9.eu-north-1     | Europe (Stockholm)        | 10.eu-west-1     | Europe (Ireland)        |
-| 11.eu-west-2     | Europe (London)           | 12.eu-west-3     | Europe (Paris)          |
-| 13.sa-east-1     | South America (Sao Paulo) | 14.us-east-1     | US East (N. Virginia)   |
-| 15.us-east-2     | US East (Ohio)            | 16.us-west-1     | US West (N. California) |
-+------------------+---------------------------+------------------+-------------------------+
-15
++--------+----------------+---------------------------+
+| OPTION |     REGION     |        DESCRIPTION        |
++--------+----------------+---------------------------+
+| 1.     | ap-northeast-1 | Asia Pacific (Tokyo)      |
++--------+----------------+---------------------------+
+| 2.     | ap-northeast-2 | Asia Pacific (Seoul)      |
++--------+----------------+---------------------------+
+| 3.     | ap-northeast-3 | Asia Pacific (Osaka)      |
++--------+----------------+---------------------------+
+| 4.     | ap-south-1     | Asia Pacific (Mumbai)     |
++--------+----------------+---------------------------+
+| 5.     | ap-southeast-1 | Asia Pacific (Singapore)  |
++--------+----------------+---------------------------+
+| 6.     | ap-southeast-2 | Asia Pacific (Sydney)     |
++--------+----------------+---------------------------+
+| 7.     | ca-central-1   | Canada (Central)          |
++--------+----------------+---------------------------+
+| 8.     | eu-central-1   | Europe (Frankfurt)        |
++--------+----------------+---------------------------+
+| 9.     | eu-north-1     | Europe (Stockholm)        |
++--------+----------------+---------------------------+
+| 10.    | eu-west-1      | Europe (Ireland)          |
++--------+----------------+---------------------------+
+| 11.    | eu-west-2      | Europe (London)           |
++--------+----------------+---------------------------+
+| 12.    | eu-west-3      | Europe (Paris)            |
++--------+----------------+---------------------------+
+| 13.    | sa-east-1      | South America (Sao Paulo) |
++--------+----------------+---------------------------+
+| 14.    | us-east-1      | US East (N. Virginia)     |
++--------+----------------+---------------------------+
+| 15.    | us-east-2      | US East (Ohio)            |
++--------+----------------+---------------------------+
+| 16.    | us-west-1      | US West (N. California)   |
++--------+----------------+---------------------------+
+| 17.    | us-west-2      | US West (Oregon)          |
++--------+----------------+---------------------------+
+Region [us-east-1]:  14
 
-Select the launch template you wish to use: [default: Do not use launch template]
-+--------+-----------------------------------+----------------+
-| OPTION |          LAUNCH TEMPLATE          | LATEST VERSION |
-+--------+-----------------------------------+----------------+
-| 1.     | Test123(lt-123example)            | 1              |
-| 2.     | MyTemplate(lt-123example)         | 3              |
-| 3.     | SubnetsTest(lt-123example)        | 5              |
-| 4.     | Do not use launch template        |
-+--------+-----------------------------------+----------------+
-4
 
-Please confirm if you would like to launch instance with following options: [default: t2.micro]
++--------+----------------------------------------+----------------+
+| OPTION |            LAUNCH TEMPLATE             | LATEST VERSION |
++--------+----------------------------------------+----------------+
+| 1.     | Dev-dsk_Template(lt-05f448f1797b94c28) | 1              |
++--------+----------------------------------------+----------------+
+| 2.     | ExampleTemplate1(lt-0f000ff5a94cf8088) | 3              |
++--------+----------------------------------------+----------------+
+| 3.     | Do not use launch template             |		   |
++--------+----------------------------------------+----------------+
+Launch Template [Do not use launch template]:  3
+
+
 1. I will enter the instance type
 2. I need advice given vCPUs and memory
-1
+Instance Select Method [t1.micro]:  1
 
-Please enter the instance type (eg. m5.xlarge, c5.xlarge): [default: t2.micro]
-t2.nano
 
-Loading images. This might take up to 1 minute. Please be patient. 
+Please enter the instance type (eg. m5.xlarge, c5.xlarge) [t1.micro]: t2.micro
 
-Please select or enter the AMI: [default: Latest Amazon Linux 2 image]
+⣯ fetching images
+
 +--------+------------------+-----------------------+--------------------------+
 | OPTION | OPERATING SYSTEM |       IMAGE ID        |      CREATION DATE       |
 +--------+------------------+-----------------------+--------------------------+
-| 1.     | Amazon Linux 2   | ami-123example        | 2020-07-24T20:40:27.000Z |
-| 2.     | Ubuntu           | ami-123example        | 2020-07-16T20:05:04.000Z |
-| 3.     | Amazon Linux     | ami-123example        | 2020-07-21T18:33:13.000Z |
-| 4.     | Red Hat          | ami-123example        | 2020-04-23T17:22:24.000Z |
-| 5.     | SUSE Linux       | ami-123example        | 2020-07-21T18:04:53.000Z |
-| 6.     | Windows          | ami-123example        | 2020-07-15T08:51:57.000Z |
+| 1.     | Amazon Linux 2   | ami-047a51fa27710816e | 2021-01-26T07:39:02.000Z |
++--------+------------------+-----------------------+--------------------------+
+| 2.     | Ubuntu           | ami-02fe94dee086c0c37 | 2021-01-28T19:54:39.000Z |
++--------+------------------+-----------------------+--------------------------+
+| 3.     | Amazon Linux     | ami-0d08a21fc010da680 | 2021-01-26T16:39:01.000Z |
++--------+------------------+-----------------------+--------------------------+
+| 4.     | Red Hat          | ami-096fda3c22c1c990a | 2020-11-02T11:01:38.000Z |
++--------+------------------+-----------------------+--------------------------+
+| 5.     | SUSE Linux       | ami-0a16c2295ef80ff63 | 2020-12-12T05:12:10.000Z |
++--------+------------------+-----------------------+--------------------------+
+| 6.     | Windows          | ami-032e26fff3bb717f3 | 2021-01-13T23:34:55.000Z |
 +--------+------------------+-----------------------+--------------------------+
 [ any image id ]: Select the image id
-3
+AMI [Latest Amazon Linux 2 image]:  1
 
-What VPC would you like to launch into?[default: My Default VPC(vpc-123example)]
+[ yes / no ]
+Persist EBS volume(s) after the instance is terminated? [no]: no
+
+[ integer ] Auto-termination timer in minutes
+[ no ] No auto-termination
+Auto-termination timer [no]: 25
+
 +--------+------------------------------------------------+---------------+
 | OPTION |                      VPC                       |  CIDR BLOCK   |
 +--------+------------------------------------------------+---------------+
-| 1.     | My Default VPC(vpc-123example)                 | 172.31.0.0/16 |
-| 2.     | New VPC(vpc-123example)                        | 172.31.0.0/16 |
-| 3.     | Create new VPC with default CIDR and 3 subnets |
+| 1.     | vpc-123example                                 | 172.31.0.0/16 |
 +--------+------------------------------------------------+---------------+
-1
+| 2.     | Create new VPC with default CIDR and 3 subnets |
++--------+------------------------------------------------+---------------+
+VPC [vpc-123example]: 1
 
-What subnet would you like to launch into?[default: My Default Subnet(subnet-123example)]
-+--------+------------------------------------+-------------------+----------------+
-| OPTION |               SUBNET               | AVAILABILITY ZONE |   CIDR BLOCK   |
-+--------+------------------------------------+-------------------+----------------+
-| 1.     | Default Subnet(subnet-123example)  | us-east-2c        | 172.31.32.0/20 |
-| 2.     | subnet-123example                  | us-east-2a        | 172.31.0.0/20  |
-| 3.     | subnet-123example                  | us-east-2b        | 172.31.16.0/20 |
-+--------+------------------------------------+-------------------+----------------+
-1
++--------+------------------------------------------+-------------------+----------------+
+| OPTION |                  SUBNET                  | AVAILABILITY ZONE |   CIDR BLOCK   |
++--------+------------------------------------------+-------------------+----------------+
+| 1.     | subnet-123example	                    | us-east-1c        | 172.31.48.0/20 |
++--------+------------------------------------------+-------------------+----------------+
+| 2.     | subnet-456example                 	    | us-east-1b        | 172.31.16.0/20 |
++--------+------------------------------------------+-------------------+----------------+
+| 3.     | subnet-789example	                    | us-east-1d        | 172.31.64.0/20 |
++--------+------------------------------------------+-------------------+----------------+
+Subnet [subnet-123example]: 1
 
-What security group would you like to use?
-+--------+-------------------------------------------------+-------------------------------------------------------+
-| OPTION |                 SECURITY GROUP                  |                      DESCRIPTION                      |
-+--------+-------------------------------------------------+-------------------------------------------------------+
-| 1.     | Default SSH SG(sg-123example)                   | launch-wizard-1 created 2020-06-07T19:45:39.448-04:00 |
-| 2.     | simple-ec2 SSH Security Group(sg-123example)    | Created by simple-ec2 for SSH connection to instances |
-| 3.     | Default SG(sg-123example)                       | default VPC security group                            |
-| 4.     | Add all available security groups               |
-| 5.     | Create a new security group that enables SSH    |
-+--------+-------------------------------------------------+-------------------------------------------------------+
-2
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| OPTION |                   SECURITY GROUP                    |                      DESCRIPTION                      |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 1.     | sg-123example	                               | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 2.     | simple-ec2 SSH Security Group(sg-456example)	       | Created by simple-ec2 for SSH connection to instances |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 3.     | sg-789example                                       | default VPC security group                            |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 4.     | Add all available security groups                   |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 5.     | Create a new security group that enables SSH        |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+Security Group(s) [sg-789example]: 3
 
-What security group would you like to use?
-+--------+----------------------------------------------+-------------------------------------------------------+
-| OPTION |                SECURITY GROUP                |                      DESCRIPTION                      |
-+--------+----------------------------------------------+-------------------------------------------------------+
-| 1.     | Default SSH SG(sg-123example)                | launch-wizard-1 created 2020-06-07T19:45:39.448-04:00 |
-| 2.     | Default SG(sg-123example)                    | default VPC security group                            |
-| 3.     | Add all available security groups            |
-| 4.     | Create a new security group that enables SSH |
-| 5.     | Don't add any more security group            |
-+--------+----------------------------------------------+-------------------------------------------------------+
-5
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| OPTION |                   SECURITY GROUP                    |                      DESCRIPTION                      |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 1.     | sg-123example	                               | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 2.     | simple-ec2 SSH Security Group(sg-456example)	       | Created by simple-ec2 for SSH connection to instances |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 3.     | Add all available security groups                   | 
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 4.     | Create a new security group that enables SSH        |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+| 5.     | Don't add any more security groups        	       |
++--------+-----------------------------------------------------+-------------------------------------------------------+
+If you wish to add additional security group(s), add from the following:
+Security Group(s) already selected: [sg-789example]: 5
 
-Please confirm if you would like to launch instance with following options: 
-+------------------+-------------------------------------------------+
-| Region           | us-east-2                                       |
-| 1.VPC            | My Default VPC(vpc-123example)                  |
-| 2.Subnet         | My Default Subnet(subnet-123example)            |
-| 3.Instance Type  | t2.nano                                         |
-| 4.Image          | ami-123example                                  |
-| 5.Security Group | simple-ec2 SSH Security Group(sg-123example)    |
-| EBS Volumes      | /dev/xvda(gp2): 8 GiB                           |
-+------------------+-------------------------------------------------+
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+| OPTION |                                   PROFILE NAME                                    |      PROFILE ID       |         CREATION DATE         |
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+| 1.     | Instance-Profile-1                                                                | AIPAXP7DUN6CORG253IFG | 2021-01-20 14:31:28 +0000 UTC |
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+| 2.     | Instance-Profile-2                                                                | AIPAXP7DUN6CJLXGLI2M5 | 2021-01-20 14:31:51 +0000 UTC |
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+| 3.     | Instance-Profile-3                                                                | AIPAXP7DUN6CFUJT5Q6VR | 2021-01-20 14:32:14 +0000 UTC |
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+| 4.     | Do not attach IAM profile                                                         |                       |                               |
++--------+-----------------------------------------------------------------------------------+-----------------------+-------------------------------+
+IAM Profile [Do not attach IAM profile]: 4
+
+Add filepath to instance boot script?
+format: absolute file path [no]: no
+
+Add tags to instances and persisted volumes?
+format: tag1|val1,tag2|val2 [no]: no
+
++--------------------------------------+--------------------------+
+| Region                               | us-east-1                |
++--------------------------------------+--------------------------+
+| VPC                                  | vpc-123example           |
++--------------------------------------+--------------------------+
+| Subnet                               | subnet-123example 	  |
++--------------------------------------+--------------------------+
+| Instance Type                        | t2.micro                 |
++--------------------------------------+--------------------------+
+| Image                                | ami-047a51fa27710816e    |
++--------------------------------------+--------------------------+
+| Security Group                       | sg-789example            |
++--------------------------------------+--------------------------+
+| Keep EBS Volume(s) After Termination | false                    |
++--------------------------------------+--------------------------+
+| Auto Termination Timer in Minutes    | 25                       |
++--------------------------------------+--------------------------+
+| EBS Volumes                          | /dev/xvda(gp2): 8 GiB    |
++--------------------------------------+--------------------------+
 [ yes / no ]
-yes
+Please confirm if you would like to launch instance with following options: yes
 Options confirmed! Launching instance...
 Launch Instance Success!
 Instance ID: i-123example
 
-Do you want to save the configuration above as a JSON file that can be used in non-interactive mode? [default: no]
 [ yes / no ]
-yes
+Do you want to save the configuration above as a JSON file that can be used in non-interactive mode? [no]: yes
 Saving config...
 Config successfully saved: /Users/$USER/.simple-ec2/simple-ec2.json
 ```
@@ -310,31 +400,58 @@ logout
 ```
 $ simple-ec2 connect -i
 
-Select the region you wish to launch the instance: [default: us-east-2]
-+------------------+---------------------------+------------------+-------------------------+
-|      REGION      |        DESCRIPTION        |      REGION      |       DESCRIPTION       |
-+------------------+---------------------------+------------------+-------------------------+
-| 1.ap-northeast-1 | Asia Pacific (Tokyo)      | 2.ap-northeast-2 | Asia Pacific (Seoul)    |
-| 3.ap-northeast-3 | Asia Pacific (Osaka)      | 4.ap-south-1     | Asia Pacific (Mumbai)   |
-| 5.ap-southeast-1 | Asia Pacific (Singapore)  | 6.ap-southeast-2 | Asia Pacific (Sydney)   |
-| 7.ca-central-1   | Canada (Central)          | 8.eu-central-1   | Europe (Frankfurt)      |
-| 9.eu-north-1     | Europe (Stockholm)        | 10.eu-west-1     | Europe (Ireland)        |
-| 11.eu-west-2     | Europe (London)           | 12.eu-west-3     | Europe (Paris)          |
-| 13.sa-east-1     | South America (Sao Paulo) | 14.us-east-1     | US East (N. Virginia)   |
-| 15.us-east-2     | US East (Ohio)            | 16.us-west-1     | US West (N. California) |
-+------------------+---------------------------+------------------+-------------------------+
-15
++--------+----------------+---------------------------+
+| OPTION |     REGION     |        DESCRIPTION        |
++--------+----------------+---------------------------+
+| 1.     | ap-northeast-1 | Asia Pacific (Tokyo)      |
++--------+----------------+---------------------------+
+| 2.     | ap-northeast-2 | Asia Pacific (Seoul)      |
++--------+----------------+---------------------------+
+| 3.     | ap-northeast-3 | Asia Pacific (Osaka)      |
++--------+----------------+---------------------------+
+| 4.     | ap-south-1     | Asia Pacific (Mumbai)     |
++--------+----------------+---------------------------+
+| 5.     | ap-southeast-1 | Asia Pacific (Singapore)  |
++--------+----------------+---------------------------+
+| 6.     | ap-southeast-2 | Asia Pacific (Sydney)     |
++--------+----------------+---------------------------+
+| 7.     | ca-central-1   | Canada (Central)          |
++--------+----------------+---------------------------+
+| 8.     | eu-central-1   | Europe (Frankfurt)        |
++--------+----------------+---------------------------+
+| 9.     | eu-north-1     | Europe (Stockholm)        |
++--------+----------------+---------------------------+
+| 10.    | eu-west-1      | Europe (Ireland)          |
++--------+----------------+---------------------------+
+| 11.    | eu-west-2      | Europe (London)           |
++--------+----------------+---------------------------+
+| 12.    | eu-west-3      | Europe (Paris)            |
++--------+----------------+---------------------------+
+| 13.    | sa-east-1      | South America (Sao Paulo) |
++--------+----------------+---------------------------+
+| 14.    | us-east-1      | US East (N. Virginia)     |
++--------+----------------+---------------------------+
+| 15.    | us-east-2      | US East (Ohio)            |
++--------+----------------+---------------------------+
+| 16.    | us-west-1      | US West (N. California)   |
++--------+----------------+---------------------------+
+| 17.    | us-west-2      | US West (Oregon)          |
++--------+----------------+---------------------------+
+Region [us-east-1]: 14
 
-Select the instance you want to connect to: 
-+--------+---------------------+-------------+------------------------+
-| OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE        |
-+--------+---------------------+-------------+------------------------+
-| 1.     | i-123example        | CreatedBy   | simple-ec2             |
-|        |                     | CreatedTime | 2020-7-29 16:38:52 EDT |
-| 2.     | i-123example        | CreatedBy   | simple-ec2             |
-|        |                     | CreatedTime | 2020-7-29 16:35:48 EDT |
-+--------+---------------------+-------------+------------------------+
-2
++--------+---------------------+-------------+-----------------------+
+| OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE       |
++--------+---------------------+-------------+-----------------------+
+| 1.     | i-123example	       | CreatedTime | 2021-2-8 13:7:59 CST  |
++--------+---------------------+-------------+-----------------------+
+|        |                     | CreatedBy   | simple-ec2            |
++--------+---------------------+-------------+-----------------------+
+| 2.     | i-456example        | CreatedBy   | simple-ec2            |
++--------+---------------------+-------------+-----------------------+
+|        |                     | CreatedTime | 2021-2-8 13:27:55 CST |
++--------+---------------------+-------------+-----------------------+
+Select the instance you want to connect to: 1
+
 
        __|  __|_  )
        _|  (     /   Amazon Linux 2 AMI
@@ -353,7 +470,7 @@ logout
 
 ```
 $ simple-ec2 terminate -h
-Terminate Amazon EC2 Instances, given the region and instance ids
+Terminate Amazon EC2 Instances, given the region and instance ids or tag values
 
 Usage:
   simple-ec2 terminate [flags]
@@ -363,6 +480,7 @@ Flags:
   -n, --instance-ids strings   The instance ids of the instances you want to terminate
   -i, --interactive            Interactive mode
   -r, --region string          The region in which the instances you want to terminate locates
+        --tags stringToString    Terminate instances containing EXACT tag key-pair (Example: CreatedBy=simple-ec2) (default [])
 ```
 
 **One Command Terminate**
@@ -373,48 +491,72 @@ Terminating instances
 Instances [i-123example] terminated successfully
 ```
 
+**One Command Terminate using tags**
+
+```
+$ simple-ec2 terminate -r us-east-1 --tags CreatedBy=simple-ec2
+Terminating instances
+Instances [i-123example i-456example] terminated successfully
+```
+
 **Interactive Terminate**
 
 ```
 $ simple-ec2 terminate -i
 
-Select the region you wish to launch the instance: [default: us-east-2]
-+------------------+---------------------------+------------------+-------------------------+
-|      REGION      |        DESCRIPTION        |      REGION      |       DESCRIPTION       |
-+------------------+---------------------------+------------------+-------------------------+
-| 1.ap-northeast-1 | Asia Pacific (Tokyo)      | 2.ap-northeast-2 | Asia Pacific (Seoul)    |
-| 3.ap-northeast-3 | Asia Pacific (Osaka)      | 4.ap-south-1     | Asia Pacific (Mumbai)   |
-| 5.ap-southeast-1 | Asia Pacific (Singapore)  | 6.ap-southeast-2 | Asia Pacific (Sydney)   |
-| 7.ca-central-1   | Canada (Central)          | 8.eu-central-1   | Europe (Frankfurt)      |
-| 9.eu-north-1     | Europe (Stockholm)        | 10.eu-west-1     | Europe (Ireland)        |
-| 11.eu-west-2     | Europe (London)           | 12.eu-west-3     | Europe (Paris)          |
-| 13.sa-east-1     | South America (Sao Paulo) | 14.us-east-1     | US East (N. Virginia)   |
-| 15.us-east-2     | US East (Ohio)            | 16.us-west-1     | US West (N. California) |
-+------------------+---------------------------+------------------+-------------------------+
-15
++--------+----------------+---------------------------+
+| OPTION |     REGION     |        DESCRIPTION        |
++--------+----------------+---------------------------+
+| 1.     | ap-northeast-1 | Asia Pacific (Tokyo)      |
++--------+----------------+---------------------------+
+| 2.     | ap-northeast-2 | Asia Pacific (Seoul)      |
++--------+----------------+---------------------------+
+| 3.     | ap-northeast-3 | Asia Pacific (Osaka)      |
++--------+----------------+---------------------------+
+| 4.     | ap-south-1     | Asia Pacific (Mumbai)     |
++--------+----------------+---------------------------+
+| 5.     | ap-southeast-1 | Asia Pacific (Singapore)  |
++--------+----------------+---------------------------+
+| 6.     | ap-southeast-2 | Asia Pacific (Sydney)     |
++--------+----------------+---------------------------+
+| 7.     | ca-central-1   | Canada (Central)          |
++--------+----------------+---------------------------+
+| 8.     | eu-central-1   | Europe (Frankfurt)        |
++--------+----------------+---------------------------+
+| 9.     | eu-north-1     | Europe (Stockholm)        |
++--------+----------------+---------------------------+
+| 10.    | eu-west-1      | Europe (Ireland)          |
++--------+----------------+---------------------------+
+| 11.    | eu-west-2      | Europe (London)           |
++--------+----------------+---------------------------+
+| 12.    | eu-west-3      | Europe (Paris)            |
++--------+----------------+---------------------------+
+| 13.    | sa-east-1      | South America (Sao Paulo) |
++--------+----------------+---------------------------+
+| 14.    | us-east-1      | US East (N. Virginia)     |
++--------+----------------+---------------------------+
+| 15.    | us-east-2      | US East (Ohio)            |
++--------+----------------+---------------------------+
+| 16.    | us-west-1      | US West (N. California)   |
++--------+----------------+---------------------------+
+| 17.    | us-west-2      | US West (Oregon)          |
++--------+----------------+---------------------------+
+Region [us-east-1]:  14
 
-Select the instance you want to terminate: 
-+--------+---------------------+-------------+------------------------+
-| OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE        |
-+--------+---------------------+-------------+------------------------+
-| 1.     | i-123example        | CreatedBy   | simple-ec2             |
-|        |                     | CreatedTime | 2020-7-29 16:38:52 EDT |
-| 2.     | i-456example        | CreatedBy   | simple-ec2             |
-|        |                     | CreatedTime | 2020-7-29 16:35:48 EDT |
-+--------+---------------------+-------------+------------------------+
-1
++--------+---------------------+-------------+-----------------------+
+| OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE       |
++--------+---------------------+-------------+-----------------------+
+| 1.     | i-123example	       | CreatedTime | 2021-2-8 13:7:59 CST  |
++--------+---------------------+-------------+-----------------------+
+|        |                     | CreatedBy   | simple-ec2            |
++--------+---------------------+-------------+-----------------------+
+Select the instance you want to terminate: 1
 
-Select the instance you want to terminate: 
-+--------+--------------------------------+-------------+------------------------+
-| OPTION |            INSTANCE            |   TAG-KEY   |       TAG-VALUE        |
-+--------+--------------------------------+-------------+------------------------+
-| 1.     | i-456example                   | CreatedBy   | simple-ec2             |
-|        |                                | CreatedTime | 2020-7-29 16:35:48 EDT |
-| 2.     | Don't add any more instance id |
-+--------+--------------------------------+-------------+------------------------+
-1
+[ yes / no ]
+Are you sure you want to terminate 1 instance(s): [i-123example]  [no]: yes
+
 Terminating instances
-Instances [i-123example i-456example] terminated successfully
+Instances [i-123example] terminated successfully
 ```
 
 ## Building
