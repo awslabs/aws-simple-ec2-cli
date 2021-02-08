@@ -1026,7 +1026,7 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 	configText := table.BuildTable(data, nil)
 
 	optionsText := configText + yesNoOption + "\n"
-	question := "Please confirm if you would like to launch instance with following options: "
+	question := "Please confirm if you would like to launch instance with following options"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,

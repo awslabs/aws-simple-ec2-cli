@@ -222,9 +222,8 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	simpleConfig := config.NewSimpleInfo()
 	if flagConfig.Region != "" {
 		simpleConfig.Region = flagConfig.Region
+		h.ChangeRegion(simpleConfig.Region)
 	}
-
-	h.ChangeRegion(simpleConfig.Region)
 
 	// Try to get config from the config file
 	err := config.ReadConfig(simpleConfig, nil)
