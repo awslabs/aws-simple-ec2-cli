@@ -127,3 +127,33 @@ release: build-binaries build-docker-images upload-resources-to-github
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*$$' $(MAKEFILE_LIST) | sort
+
+## Targets intended to be run in preparation for a new release
+draft-release-notes:
+	${MAKEFILE_PATH}/scripts/draft-release-notes
+
+create-local-release-tag-major:
+	${MAKEFILE_PATH}/scripts/create-local-tag-for-release -m
+
+create-local-release-tag-minor:
+	${MAKEFILE_PATH}/scripts/create-local-tag-for-release -i
+
+create-local-release-tag-patch:
+	${MAKEFILE_PATH}/scripts/create-local-tag-for-release -p
+
+create-release-prep-pr:
+	${MAKEFILE_PATH}/scripts/prepare-for-release
+
+create-release-prep-pr-draft:
+	${MAKEFILE_PATH}/scripts/prepare-for-release -d
+
+release-prep-major: create-local-release-tag-major create-release-prep-pr
+
+release-prep-minor: create-local-release-tag-minor create-release-prep-pr
+
+release-prep-patch: create-local-release-tag-patch create-release-prep-pr
+
+release-prep-custom: # Run make NEW_VERSION=v1.2.3 release-prep-custom to prep for a custom release version
+ifdef NEW_VERSION
+	$(shell echo "${MAKEFILE_PATH}/scripts/create-local-tag-for-release -v $(NEW_VERSION) && echo && make create-release-prep-pr")
+endif
