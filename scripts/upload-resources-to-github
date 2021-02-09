@@ -1,18 +1,79 @@
 #!/bin/bash
 set -euo pipefail
 
+# Script to upload release assets to Github.
+# This script cleans up after itself in cases of parital failures. i.e. either all assets are uploaded or none
+
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 VERSION=$(make -s -f $SCRIPTPATH/../Makefile version)
+BINARY_DIR=$SCRIPTPATH/../build/bin
 
 RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
     https://api.github.com/repos/awslabs/aws-simple-ec2-cli/releases | \
     jq --arg VERSION "$VERSION" '.[] | select(.tag_name==$VERSION) | .id')
 
-for binary in $SCRIPTPATH/../build/bin/*; do 
-    curl \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        -H "Content-Type: $(file -b --mime-type $binary)" \
-        --data-binary @$binary \
-        "https://uploads.github.com/repos/awslabs/aws-simple-ec2-cli/releases/$RELEASE_ID/assets?name=$(basename $binary)"
-done
+[[ -z $TERM ]] || export TERM=linux
+RED=$(tput setaf 1)
+RESET_FMT=$(tput sgr 0)
 
+ASSET_IDS_UPLOADED=()
+
+trap 'handle_errors_and_cleanup $?' EXIT
+
+handle_errors_and_cleanup() {
+    if [ $1 -eq "0" ]; then
+        exit 0
+    fi
+
+    if [[ ${#ASSET_IDS_UPLOADED[@]} -ne 0 ]]; then
+        echo -e "\nCleaning up assets uploaded in the current execution of the script"
+        for asset_id in "${ASSET_IDS_UPLOADED[@]}"; do
+            echo "Deleting asset $asset_id"
+            curl -X DELETE \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/awslabs/aws-simple-ec2-cli/releases/assets/$asset_id"
+        done
+        exit $1
+    fi
+}
+
+gather_assets_to_upload() {
+    local resources=()
+
+    for binary in $BINARY_DIR/*; do
+        resources+=("$binary")
+    done
+
+    echo "${resources[@]}"
+}
+
+# $1: absolute path to asset
+upload_asset() {
+    resp=$(curl --write-out '%{http_code}' --silent \
+        -H "Authorization: token $GITHUB_TOKEN" \
+        -H "Content-Type: $(file -b --mime-type $1)" \
+        --data-binary @$1 \
+        "https://uploads.github.com/repos/awslabs/aws-simple-ec2-cli/releases/$RELEASE_ID/assets?name=$(basename $1)")
+
+    response_code=$(echo $resp | sed 's/\(.*\)}//')
+    response_content=$(echo $resp | sed "s/$response_code//")
+
+    # HTTP success code expected - 201 Created
+    if [[ $response_code -eq 201 ]]; then
+        asset_id=$(echo $response_content | jq '.id')
+        ASSET_IDS_UPLOADED+=("$asset_id")
+        echo "Created asset ID $asset_id successfully"
+    else
+        echo -e "❌ ${RED}Upload failed with response code $response_code and message \n$response_content${RESET_FMT} ❌"
+        exit 1
+    fi
+}
+
+ASSETS=$(gather_assets_to_upload)
+COUNT=1
+echo -e "\nUploading release assets for release id '$RELEASE_ID' to Github"
+for asset in $ASSETS; do
+    name=$(echo $asset | tr '/' '\n' | tail -1)
+    echo -e "\n  $((COUNT++)). $name"
+    upload_asset $asset
+done

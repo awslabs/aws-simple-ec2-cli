@@ -130,11 +130,13 @@ update_versions() {
     for f in "${FILES[@]}"; do
         # do not exit if grep doesn't find $PREVIOUS_VERSION; continue to exit on all other exit codes
         has_incorrect_version=$(cat $f | grep "$PREVIOUS_VERSION" || [[ $? == 1 ]])
+        # escape the "." in version so that substitutions are done on EXACT version match only
+        previousVersionEsc="$(sed -e 's/\./\\./' <<< "$PREVIOUS_VERSION")"
         if [[ ! -z  $has_incorrect_version ]]; then
             if [[ "${os}" = "Linux" ]]; then
-              sed -i "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
+              sed -i "s/$previousVersionEsc/$LATEST_VERSION/g" $f
             elif [[ "${os}" = "Darwin" ]]; then
-              sed -i '' "s/$PREVIOUS_VERSION/$LATEST_VERSION/g" $f
+              sed -i '' "s/$previousVersionEsc/$LATEST_VERSION/g" $f
             else
               echo -e "❌ ${RED}Platform ${os} does not support Simple-EC2 release. Please use: Linux or macOS ${RESET_FMT}"
               exit 1
