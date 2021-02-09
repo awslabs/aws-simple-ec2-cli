@@ -32,9 +32,6 @@ PR_TITLE="🥑🤖 $LATEST_TAG release prep"
 PR_BODY="🥑🤖 Auto-generated PR for $LATEST_TAG release. Updating release versions in repo."
 PR_LABEL_1="release-prep"
 PR_LABEL_2="🤖 auto-generated🤖"
-EC2_BOT_USER="ec2-bot 🤖"
-EC2_BOT_EMAIL="ec2-bot@users.noreply.github.com"
-EC2_BOT_SET=false
 
 HELP=$(cat << 'EOM'
   Update repo with the new release version and create a pr from a new release prep branch.
@@ -157,9 +154,6 @@ update_versions() {
 
 commit_changes() {
     echo -e "\n🥑 Adding and committing release version changes."
-    git config user.name "$EC2_BOT_USER"
-    git config user.email "$EC2_BOT_EMAIL"
-    EC2_BOT_SET=true
     git add "${FILES_CHANGED[@]}"
     git commit -m "$COMMIT_MESSAGE"
     echo -e "✅✅✅ ${BOLD}Committed release prep changes to new branch $NEW_BRANCH with commit message '$COMMIT_MESSAGE'\n\n${RESET_FMT}"
@@ -237,14 +231,6 @@ rollback() {
         # delete local and remote release branch only if current execution of the script created them
         git branch -D $NEW_BRANCH
         git push origin --delete $NEW_BRANCH
-
-        # if multiple user.name are set, then only the latest(ec2-bot) will be removed
-        if [[ $EC2_BOT_SET == true ]]; then
-          echo "🥑${BOLD}Rolling back ec2-bot git config"
-          git config --unset user.name
-          git config --unset user.email
-        fi
-
     fi
     echo "${RESET_FMT}"
 }
