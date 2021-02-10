@@ -25,19 +25,16 @@ var backupSimpleEc2String = cfn.SimpleEc2CloudformationTemplateEncoded
 
 func TestDecodeTemplateVariables_Success(t *testing.T) {
 	err := cfn.DecodeTemplateVariables()
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	}
+	th.Ok(t, err)
 }
 
 func TestDecodeTemplateVariables_Error(t *testing.T) {
 	// Test 2: Decode error
 	cfn.E2eConnectTestCloudformationTemplateEncoded = "{}"
 	err := cfn.DecodeTemplateVariables()
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
 
 	// Restore encoded strings
 	cfn.SimpleEc2CloudformationTemplateEncoded = backupSimpleEc2String
+
+	th.Nok(t, err)
 }

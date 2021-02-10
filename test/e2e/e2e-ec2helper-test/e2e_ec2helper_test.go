@@ -16,8 +16,6 @@ package ec2helper_e2e
 import (
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/ec2"
-
 	"simple-ec2/pkg/cfn"
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
@@ -27,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 const testStackName = "simple-ec2-e2e-ec2helper-test"
@@ -46,9 +45,7 @@ var resources []*cloudformation.StackResource
 func TestSetupEnvironment(t *testing.T) {
 	// Parse CloudFormation templates
 	err := cfn.DecodeTemplateVariables()
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 
 	// The tests only work in us-east-2, so change the region if the region is not correct
 	if *sess.Config.Region != correctRegion {
@@ -58,9 +55,7 @@ func TestSetupEnvironment(t *testing.T) {
 
 	vpcId, subnetIds, instanceId, resources, err = c.CreateStackAndGetResources(nil, aws.String(testStackName),
 		cfn.E2eEc2helperTestCloudformationTemplate)
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 
 	// Find the launch template and the securiy group
 	for _, resource := range resources {
@@ -74,267 +69,207 @@ func TestSetupEnvironment(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	h = ec2helper.New(sess)
-
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 }
 
 func TestGetEnabledRegions(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	regions, err := h.GetEnabledRegions()
-	if err != nil {
-		t.Fatal(err)
-	} else if regions == nil || len(regions) <= 0 {
-		t.Fatal("Incorrect regions: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, regions != nil, "Regions should not be nil")
+	th.Assert(t, len(regions) > 0, "Regions should not be empty")
 }
 
 func TestGetAvailableAvailabilityZones(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	zones, err := h.GetAvailableAvailabilityZones()
-	if err != nil {
-		t.Fatal(err)
-	} else if zones == nil || len(zones) <= 0 {
-		t.Fatal("Incorrect availability zones: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, zones != nil, "Zones should not be nil")
+	th.Assert(t, len(zones) > 0, "Zones should not be empty")
 }
 
 func TestGetLaunchTemplatesInRegion(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	_, err := h.GetLaunchTemplatesInRegion()
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetLaunchTemplateById(t *testing.T) {
-	checkClient(t)
-	checkLaunchTemplateId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, launchTemplateId != nil, "No test launch template found")
 
 	template, err := h.GetLaunchTemplateById(*launchTemplateId)
-	if err != nil {
-		t.Fatal(err)
-	} else if template == nil {
-		t.Fatal("Incorrect launch template: empty result")
-	} else if *launchTemplateId != *template.LaunchTemplateId {
-		t.Errorf(th.IncorrectValueFormat, "launch template ID", *launchTemplateId,
-			*template.LaunchTemplateId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, template != nil, "Launch template should not be nil")
+	th.Equals(t, *launchTemplateId, *template.LaunchTemplateId)
 }
 
 func TestGetLaunchTemplateVersions(t *testing.T) {
-	checkClient(t)
-	checkLaunchTemplateId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, launchTemplateId != nil, "No test launch template found")
 
 	versions, err := h.GetLaunchTemplateVersions(*launchTemplateId, nil)
-	if err != nil {
-		t.Fatal(err)
-	} else if versions == nil || len(versions) <= 0 {
-		t.Fatal("Incorrect launch template versions: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, versions != nil, "Versions should not be nil")
+	th.Assert(t, len(versions) > 0, "Versions should not be empty")
 }
 
 func TestGetDefaultFreeTierInstanceType(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	_, err := h.GetDefaultFreeTierInstanceType()
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetInstanceTypesInRegion(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	instanceTypes, err := h.GetInstanceTypesInRegion()
-	if err != nil {
-		t.Fatal(err)
-	} else if instanceTypes == nil || len(instanceTypes) <= 0 {
-		t.Fatal("Incorrect instance types: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, instanceTypes != nil, "InstanceTypes should not be nil")
+	th.Assert(t, len(instanceTypes) > 0, "InstanceTypes should not be empty")
 }
 
 func TestGetInstanceType(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	instanceType, err := h.GetInstanceType("t2.micro")
-	if err != nil {
-		t.Fatal(err)
-	} else if instanceType == nil {
-		t.Fatal("Incorrect instance type: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, instanceType != nil, "InstanceType should not be nil")
 }
 
 func TestGetInstanceTypesFromInstanceSelector(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	instanceSelector := selector.New(h.Sess)
 	_, err := h.GetInstanceTypesFromInstanceSelector(instanceSelector, 2, 4)
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetLatestImages(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	_, err := h.GetLatestImages(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetDefaultImage(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	image, err := h.GetDefaultImage(nil)
-	if err != nil {
-		t.Fatal(err)
-	} else if image == nil {
-		t.Fatal("Incorrect image: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, image != nil, "Image should not be nil")
 }
 
 func TestGetImageById(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	image, err := h.GetImageById(testAmi)
-	if err != nil {
-		t.Fatal(err)
-	} else if image == nil {
-		t.Fatal("Incorrect image: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, image != nil, "Image should not be nil")
 }
 
 func TestGetAllVpcs(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	vpcs, err := h.GetAllVpcs()
-	if err != nil {
-		t.Fatal(err)
-	} else if vpcs == nil || len(vpcs) <= 0 {
-		t.Fatal("Incorrect VPCs: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, vpcs != nil, "Vpcs should not be nil")
+	th.Assert(t, len(vpcs) > 0, "Vpcs should not be empty")
 }
 
 func TestGetVpcById(t *testing.T) {
-	checkClient(t)
-	checkVpcId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, vpcId != nil, "No test VPC found")
 
 	vpc, err := h.GetVpcById(*vpcId)
-	if err != nil {
-		t.Fatal(err)
-	} else if vpc == nil {
-		t.Fatal("Incorrect VPC: empty result")
-	} else if *vpcId != *vpc.VpcId {
-		t.Errorf(th.IncorrectValueFormat, "VPC ID", *vpcId, *vpc.VpcId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, vpc != nil, "Vpc should not be nil")
+	th.Equals(t, *vpcId, *vpc.VpcId)
 }
 
 func TestGetSubnetsByVpc(t *testing.T) {
-	checkClient(t)
-	checkVpcId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, vpcId != nil, "No test VPC found")
 
 	subnets, err := h.GetSubnetsByVpc(*vpcId)
-	if err != nil {
-		t.Fatal(err)
-	} else if subnets == nil || len(subnets) <= 0 {
-		t.Fatal("Incorrect subnets: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, subnets != nil, "subnets should not be nil")
+	th.Assert(t, len(subnets) > 0, "subnets should not be empty")
 }
 
 func TestGetSubnetById(t *testing.T) {
-	checkClient(t)
-	checkSubnetIds(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, subnetIds != nil, "No test subnets found")
+	th.Assert(t, len(subnetIds) > 0, "No test subnets found")
 
 	subnetId := subnetIds[0]
 	subnet, err := h.GetSubnetById(subnetId)
-	if err != nil {
-		t.Fatal(err)
-	} else if subnet == nil {
-		t.Fatal("Incorrect subnet: empty result")
-	} else if *subnet.SubnetId != subnetId {
-		t.Errorf(th.IncorrectValueFormat, "subnet ID", subnetId, *subnet.SubnetId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, subnet != nil, "subnet should not be nil")
+	th.Equals(t, subnetId, *subnet.SubnetId)
 }
 
 func TestGetSecurityGroupsByIds(t *testing.T) {
-	checkClient(t)
-	checkSecurityGroupId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, securityGroupId != nil, "No test security group found")
 
 	securityGroups, err := h.GetSecurityGroupsByIds([]string{*securityGroupId})
-	if err != nil {
-		t.Fatal(err)
-	} else if securityGroups == nil || len(securityGroups) <= 0 {
-		t.Fatal("Incorrect security groups: empty result")
-	} else if *securityGroups[0].GroupId != *securityGroupId {
-		t.Errorf(th.IncorrectValueFormat, "security group ID", *securityGroupId,
-			*securityGroups[0].GroupId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, securityGroups != nil, "securityGroups should not be nil")
+	th.Assert(t, len(securityGroups) > 0, "securityGroups should not be empty")
+	th.Equals(t, *securityGroupId, *securityGroups[0].GroupId)
 }
 
 func TestGetSecurityGroupsByVpc(t *testing.T) {
-	checkClient(t)
-	checkVpcId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, vpcId != nil, "No test VPC found")
 
 	securityGroups, err := h.GetSecurityGroupsByVpc(*vpcId)
-	if err != nil {
-		t.Fatal(err)
-	} else if securityGroups == nil || len(securityGroups) <= 0 {
-		t.Fatal("Incorrect security groups: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, securityGroups != nil, "securityGroupsByVpc should not be nil")
+	th.Assert(t, len(securityGroups) > 0, "securityGroupsByVpc should not be empty")
 }
 
 func TestCreateSecurityGroupForSsh(t *testing.T) {
-	checkClient(t)
-	checkVpcId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, vpcId != nil, "No test VPC found")
 
 	// Create the security group
 	newSecurityGroupId, err := h.CreateSecurityGroupForSsh(*vpcId)
-	if err != nil {
-		t.Fatal(err)
-	} else if newSecurityGroupId == nil {
-		t.Fatal("Incorrect new security group: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, newSecurityGroupId != nil, "new security group should not be nil")
 
 	// Verify the new security group
 	securityGroups, err := h.GetSecurityGroupsByIds([]string{*newSecurityGroupId})
-	if err != nil {
-		t.Error(err)
-	} else if securityGroups == nil || len(securityGroups) <= 0 {
-		t.Error("Incorrect security groups: empty result")
-	} else if *securityGroups[0].VpcId != *vpcId {
-		t.Errorf(th.IncorrectValueFormat, "VPC ID", *vpcId, *securityGroups[0].VpcId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, securityGroups != nil, "securityGroupsForSsh should not be nil")
+	th.Assert(t, len(securityGroups) > 0, "securityGroupsForSsh should not be empty")
+	th.Equals(t, *vpcId, *securityGroups[0].VpcId)
 
 	// Clean up the security group
 	input := &ec2.DeleteSecurityGroupInput{
 		GroupId: newSecurityGroupId,
 	}
 	_, err = h.Svc.DeleteSecurityGroup(input)
-	if err != nil {
-		t.Error(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestGetInstanceById(t *testing.T) {
-	checkClient(t)
-	checkInstanceId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, instanceId != nil, "No test instance ID found")
 
 	instance, err := h.GetInstanceById(*instanceId)
-	if err != nil {
-		t.Fatal(err)
-	} else if instance == nil {
-		t.Fatal("Incorrect instance: empty result")
-	} else if *instance.InstanceId != *instanceId {
-		t.Errorf(th.IncorrectValueFormat, "instance ID", *instanceId, *instance.InstanceId)
-	}
+	th.Ok(t, err)
+	th.Assert(t, instance != nil, "instance should not be nil")
+	th.Equals(t, *instanceId, *instance.InstanceId)
 }
 
 func TestGetInstancesByState(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	states := []string{
 		ec2.InstanceStateNamePending,
@@ -343,17 +278,16 @@ func TestGetInstancesByState(t *testing.T) {
 		ec2.InstanceStateNameStopped,
 	}
 	instances, err := h.GetInstancesByState(states)
-	if err != nil {
-		t.Fatal(err)
-	} else if instances == nil || len(instances) <= 0 {
-		t.Fatal("Incorrect instances: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, instances != nil, "instancesByState should not be nil")
+	th.Assert(t, len(instances) > 0, "instancesByState should not be empty")
 }
 
 func TestParseConfig(t *testing.T) {
-	checkClient(t)
-	checkSubnetIds(t)
-	checkSecurityGroupId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, subnetIds != nil, "No test subnets found")
+	th.Assert(t, len(subnetIds) > 0, "No test subnets found")
+	th.Assert(t, securityGroupId != nil, "No test security group found")
 
 	instanceType := "t2.micro"
 	subnetId := subnetIds[0]
@@ -365,50 +299,30 @@ func TestParseConfig(t *testing.T) {
 		ImageId:      testAmi,
 		InstanceType: instanceType,
 	}
+
 	detailedConfig, err := h.ParseConfig(testSimpleConfig)
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		if *detailedConfig.Subnet.SubnetId != subnetId {
-			t.Errorf(th.IncorrectValueFormat, "subnet ID", subnetId, *detailedConfig.Subnet.SubnetId)
-		}
-		if *detailedConfig.Vpc.VpcId != *vpcId {
-			t.Errorf(th.IncorrectValueFormat, "VPC ID", *vpcId, *detailedConfig.Vpc.VpcId)
-		}
-		if *detailedConfig.SecurityGroups[0].GroupId != *securityGroupId {
-			t.Errorf(th.IncorrectValueFormat, "security group ID", *securityGroupId,
-				*detailedConfig.SecurityGroups[0].GroupId)
-		}
-		if *detailedConfig.Image.ImageId != testAmi {
-			t.Errorf(th.IncorrectValueFormat, "image ID", testAmi, *detailedConfig.Image.ImageId)
-		}
-		if *detailedConfig.InstanceTypeInfo.InstanceType != instanceType {
-			t.Errorf(th.IncorrectValueFormat, "instance type", instanceType,
-				*detailedConfig.InstanceTypeInfo.InstanceType)
-		}
-	}
+	th.Ok(t, err)
+	th.Equals(t, subnetId, *detailedConfig.Subnet.SubnetId)
+	th.Equals(t, *vpcId, *detailedConfig.Vpc.VpcId)
+	th.Equals(t, *securityGroupId, *detailedConfig.SecurityGroups[0].GroupId)
+	th.Equals(t, testAmi, *detailedConfig.Image.ImageId)
+	th.Equals(t, instanceType, *detailedConfig.InstanceTypeInfo.InstanceType)
 }
 
 func TestGetDefaultSimpleConfig(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	simpleConfig, err := h.GetDefaultSimpleConfig()
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		if simpleConfig.InstanceType == "" {
-			t.Fatal("Incorrect instance type: empty result")
-		}
-		if simpleConfig.ImageId == "" {
-			t.Fatal("Incorrect image: empty result")
-		}
-	}
+	th.Ok(t, err)
+	th.Assert(t, simpleConfig.InstanceType != "", "InstanceType should not be empty")
+	th.Assert(t, simpleConfig.ImageId != "", "ImageId should not be empty")
 }
 
 func TestLaunchInstance(t *testing.T) {
-	checkClient(t)
-	checkSubnetIds(t)
-	checkSecurityGroupId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, subnetIds != nil, "No test subnets found")
+	th.Assert(t, len(subnetIds) > 0, "No test subnets found")
+	th.Assert(t, securityGroupId != nil, "No test security group found")
 
 	// Create instances
 	instanceType := "t2.micro"
@@ -422,80 +336,35 @@ func TestLaunchInstance(t *testing.T) {
 		InstanceType: instanceType,
 	}
 	instanceIds, err := h.LaunchInstance(testSimpleConfig, nil, true)
-	if err != nil {
-		t.Fatal(err)
-	} else if instanceIds == nil || len(instanceIds) <= 0 {
-		t.Fatal("Incorrect instance IDs: empty result")
-	}
+	th.Ok(t, err)
+	th.Assert(t, instanceIds != nil, "instanceIds should not be nil")
+	th.Assert(t, len(instanceIds) > 0, "instanceIds should not be empty")
 
 	// Clean up
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice(instanceIds),
 	}
+
 	_, err = h.Svc.TerminateInstances(input)
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestTerminateInstances(t *testing.T) {
-	checkClient(t)
-	checkInstanceId(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+	th.Assert(t, instanceId != nil, "No test instance ID found")
 
 	err := h.TerminateInstances([]string{*instanceId})
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func TestValidateImageId(t *testing.T) {
-	checkClient(t)
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
 	isValid := ec2helper.ValidateImageId(h, testAmi)
-	if !isValid {
-		t.Errorf(th.IncorrectValueFormat, "image validation", "true", "false")
-	}
+	th.Equals(t, true, isValid)
 }
 
 func TestCleanupEnvironment(t *testing.T) {
 	err := c.DeleteStack(testStackName)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-func checkClient(t *testing.T) {
-	if h == nil {
-		t.Fatal("EC2Helper is not initialized successfully")
-	}
-}
-
-func checkLaunchTemplateId(t *testing.T) {
-	if launchTemplateId == nil {
-		t.Fatal("No test launch template found")
-	}
-}
-
-func checkVpcId(t *testing.T) {
-	if vpcId == nil {
-		t.Fatal("No test VPC found")
-	}
-}
-
-func checkSubnetIds(t *testing.T) {
-	if subnetIds == nil || len(subnetIds) <= 0 {
-		t.Fatal("No test subnet found")
-	}
-}
-
-func checkSecurityGroupId(t *testing.T) {
-	if securityGroupId == nil {
-		t.Fatal("No test security group found")
-	}
-}
-
-func checkInstanceId(t *testing.T) {
-	if instanceId == nil {
-		t.Fatal("No test instance ID found")
-	}
+	th.Ok(t, err)
 }

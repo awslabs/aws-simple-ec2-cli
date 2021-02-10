@@ -14,11 +14,8 @@
 package config_test
 
 import (
-	"bytes"
 	"io/ioutil"
 	"os"
-	"reflect"
-	"strconv"
 	"testing"
 
 	"simple-ec2/pkg/config"
@@ -34,29 +31,16 @@ var testConfigFilePath = os.Getenv("HOME") + "/.simple-ec2/" + testConfigFileNam
 func TestSaveInConfigFolder(t *testing.T) {
 	testString := "unit test config"
 	testData := []byte(testString)
-	path, err := config.SaveInConfigFolder(testConfigFileName, testData, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
 
-	// Check if the path is correct
-	if *path != testConfigFilePath {
-		os.Remove(*path)
-		t.Fatal("The config file path is incorrect")
-	}
+	path, err := config.SaveInConfigFolder(testConfigFileName, testData, 0644)
+	defer os.Remove(*path)
+	th.Ok(t, err)
+	th.Assert(t, testConfigFilePath == *path, "The config file path is incorrect")
 
 	// Check the content of the file is correct
 	readData, err := ioutil.ReadFile(testConfigFilePath)
-	if err != nil {
-		os.Remove(*path)
-		t.Fatal(err)
-	}
-	if bytes.Compare(testData, readData) != 0 {
-		t.Errorf("Config file content incorrect, expect: \"%s\" got: \"%s\"",
-			testString, string(readData))
-	}
-
-	os.Remove(*path)
+	th.Ok(t, err)
+	th.Equals(t, testData, readData)
 }
 
 // This is merely a test config to test if functions work. It won't work in the real environment.
@@ -91,29 +75,18 @@ func TestSaveConfig(t *testing.T) {
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
-	if err != nil {
-		os.Remove(testConfigFilePath)
-		t.Fatal(err)
-	}
+	defer os.Remove(testConfigFilePath)
+	th.Ok(t, err)
 
 	// Check the content of the file is correct
 	readData, err := ioutil.ReadFile(testConfigFilePath)
-	if err != nil {
-		os.Remove(testConfigFilePath)
-		t.Fatal(err)
-	}
-	if expectedJson != string(readData) {
-		t.Errorf("Config file content incorrect, expect: \"%s\" got: \"%s\"",
-			expectedJson, string(readData))
-
-	}
-
-	os.Remove(testConfigFilePath)
+	th.Ok(t, err)
+	th.Equals(t, expectedJson, string(readData))
 }
 
 func TestOverrideConfigWithFlags(t *testing.T) {
-	simpleConfig := config.NewSimpleInfo()
-	flagConfig := &config.SimpleInfo{
+	actualConfig := config.NewSimpleInfo()
+	expectedConfig := &config.SimpleInfo{
 		Region:                testRegion,
 		ImageId:               testImageId,
 		InstanceType:          testInstanceType,
@@ -126,84 +99,22 @@ func TestOverrideConfigWithFlags(t *testing.T) {
 		BootScriptFilePath:    testBootScriptFilePath,
 		UserTags:              testTags,
 	}
-
-	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
-
-	// Check if the fields are correct
-	compareConfig(flagConfig, simpleConfig, t)
-}
-
-func compareConfig(correctConfig, otherConfig *config.SimpleInfo, t *testing.T) {
-	if correctConfig.Region != otherConfig.Region {
-		t.Errorf("Region is not correct, expect: %s got %s",
-			correctConfig.Region, otherConfig.Region)
-	}
-	if correctConfig.InstanceType != otherConfig.InstanceType {
-		t.Errorf("InstanceType is not correct, expect: %s got %s",
-			correctConfig.InstanceType, otherConfig.InstanceType)
-	}
-	if correctConfig.ImageId != otherConfig.ImageId {
-		t.Errorf("ImageId is not correct, expect: %s got %s",
-			correctConfig.ImageId, otherConfig.ImageId)
-	}
-	if correctConfig.SubnetId != otherConfig.SubnetId {
-		t.Errorf("SubnetId is not correct, expect: %s got %s",
-			correctConfig.SubnetId, otherConfig.SubnetId)
-	}
-	if correctConfig.LaunchTemplateId != otherConfig.LaunchTemplateId {
-		t.Errorf("LaunchTemplateId is not correct, expect: %s got %s",
-			correctConfig.LaunchTemplateId, otherConfig.LaunchTemplateId)
-	}
-	if correctConfig.LaunchTemplateVersion != otherConfig.LaunchTemplateVersion {
-		t.Errorf("LaunchTemplateVersion is not correct, expect: %s got %s",
-			correctConfig.LaunchTemplateVersion, otherConfig.LaunchTemplateVersion)
-	}
-	if !th.StringSliceEqual(correctConfig.SecurityGroupIds, otherConfig.SecurityGroupIds) {
-		t.Errorf("SecurityGroupIds is not correct, expect: %s got %s",
-			correctConfig.SecurityGroupIds, otherConfig.SecurityGroupIds)
-	}
-	if correctConfig.NewVPC != otherConfig.NewVPC {
-		t.Errorf("NewVPC is not correct, expect: %s got %s",
-			strconv.FormatBool(correctConfig.NewVPC), strconv.FormatBool(otherConfig.NewVPC))
-	}
-	if correctConfig.AutoTerminationTimerMinutes != otherConfig.AutoTerminationTimerMinutes {
-		t.Errorf("AutoTerminationTimerMinutes is not correct, expect: %d got %d",
-			correctConfig.AutoTerminationTimerMinutes, otherConfig.AutoTerminationTimerMinutes)
-	}
-	if correctConfig.KeepEbsVolumeAfterTermination != otherConfig.KeepEbsVolumeAfterTermination {
-		t.Errorf("KeepEbsVolumeAfterTermination is not correct, expect: %s got %s",
-			strconv.FormatBool(correctConfig.KeepEbsVolumeAfterTermination), strconv.FormatBool(otherConfig.KeepEbsVolumeAfterTermination))
-	}
-	if correctConfig.IamInstanceProfile != otherConfig.IamInstanceProfile {
-		t.Errorf("IamInstanceProfile is not correct, expect: %s got %s",
-			correctConfig.IamInstanceProfile, otherConfig.IamInstanceProfile)
-	}
-	if correctConfig.BootScriptFilePath != otherConfig.BootScriptFilePath {
-		t.Errorf("BootScriptFilePath is not correct, expect: %s got %s",
-			correctConfig.BootScriptFilePath, otherConfig.BootScriptFilePath)
-	}
-	if !reflect.DeepEqual(correctConfig.UserTags, otherConfig.UserTags) {
-		t.Errorf("UserTags is not correct, expect: %s got %s",
-			correctConfig.UserTags, otherConfig.UserTags)
-	}
+	config.OverrideConfigWithFlags(actualConfig, expectedConfig)
+	th.Equals(t, expectedConfig, actualConfig)
 }
 
 func TestReadConfig(t *testing.T) {
 	err := ioutil.WriteFile(testConfigFilePath, []byte(expectedJson), 0644)
-	if err != nil {
-		os.Remove(testConfigFilePath)
-		t.Fatal(err)
-	}
+	defer os.Remove(testConfigFilePath)
 
-	simpleConfig := config.NewSimpleInfo()
-	err = config.ReadConfig(simpleConfig, aws.String(testConfigFileName))
-	if err != nil {
-		os.Remove(testConfigFilePath)
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
+
+	actualConfig := config.NewSimpleInfo()
+	err = config.ReadConfig(actualConfig, aws.String(testConfigFileName))
+	th.Ok(t, err)
 
 	// Check if the config is read correctly
-	correctConfig := &config.SimpleInfo{
+	expectedConfig := &config.SimpleInfo{
 		Region:                testRegion,
 		ImageId:               testImageId,
 		InstanceType:          testInstanceType,
@@ -216,7 +127,5 @@ func TestReadConfig(t *testing.T) {
 		BootScriptFilePath:    testBootScriptFilePath,
 		UserTags:              testTags,
 	}
-
-	compareConfig(correctConfig, simpleConfig, t)
-	os.Remove(testConfigFilePath)
+	th.Equals(t, expectedConfig, actualConfig)
 }

@@ -44,7 +44,7 @@ var testEC2 = &ec2helper.EC2Helper{
 AskQuestion Tests
 */
 
-const correctOutput = `
+const expectedOutput = `
 These are the optionsThis is a question [default option]:  `
 
 var input = &question.AskQuestionInput{
@@ -63,15 +63,9 @@ func TestAskQuestion_StringOptionAnswer(t *testing.T) {
 	initQuestionTest(t, testResponse+"\n")
 
 	answer := question.AskQuestion(input)
-
 	output := cleanupQuestionTest()
-	if output != correctOutput {
-		t.Errorf(th.IncorrectValueFormat, "question output", correctOutput, output)
-	}
-
-	if answer != testResponse {
-		t.Errorf(th.IncorrectValueFormat, "response", testResponse, answer)
-	}
+	th.Equals(t, expectedOutput, output)
+	th.Equals(t, testResponse, answer)
 }
 
 func TestAskQuestion_IndexedOptionAnswer(t *testing.T) {
@@ -80,9 +74,7 @@ func TestAskQuestion_IndexedOptionAnswer(t *testing.T) {
 	initQuestionTest(t, index+"\n")
 
 	answer := question.AskQuestion(input)
-	if answer != input.IndexedOptions[0] {
-		t.Errorf(th.IncorrectValueFormat, "response", input.IndexedOptions[0], answer)
-	}
+	th.Equals(t, input.IndexedOptions[0], answer)
 
 	cleanupQuestionTest()
 }
@@ -91,44 +83,38 @@ func TestAskQuestion_DefaultAnswer(t *testing.T) {
 	initQuestionTest(t, "\n")
 
 	answer := question.AskQuestion(input)
-	if answer != *input.DefaultOption {
-		t.Errorf(th.IncorrectValueFormat, "response", *input.DefaultOption, answer)
-	}
+	th.Equals(t, *input.DefaultOption, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskQuestion_IntegerAnswer(t *testing.T) {
-	const testInteger = "5"
-	initQuestionTest(t, testInteger+"\n")
+	const expectedInteger = "5"
+	initQuestionTest(t, expectedInteger+"\n")
 
 	answer := question.AskQuestion(input)
-	if answer != testInteger {
-		t.Errorf(th.IncorrectValueFormat, "response", testInteger, answer)
-	}
+	th.Equals(t, expectedInteger, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskQuestion_AnyStringAnswer(t *testing.T) {
-	const testString = "any string"
-	initQuestionTest(t, testString+"\n")
+	const expectedString = "any string"
+	initQuestionTest(t, expectedString+"\n")
 
 	answer := question.AskQuestion(input)
-	if answer != testString {
-		t.Errorf(th.IncorrectValueFormat, "response", testString, answer)
-	}
+	th.Equals(t, expectedString, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskQuestion_FunctionCheckedInput(t *testing.T) {
-	const testImageId = "ami-12345"
+	const expectedImageId = "ami-12345"
 	testEC2 := &ec2helper.EC2Helper{
 		Svc: &th.MockedEC2Svc{
 			Images: []*ec2.Image{
 				{
-					ImageId: aws.String(testImageId),
+					ImageId: aws.String(expectedImageId),
 				},
 			},
 		},
@@ -138,12 +124,10 @@ func TestAskQuestion_FunctionCheckedInput(t *testing.T) {
 		ec2helper.ValidateImageId,
 	}
 
-	initQuestionTest(t, testImageId+"\n")
+	initQuestionTest(t, expectedImageId+"\n")
 
 	answer := question.AskQuestion(input)
-	if answer != testImageId {
-		t.Errorf(th.IncorrectValueFormat, "response", testImageId, answer)
-	}
+	th.Equals(t, expectedImageId, answer)
 
 	cleanupQuestionTest()
 }
@@ -153,13 +137,13 @@ Other Question Asking Tests
 */
 
 func TestAskRegion_Success(t *testing.T) {
-	const testRegion = "us-east-2"
+	const expectedRegion = "us-east-2"
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Regions: []*ec2.Region{
 			{
-				RegionName: aws.String(testRegion),
+				RegionName: aws.String(expectedRegion),
 			},
 			{
 				RegionName: aws.String("us-west-1"),
@@ -171,11 +155,8 @@ func TestAskRegion_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskRegion(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testRegion {
-		t.Errorf(th.IncorrectValueFormat, "answer", testRegion, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedRegion, *answer)
 
 	cleanupQuestionTest()
 }
@@ -188,22 +169,20 @@ func TestAskRegion_DescribeRegionsError(t *testing.T) {
 	initQuestionTest(t, "\n")
 
 	_, err := question.AskRegion(testEC2)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskLaunchTemplate_Success(t *testing.T) {
-	const testTemplateId = "lt-12345"
+	const expectedTemplateId = "lt-12345"
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplates: []*ec2.LaunchTemplate{
 			{
-				LaunchTemplateId:    aws.String(testTemplateId),
-				LaunchTemplateName:  aws.String(testTemplateId),
+				LaunchTemplateId:    aws.String(expectedTemplateId),
+				LaunchTemplateName:  aws.String(expectedTemplateId),
 				LatestVersionNumber: aws.Int64(1),
 			},
 			{
@@ -215,9 +194,7 @@ func TestAskLaunchTemplate_Success(t *testing.T) {
 	}
 
 	answer := question.AskLaunchTemplate(testEC2)
-	if *answer != testTemplateId {
-		t.Errorf(th.IncorrectValueFormat, "answer", testTemplateId, *answer)
-	}
+	th.Equals(t, expectedTemplateId, *answer)
 
 	cleanupQuestionTest()
 }
@@ -230,9 +207,7 @@ func TestAskLaunchTemplate_DescribeLaunchTemplatesPagesError(t *testing.T) {
 	initQuestionTest(t, "\n")
 
 	answer := question.AskLaunchTemplate(testEC2)
-	if *answer != cli.ResponseNo {
-		t.Errorf(th.IncorrectValueFormat, "answer", cli.ResponseNo, *answer)
-	}
+	th.Equals(t, cli.ResponseNo, *answer)
 
 	cleanupQuestionTest()
 }
@@ -259,11 +234,8 @@ func TestAskLaunchTemplateVersion_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != strconv.Itoa(testVersion) {
-		t.Errorf(th.IncorrectValueFormat, "answer", strconv.Itoa(testVersion), *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, strconv.Itoa(testVersion), *answer)
 
 	cleanupQuestionTest()
 }
@@ -278,32 +250,27 @@ func TestAskLaunchTemplateVersion_DescribeLaunchTemplateVersionsPagesError(t *te
 	initQuestionTest(t, "\n")
 
 	_, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskIfEnterInstanceType_Success(t *testing.T) {
-	const testInstanceType = ec2.InstanceTypeT2Micro
+	const expectedInstanceType = ec2.InstanceTypeT2Micro
 	initQuestionTest(t, "\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
 			{
-				InstanceType:     aws.String(testInstanceType),
+				InstanceType:     aws.String(expectedInstanceType),
 				FreeTierEligible: aws.Bool(true),
 			},
 		},
 	}
 
 	answer, err := question.AskIfEnterInstanceType(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstanceType, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedInstanceType, *answer)
 
 	cleanupQuestionTest()
 }
@@ -316,32 +283,27 @@ func TestAskIfEnterInstanceType_(t *testing.T) {
 	initQuestionTest(t, "\n")
 
 	_, err := question.AskIfEnterInstanceType(testEC2)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskInstanceType_Success(t *testing.T) {
-	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, testInstanceType+"\n")
+	const expectedInstanceType = ec2.InstanceTypeT2Micro
+	initQuestionTest(t, expectedInstanceType+"\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
 			{
-				InstanceType:     aws.String(testInstanceType),
+				InstanceType:     aws.String(expectedInstanceType),
 				FreeTierEligible: aws.Bool(true),
 			},
 		},
 	}
 
 	answer, err := question.AskInstanceType(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstanceType, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedInstanceType, *answer)
 
 	cleanupQuestionTest()
 }
@@ -354,39 +316,33 @@ func TestAskInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
 	initQuestionTest(t, "\n")
 
 	_, err := question.AskInstanceType(testEC2)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskInstanceTypeVCpu(t *testing.T) {
-	const testVcpus = "2"
-	initQuestionTest(t, testVcpus+"\n")
+	const expectedVcpus = "2"
+	initQuestionTest(t, expectedVcpus+"\n")
 
 	answer := question.AskInstanceTypeVCpu()
-	if answer != testVcpus {
-		t.Errorf(th.IncorrectValueFormat, "answer", testVcpus, answer)
-	}
+	th.Equals(t, expectedVcpus, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskInstanceTypeMemory(t *testing.T) {
-	const testMemory = "2"
-	initQuestionTest(t, testMemory+"\n")
+	const expectedMemory = "2"
+	initQuestionTest(t, expectedMemory+"\n")
 
 	answer := question.AskInstanceTypeMemory()
-	if answer != testMemory {
-		t.Errorf(th.IncorrectValueFormat, "answer", testMemory, answer)
-	}
+	th.Equals(t, expectedMemory, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskImage_Success(t *testing.T) {
-	const testImage = "ami-12345"
+	const expectedImage = "ami-12345"
 	const testInstanceType = ec2.InstanceTypeT2Micro
 	initQuestionTest(t, "1\n")
 
@@ -399,18 +355,15 @@ func TestAskImage_Success(t *testing.T) {
 		},
 		Images: []*ec2.Image{
 			{
-				ImageId:      aws.String(testImage),
+				ImageId:      aws.String(expectedImage),
 				CreationDate: aws.String("some time"),
 			},
 		},
 	}
 
 	answer, err := question.AskImage(testEC2, testInstanceType)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer.ImageId != testImage {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstanceType, *answer.ImageId)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedImage, *answer.ImageId)
 
 	cleanupQuestionTest()
 }
@@ -429,9 +382,7 @@ func TestAskImage_NoImage(t *testing.T) {
 	}
 
 	_, err := question.AskImage(testEC2, testInstanceType)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -445,9 +396,7 @@ func TestAskImage_DescribeInstanceTypesPagesError(t *testing.T) {
 	}
 
 	_, err := question.AskImage(testEC2, testInstanceType)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -467,45 +416,39 @@ func TestAskImage_DescribeImagesError(t *testing.T) {
 	}
 
 	_, err := question.AskImage(testEC2, testInstanceType)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskKeepEbsVolume(t *testing.T) {
-	const testAnswer = cli.ResponseYes
-	initQuestionTest(t, testAnswer+"\n")
+	const expectedAnswer = cli.ResponseYes
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer := question.AskKeepEbsVolume()
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskAutoTerminationTimerMinutes(t *testing.T) {
-	const testAnswer = "30"
-	initQuestionTest(t, testAnswer+"\n")
+	const expectedAnswer = "30"
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer := question.AskAutoTerminationTimerMinutes()
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskVpc_Success(t *testing.T) {
-	const testVpc = "vpc-12345"
+	const expectedVpc = "vpc-12345"
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Vpcs: []*ec2.Vpc{
 			{
-				VpcId:     aws.String(testVpc),
+				VpcId:     aws.String(expectedVpc),
 				CidrBlock: aws.String("some block"),
 				Tags: []*ec2.Tag{
 					{
@@ -524,17 +467,13 @@ func TestAskVpc_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskVpc(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testVpc {
-		t.Errorf(th.IncorrectValueFormat, "answer", testVpc, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedVpc, *answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskVpc_DescribeVpcsPagesError(t *testing.T) {
-	const testInstanceType = ec2.InstanceTypeT2Micro
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
@@ -542,22 +481,20 @@ func TestAskVpc_DescribeVpcsPagesError(t *testing.T) {
 	}
 
 	_, err := question.AskVpc(testEC2)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSubnet_Success(t *testing.T) {
 	const testVpc = "vpc-12345"
-	const testSubnet = "subnet-12345"
+	const expectedSubnet = "subnet-12345"
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
 			{
-				SubnetId:         aws.String(testSubnet),
+				SubnetId:         aws.String(expectedSubnet),
 				VpcId:            aws.String(testVpc),
 				CidrBlock:        aws.String("some block"),
 				AvailabilityZone: aws.String("some az"),
@@ -578,11 +515,8 @@ func TestAskSubnet_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskSubnet(testEC2, testVpc)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testSubnet {
-		t.Errorf(th.IncorrectValueFormat, "answer", testSubnet, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedSubnet, *answer)
 
 	cleanupQuestionTest()
 }
@@ -596,21 +530,19 @@ func TestAskSubnet_DescribeSubnetsPagesError(t *testing.T) {
 	}
 
 	_, err := question.AskSubnet(testEC2, testVpc)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSubnetPlaceholder_Success(t *testing.T) {
-	const testAz = "us-east-1"
+	const expectedAz = "us-east-1"
 	initQuestionTest(t, "1\n")
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		AvailabilityZones: []*ec2.AvailabilityZone{
 			{
-				ZoneName: aws.String(testAz),
+				ZoneName: aws.String(expectedAz),
 				ZoneId:   aws.String("some id"),
 			},
 			{
@@ -621,11 +553,8 @@ func TestAskSubnetPlaceholder_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskSubnetPlaceholder(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testAz {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAz, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedAz, *answer)
 
 	cleanupQuestionTest()
 }
@@ -639,20 +568,18 @@ func TestAskSubnetPlaceholder_DescribeAvailabilityZonesError(t *testing.T) {
 	}
 
 	_, err := question.AskSubnetPlaceholder(testEC2)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSecurityGroups_Success(t *testing.T) {
-	const testGroup = "sg-12345"
+	const expectedGroup = "sg-12345"
 
 	testSecurityGroups := []*ec2.SecurityGroup{
 		{
 			GroupName: aws.String("Group1"),
-			GroupId:   aws.String(testGroup),
+			GroupId:   aws.String(expectedGroup),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -689,37 +616,28 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
-	if answer != testGroup {
-		t.Errorf(th.IncorrectValueFormat, "answer", testGroup, answer)
-	}
+	th.Equals(t, expectedGroup, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSecurityGroups_NoGroup(t *testing.T) {
-	const testAnswer = cli.ResponseNo
-
 	testSecurityGroups := []*ec2.SecurityGroup{}
 	addedGroups := []string{}
 
 	initQuestionTest(t, "1\n")
 
 	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, cli.ResponseNo, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSecurityGroupPlaceholder(t *testing.T) {
-	const testAnswer = cli.ResponseAll
 	initQuestionTest(t, "1\n")
 
 	answer := question.AskSecurityGroupPlaceholder()
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, cli.ResponseAll, answer)
 
 	cleanupQuestionTest()
 }
@@ -727,7 +645,7 @@ func TestAskSecurityGroupPlaceholder(t *testing.T) {
 func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
-	const testAnswer = cli.ResponseYes
+	const expectedAnswer = cli.ResponseYes
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
@@ -747,14 +665,11 @@ func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 		LaunchTemplateVersion: strconv.Itoa(testVersion),
 	}
 
-	initQuestionTest(t, testAnswer+"\n")
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedAnswer, *answer)
 
 	cleanupQuestionTest()
 }
@@ -762,7 +677,7 @@ func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 func TestAskConfirmationWithTemplate_Success_Overriding(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
-	const testAnswer = cli.ResponseYes
+	const expectedAnswer = cli.ResponseYes
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
@@ -785,14 +700,11 @@ func TestAskConfirmationWithTemplate_Success_Overriding(t *testing.T) {
 		ImageId:               "ami-12345",
 	}
 
-	initQuestionTest(t, testAnswer+"\n")
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedAnswer, *answer)
 
 	cleanupQuestionTest()
 }
@@ -828,9 +740,7 @@ func TestAskConfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 	initQuestionTest(t, cli.ResponseYes+"\n")
 
 	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -845,9 +755,7 @@ func TestAskConfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t 
 	initQuestionTest(t, cli.ResponseYes+"\n")
 
 	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -912,19 +820,17 @@ var testDetailedConfig = &config.DetailedInfo{
 }
 
 func TestAskConfirmationWithInput_Success_NoNewInfrastructure(t *testing.T) {
-	const testAnswer = cli.ResponseYes
-
-	initQuestionTest(t, testAnswer+"\n")
+	const expectedAnswer = cli.ResponseYes
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
+	const expectedAnswer = cli.ResponseYes
 	// Modify the configs for creating new infrastructure
 	testSimpleConfig.NewVPC = true
 	testSimpleConfig.SecurityGroupIds = []string{cli.ResponseNew}
@@ -932,37 +838,31 @@ func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
 	testSimpleConfig.SubnetId = "us-east-2"
 	testDetailedConfig.SecurityGroups = nil
 
-	const testAnswer = cli.ResponseYes
-
-	initQuestionTest(t, testAnswer+"\n")
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskSaveConfig(t *testing.T) {
-	const testAnswer = cli.ResponseYes
-	initQuestionTest(t, testAnswer+"\n")
+	const expectedAnswer = cli.ResponseYes
+	initQuestionTest(t, expectedAnswer+"\n")
 
 	answer := question.AskSaveConfig()
-	if answer != testAnswer {
-		t.Errorf(th.IncorrectValueFormat, "answer", testAnswer, answer)
-	}
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskInstanceId_Success(t *testing.T) {
-	const testInstance = "i-12345"
+	const expectedInstance = "i-12345"
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Instances: []*ec2.Instance{
 			{
-				InstanceId: aws.String(testInstance),
+				InstanceId: aws.String(expectedInstance),
 			},
 			{
 				InstanceId: aws.String("i-67890"),
@@ -973,11 +873,8 @@ func TestAskInstanceId_Success(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	answer, err := question.AskInstanceId(testEC2)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testInstance {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstance, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedInstance, *answer)
 
 	cleanupQuestionTest()
 }
@@ -990,9 +887,7 @@ func TestAskInstanceId_NoInstance(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceId(testEC2)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1005,20 +900,18 @@ func TestAskInstanceId_DescribeInstancesPagesError(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceId(testEC2)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskInstanceIds_Success(t *testing.T) {
-	const testInstance = "i-12345"
+	const expectedInstance = "i-12345"
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Instances: []*ec2.Instance{
 			{
-				InstanceId: aws.String(testInstance),
+				InstanceId: aws.String(expectedInstance),
 			},
 			{
 				InstanceId: aws.String("i-67890"),
@@ -1030,11 +923,8 @@ func TestAskInstanceIds_Success(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	answer, err := question.AskInstanceIds(testEC2, addedInstances)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testInstance {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstance, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedInstance, *answer)
 
 	cleanupQuestionTest()
 }
@@ -1046,9 +936,7 @@ func TestAskInstanceIds_NoInstance(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceIds(testEC2, addedInstances)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1062,9 +950,7 @@ func TestAskInstanceIds_DescribeInstancesPagesError(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceIds(testEC2, addedInstances)
-	if err == nil {
-		t.Errorf(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1105,11 +991,8 @@ func TestAskInstanceTypeInstanceSelector_Success(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	answer, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *answer != testInstanceType {
-		t.Errorf(th.IncorrectValueFormat, "answer", testInstanceType, *answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, testInstanceType, *answer)
 
 	cleanupQuestionTest()
 }
@@ -1118,9 +1001,7 @@ func TestAskInstanceTypeInstanceSelector_BadVcpus(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "a", "4")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1129,9 +1010,7 @@ func TestAskInstanceTypeInstanceSelector_BadMemory(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "a")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1144,9 +1023,7 @@ func TestAskInstanceTypeInstanceSelector_NoResult(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
@@ -1160,15 +1037,13 @@ func TestAskInstanceTypeInstanceSelector_SelectorError(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
 	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 
 	cleanupQuestionTest()
 }
 
 func TestAskIamProfile_Success(t *testing.T) {
-	testProfileName := "profile2"
+	expectedProfileName := "profile2"
 	testProfiles := []*iam.InstanceProfile{
 		{
 			InstanceProfileName: aws.String("profile1"),
@@ -1191,12 +1066,10 @@ func TestAskIamProfile_Success(t *testing.T) {
 	}
 	iam := &iamhelper.IAMHelper{Client: mockedIam}
 	initQuestionTest(t, "2\n")
+
 	answer, err := question.AskIamProfile(iam)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if answer != testProfileName {
-		t.Errorf(th.IncorrectValueFormat, "answer", testProfileName, answer)
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedProfileName, answer)
 
 	cleanupQuestionTest()
 }
@@ -1207,23 +1080,19 @@ func TestAskIamProfile_Error(t *testing.T) {
 	}
 	iam := &iamhelper.IAMHelper{Client: mockedIam}
 	initQuestionTest(t, "1\n")
+
 	_, err := question.AskIamProfile(iam)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
+
 	cleanupQuestionTest()
 }
 
 func initQuestionTest(t *testing.T, input string) {
 	err := th.TakeOverStdin(input)
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 
 	err = th.TakeOverStdout()
-	if err != nil {
-		t.Fatal(err)
-	}
+	th.Ok(t, err)
 }
 
 func cleanupQuestionTest() string {

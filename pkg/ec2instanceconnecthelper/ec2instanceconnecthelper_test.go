@@ -34,25 +34,11 @@ func TestGenerateSSHKeyPair(t *testing.T) {
 	const privateKeyTailOffset = len(expectedPrivateKeyTail)
 
 	publicKey, privateKey, err := ec2ichelper.GenerateSSHKeyPair()
-	if err != nil {
-		t.Error(err)
-	} else {
-		// Validate public key
-		if (*publicKey)[:7] != expectedPublicKeyHeader {
-			t.Error("Public key header incorrect: expected", expectedPublicKeyHeader, "got",
-				(*publicKey)[:publicKeyHeaderRightIndex])
-		} else if !isBase64((*publicKey)[publicKeyContentLeftIndex:]) {
-			t.Error("Public key is not Base64 encoded")
-		}
-
-		// Validate private key
-		if (*privateKey)[:privateKeyHeaderRightIndex] != expectedPrivateKeyHeader {
-			t.Error("Private key header incorrect: expected", expectedPrivateKeyHeader, "got", (*privateKey)[:31])
-		} else if (*privateKey)[len(*privateKey)-privateKeyTailOffset-1:len(*privateKey)-1] != expectedPrivateKeyTail {
-			t.Error("Private key tail incorrect: expected", expectedPrivateKeyTail,
-				"got", (*privateKey)[len(*privateKey)-privateKeyTailOffset-1:len(*privateKey)-1])
-		}
-	}
+	th.Ok(t, err)
+	th.Equals(t, expectedPublicKeyHeader, (*publicKey)[:7])
+	th.Assert(t, isBase64((*publicKey)[publicKeyContentLeftIndex:]), "Public key is not Base64 encoded")
+	th.Equals(t, expectedPrivateKeyHeader, (*privateKey)[:privateKeyHeaderRightIndex])
+	th.Equals(t, expectedPrivateKeyTail, (*privateKey)[len(*privateKey)-privateKeyTailOffset-1:len(*privateKey)-1])
 }
 
 func TestGetInstancePublicDnsName_Success(t *testing.T) {
@@ -68,11 +54,8 @@ func TestGetInstancePublicDnsName_Success(t *testing.T) {
 	}
 
 	name, err := ec2ichelper.GetInstancePublicDnsName(instance)
-	if err != nil {
-		t.Errorf(th.UnexpectedErrorFormat, err)
-	} else if *name != testDnsName {
-		t.Errorf(th.IncorrectValueFormat, "instance public DNS name", testDnsName, *name)
-	}
+	th.Ok(t, err)
+	th.Equals(t, testDnsName, *name)
 }
 
 func TestGetInstancePublicDnsName_NoNetworkInterface(t *testing.T) {
@@ -81,9 +64,7 @@ func TestGetInstancePublicDnsName_NoNetworkInterface(t *testing.T) {
 	}
 
 	_, err := ec2ichelper.GetInstancePublicDnsName(instance)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 func TestGetInstancePublicDnsName_NoDnsNameInNetworkInterface(t *testing.T) {
@@ -96,9 +77,7 @@ func TestGetInstancePublicDnsName_NoDnsNameInNetworkInterface(t *testing.T) {
 	}
 
 	_, err := ec2ichelper.GetInstancePublicDnsName(instance)
-	if err == nil {
-		t.Error(th.ExpectErrorMsg)
-	}
+	th.Nok(t, err)
 }
 
 // A helper function to decide whether a string is Base64 encoded or not
