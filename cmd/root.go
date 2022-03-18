@@ -16,6 +16,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"simple-ec2/pkg/version"
 
 	"github.com/spf13/cobra"
 )
@@ -25,6 +26,15 @@ var rootCmd = &cobra.Command{
 	Short: "AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances",
 	Long: "AWS Simple EC2 CLI (simple-ec2) is a simple tool to launch, connect and terminate Amazon EC2 instances. " +
 		"Users can easily launch an instance with or without custom configurations.",
+}
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of this binary",
+	Long:  `Print the version number of this binary`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Version %s", version.BuildInfo)
+	},
 }
 
 // Execute adds all child commands to the root command sets flags appropriately.
