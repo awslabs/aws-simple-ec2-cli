@@ -83,7 +83,7 @@ $ simple-ec2 launch -h
 Launch an Amazon EC2 instance with the default configurations. All configurations can be overridden by configurations provided by configuration files or user input.
 
 Usage:
-  simple-ec2 launch [flags]
+  simple-ec2 launch|version [flags]
 
 Flags:
   -a, --auto-termination-timer int       The auto-termination timer for the instance in minutes
@@ -104,7 +104,10 @@ Flags:
 ```
 
 **Single Command Launch**
-
+```
+$ simple-ec2 version
+Prints the version of this tool
+```
 ```
 $ simple-ec2 launch
 
