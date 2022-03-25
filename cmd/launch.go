@@ -41,7 +41,6 @@ var launchCmd = &cobra.Command{
 // Add flags
 func init() {
 	rootCmd.AddCommand(launchCmd)
-	rootCmd.AddCommand(versionCmd)
 	launchCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
 	launchCmd.Flags().StringVarP(&flagConfig.Region, "region", "r", "",
 		"The region where the instance will be launched")
