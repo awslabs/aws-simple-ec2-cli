@@ -1,5 +1,6 @@
 package version
 
 var (
-	BuildInfo        = "v0.7"
+	// This string is populated by Makefile during build time
+	BuildInfo = "v0.7"
 )
