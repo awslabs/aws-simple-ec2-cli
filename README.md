@@ -9,9 +9,6 @@
 	<a href="https://opensource.org/licenses/Apache-2.0">
 	<img src="https://img.shields.io/badge/License-Apache%202.0-ff69b4.svg?color=orange" alt="license">
 	</a>
-	<a href="https://goreportcard.com/report/github.com/awslabs/aws-simple-ec2-cli">
-	<img src="https://goreportcard.com/badge/github.com/awslabs/aws-simple-ec2-cli" alt="go-report-card">
-	</a>
 </p>
 
 
