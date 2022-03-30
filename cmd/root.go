@@ -15,9 +15,8 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-
 	"github.com/spf13/cobra"
+	"os"
 )
 
 var rootCmd = &cobra.Command{

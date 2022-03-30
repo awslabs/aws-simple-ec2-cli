@@ -71,6 +71,13 @@ curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/downl
 
 ## Examples
 
+### Version
+
+**Single Command Launch**
+```
+$ simple-ec2 version
+Prints the version of this tool
+```
 ### Launch
 
 **All CLI Options**
@@ -101,7 +108,6 @@ Flags:
 ```
 
 **Single Command Launch**
-
 ```
 $ simple-ec2 launch
 
