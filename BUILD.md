@@ -36,7 +36,7 @@ $ make unit-test
 
 ### Run All Tests
 
-The full suite includes license-test, go-report-card, and more. See the full list in the [makefile](./Makefile). NOTE: some tests require AWS Credentials to be configured on the system: 
+The full suite includes unit tests, end-to-end tests, license-test, and more. See the full list in the [makefile](./Makefile). NOTE: some tests require AWS Credentials to be configured on the system:
 
 ```
 $ make test
