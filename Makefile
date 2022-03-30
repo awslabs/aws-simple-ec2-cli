@@ -101,16 +101,13 @@ e2e-ec2helper-test:
 license-test:
 	${MAKEFILE_PATH}/test/license-test/run-license-test.sh
 
-go-report-card-test:
-	${MAKEFILE_PATH}/test/go-report-card-test/run-report-card-test.sh
-
 spellcheck:
 	${MAKEFILE_PATH}/test/readme-test/run-readme-spellcheck
 
 shellcheck:
 	${MAKEFILE_PATH}/test/shellcheck/run-shellcheck
 
-test: unit-test e2e-test license-test go-report-card-test spellcheck shellcheck
+test: unit-test e2e-test license-test spellcheck shellcheck
 
 fmt:
 	goimports -w ./ && gofmt -s -w ./
