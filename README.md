@@ -71,7 +71,7 @@ curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/downl
 
 ## Examples
 
-### Connect
+### Version
 
 **Single Command Launch**
 ```
