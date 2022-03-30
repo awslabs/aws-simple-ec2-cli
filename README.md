@@ -71,6 +71,13 @@ curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/downl
 
 ## Examples
 
+### Connect
+
+**Single Command Launch**
+```
+$ simple-ec2 version
+Prints the version of this tool
+```
 ### Launch
 
 **All CLI Options**
@@ -100,11 +107,7 @@ Flags:
       --tags stringToString              The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2) (default [])
 ```
 
-**Single Command Version**
-```
-$ simple-ec2 version
-Prints the version of this tool
-```
+**Single Command Launch**
 ```
 $ simple-ec2 launch
 
