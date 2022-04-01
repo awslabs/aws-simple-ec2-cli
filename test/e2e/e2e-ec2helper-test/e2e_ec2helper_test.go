@@ -152,14 +152,22 @@ func TestGetInstanceTypesFromInstanceSelector(t *testing.T) {
 func TestGetLatestImages(t *testing.T) {
 	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
-	_, err := h.GetLatestImages(nil)
+	_, err := h.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
 }
 
-func TestGetDefaultImage(t *testing.T) {
+func TestGetDefaultImageForAmd(t *testing.T) {
 	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
-	image, err := h.GetDefaultImage(nil)
+	image, err := h.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
+	th.Ok(t, err)
+	th.Assert(t, image != nil, "Image should not be nil")
+}
+
+func TestGetDefaultImageForArm(t *testing.T) {
+	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
+
+	image, err := h.GetDefaultImage(nil, aws.StringSlice([]string{"arm64"}))
 	th.Ok(t, err)
 	th.Assert(t, image != nil, "Image should not be nil")
 }
