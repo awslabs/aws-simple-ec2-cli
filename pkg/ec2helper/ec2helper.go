@@ -348,22 +348,22 @@ func (h *EC2Helper) getInstanceTypes(input *ec2.DescribeInstanceTypesInput) ([]*
 // Define all OS and corresponding AMI name formats
 var osDescs = map[string]map[string]string{
 	"Amazon Linux": {
-		"ebs":            "amzn-ami-hvm-????.??.?.????????.?-x86_64-gp2",
-		"instance-store": "amzn-ami-hvm-????.??.?.????????.?-x86_64-s3",
+		"ebs":            "amzn-ami-hvm-????.??.?.????????.?-*-gp2",
+		"instance-store": "amzn-ami-hvm-????.??.?.????????.?-*-s3",
 	},
 	"Amazon Linux 2": {
-		"ebs": "amzn2-ami-hvm-2.?.????????.?-x86_64-gp2",
+		"ebs": "amzn2-ami-hvm-2.?.????????.?-*-gp2",
 	},
 	"Red Hat": {
-		"ebs": "RHEL-?.?.?_HVM-????????-x86_64-?-Hourly2-GP2",
+		"ebs": "RHEL-?.?.?_HVM-????????-*-?-Hourly2-GP2",
 	},
 	"SUSE Linux": {
-		"ebs": "suse-sles-??-sp?-v????????-hvm-ssd-x86_64",
+		"ebs": "suse-sles-??-sp?-v????????-hvm-ssd-*",
 	},
 	// Ubuntu 18.04 LTS
 	"Ubuntu": {
-		"ebs":            "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-????????",
-		"instance-store": "ubuntu/images/hvm-instance/ubuntu-bionic-18.04-amd64-server-????????",
+		"ebs":            "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-*-server-????????",
+		"instance-store": "ubuntu/images/hvm-instance/ubuntu-bionic-18.04-*-server-????????",
 	},
 	// 64 bit Microsoft Windows Server with Desktop Experience Locale English AMI
 	"Windows": {
@@ -372,7 +372,7 @@ var osDescs = map[string]map[string]string{
 }
 
 // Get the appropriate input for describing images
-func getDescribeImagesInputs(rootDeviceType string) *map[string]ec2.DescribeImagesInput {
+func getDescribeImagesInputs(rootDeviceType string, architectures []*string) *map[string]ec2.DescribeImagesInput {
 	// Construct all the inputs
 	imageInputs := map[string]ec2.DescribeImagesInput{}
 	for osName, rootDeviceTypes := range osDescs {
@@ -400,6 +400,10 @@ func getDescribeImagesInputs(rootDeviceType string) *map[string]ec2.DescribeImag
 							aws.String(rootDeviceType),
 						},
 					},
+					{
+						Name: aws.String("architecture"),
+						Values: architectures,
+					},
 				},
 			}
 		}
@@ -419,12 +423,12 @@ func (a byCreationDate) Less(i, j int) bool { return *a[i].CreationDate < *a[j].
 Get the information about the latest AMIs.
 Empty result is allowed.
 */
-func (h *EC2Helper) GetLatestImages(rootDeviceType *string) (*map[string]*ec2.Image, error) {
+func (h *EC2Helper) GetLatestImages(rootDeviceType *string, architectures []*string) (*map[string]*ec2.Image, error) {
 	var inputs *map[string]ec2.DescribeImagesInput
 	if rootDeviceType == nil {
-		inputs = getDescribeImagesInputs("ebs")
+		inputs = getDescribeImagesInputs("ebs", architectures)
 	} else {
-		inputs = getDescribeImagesInputs(*rootDeviceType)
+		inputs = getDescribeImagesInputs(*rootDeviceType, architectures)
 	}
 
 	images := map[string]*ec2.Image{}
@@ -456,8 +460,8 @@ func GetImagePriority() []string {
 Get an appropriate default image, given the information about the latest AMIs.
 Empty result is not allowed.
 */
-func (h *EC2Helper) GetDefaultImage(rootDeviceType *string) (*ec2.Image, error) {
-	latestImages, err := h.GetLatestImages(rootDeviceType)
+func (h *EC2Helper) GetDefaultImage(rootDeviceType *string,architectures []*string) (*ec2.Image, error) {
+	latestImages, err := h.GetLatestImages(rootDeviceType, architectures)
 	if err != nil {
 		return nil, err
 	}
@@ -1084,7 +1088,7 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		rootDeviceType = "instance-store"
 	}
 
-	image, err := h.GetDefaultImage(&rootDeviceType)
+	image, err := h.GetDefaultImage(&rootDeviceType,instanceTypeInfo.ProcessorInfo.SupportedArchitectures)
 	if err != nil {
 		return nil, err
 	}

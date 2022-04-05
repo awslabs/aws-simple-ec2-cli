@@ -455,13 +455,13 @@ func TestGetLatestImages_Success_Ebs(t *testing.T) {
 		Images: testImages,
 	}
 
-	actualImages, err := testEC2.GetLatestImages(nil)
+	actualImages, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
 	th.Equals(t, testMapEbs, *actualImages)
 }
 
 func TestGetLatestImages_Success_InstanceStore(t *testing.T) {
-	actualImages, err := testEC2.GetLatestImages(aws.String("instance-store"))
+	actualImages, err := testEC2.GetLatestImages(aws.String("instance-store"), aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
 	th.Equals(t, testMapInstanceStore, *actualImages)
 }
@@ -471,7 +471,7 @@ func TestGetLatestImages_NoResult(t *testing.T) {
 		Images: []*ec2.Image{},
 	}
 
-	_, err := testEC2.GetLatestImages(nil)
+	_, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
 }
 
@@ -480,7 +480,7 @@ func TestGetLatestImages_DescribeImagesError(t *testing.T) {
 		DescribeImagesError: errors.New("Test error"),
 	}
 
-	_, err := testEC2.GetLatestImages(nil)
+	_, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Nok(t, err)
 }
 
@@ -489,7 +489,7 @@ func TestGetDefaultImage_Success(t *testing.T) {
 		Images: testImages,
 	}
 
-	actualImage, err := testEC2.GetDefaultImage(nil)
+	actualImage, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
 	th.Equals(t, *lastImage.ImageId, *actualImage.ImageId)
 }
@@ -499,7 +499,7 @@ func TestGetDefaultImage_NoResult(t *testing.T) {
 		Images: []*ec2.Image{},
 	}
 
-	_, err := testEC2.GetDefaultImage(nil)
+	_, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Nok(t, err)
 }
 
@@ -508,7 +508,7 @@ func TestGetDefaultImage_DescribeImagesError(t *testing.T) {
 		DescribeImagesError: errors.New("Test error"),
 	}
 
-	_, err := testEC2.GetDefaultImage(nil)
+	_, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Nok(t, err)
 }
 
