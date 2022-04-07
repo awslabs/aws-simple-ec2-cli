@@ -14,7 +14,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/processcreds"
 	"os"
 	"strconv"
 	"strings"
@@ -44,6 +47,10 @@ func init() {
 	launchCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
 	launchCmd.Flags().StringVarP(&flagConfig.Region, "region", "r", "",
 		"The region where the instance will be launched")
+	launchCmd.Flags().VarP(&flagConfig.Ec2PurchaseInstanceType, "purchase-instance-type","z",
+		`The purchase type of the instance. Allowed values "On Demand" and "Spot Instance"`)
+	launchCmd.Flags().Float64VarP(&flagConfig.SpotInstancePrice, "spot-price", "x", 0,
+		"The quote price to Spot Instance")
 	launchCmd.Flags().StringVarP(&flagConfig.InstanceType, "instance-type", "t", "",
 		"The instance type of the instance")
 	launchCmd.Flags().StringVarP(&flagConfig.ImageId, "image-id", "m", "",
@@ -76,7 +83,14 @@ func launch(cmd *cobra.Command, args []string) {
 	}
 
 	// Start a new session, with the default credentials and config loading
-	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
+	creds := processcreds.NewCredentials("isengardcli credentials --awscli --role Admin carthick+webeip1@amazon.com")
+	sess, err := session.NewSession(&aws.Config{
+		Region:      aws.String("us-east-1"),
+		Credentials: creds,
+	})
+	if err != nil {
+		fmt.Println("Could not get creads")
+	}
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
 
@@ -87,12 +101,41 @@ func launch(cmd *cobra.Command, args []string) {
 	}
 }
 
+func askAndParseSpotPrice(h *ec2helper.EC2Helper) (float64, error) {
+	answer := question.AskSpotInstancePrice(h)
+	floatVal, err := strconv.ParseFloat(answer, 64)
+	if err != nil{
+		return 0, errors.New("Invalid value for Spot price")
+	}
+	return floatVal, nil
+}
+
+
 // Launch the instance interactively
 func launchInteractive(h *ec2helper.EC2Helper) {
 	var err error
 	simpleConfig := config.NewSimpleInfo()
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
+
+	if simpleConfig.Ec2PurchaseInstanceType == "" {
+		workloadType := question.AskPurchaseInstanceType()
+		if cli.ShowError(err, "Asking Purchase Instance type failed") {
+			return
+		}
+		simpleConfig.Ec2PurchaseInstanceType = config.ToPurchaseInstanceType(workloadType)
+	}
+
+	if simpleConfig.Ec2PurchaseInstanceType == config.SpotInstance {
+		if simpleConfig.SpotInstancePrice == 0 {
+			floatVal, err := askAndParseSpotPrice(h)
+			if err != nil {
+				cli.ShowError(err, "Launching instance failed")
+				return
+			}
+			simpleConfig.SpotInstancePrice = floatVal
+		}
+	}
 
 	if simpleConfig.Region == "" {
 		// Ask Region
@@ -105,19 +148,20 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 	h.ChangeRegion(simpleConfig.Region)
 
-	// Ask Launch Template
-	launchTemplateId := &simpleConfig.LaunchTemplateId
-	if simpleConfig.LaunchTemplateId == "" {
-		launchTemplateId = question.AskLaunchTemplate(h)
-	}
+	// Ask For launch template details only if Purchase instance type is On Demand
+	if simpleConfig.Ec2PurchaseInstanceType == config.OnDemand {
+		launchTemplateId := &simpleConfig.LaunchTemplateId
+		if simpleConfig.LaunchTemplateId == "" {
+			launchTemplateId = question.AskLaunchTemplate(h)
+		}
 
-	if *launchTemplateId != cli.ResponseNo {
-		// Use a launch template in this case.
-		simpleConfig.LaunchTemplateId = *launchTemplateId
-		UseLaunchTemplate(h, simpleConfig)
-		return
+		if *launchTemplateId != cli.ResponseNo {
+			// Use a launch template in this case.
+			simpleConfig.LaunchTemplateId = *launchTemplateId
+			UseLaunchTemplate(h, simpleConfig)
+			return
+		}
 	}
-
 	// Not using a launch template if the program is not terminated at the point
 	if simpleConfig.InstanceType == "" && !ReadInstanceType(h, simpleConfig) {
 		return

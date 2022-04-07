@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"simple-ec2/pkg/cfn"
@@ -987,6 +988,52 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 	return &detailedConfig, nil
 }
 
+
+func getSpotInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RequestSpotInstancesInput{
+	input := &ec2.RequestSpotInstancesInput{
+		SpotPrice: aws.String(fmt.Sprint(simpleConfig.SpotInstancePrice)),
+		InstanceCount:  aws.Int64(1),
+		Type:      aws.String("one-time"),
+	}
+	input.LaunchSpecification = &ec2.RequestSpotLaunchSpecification{}
+
+	if simpleConfig.ImageId != "" {
+		input.LaunchSpecification.ImageId = aws.String(simpleConfig.ImageId)
+	}
+	if simpleConfig.InstanceType != "" {
+		input.LaunchSpecification.InstanceType = aws.String(simpleConfig.InstanceType)
+	}
+	if simpleConfig.SubnetId != "" {
+		input.LaunchSpecification.SubnetId = aws.String(simpleConfig.SubnetId)
+	}
+	if simpleConfig.SecurityGroupIds != nil && len(simpleConfig.SecurityGroupIds) > 0 {
+		input.LaunchSpecification.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
+	}
+	if simpleConfig.IamInstanceProfile != "" {
+		input.LaunchSpecification.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+			Name: aws.String(simpleConfig.IamInstanceProfile),
+		}
+	}
+	if detailedConfig != nil {
+		// Set all EBS volumes not to be deleted, if specified
+		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
+			input.LaunchSpecification.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
+			for _, block := range input.LaunchSpecification.BlockDeviceMappings {
+				if block.Ebs != nil {
+					block.Ebs.DeleteOnTermination = aws.Bool(false)
+				}
+			}
+		}
+	}
+	if simpleConfig.BootScriptFilePath != "" {
+		bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+		input.LaunchSpecification.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+	}
+	input.InstanceInterruptionBehavior = aws.String(ec2.InstanceInterruptionBehaviorTerminate)
+	return  input
+}
+
+
 // Get a RunInstanceInput given a structured config
 func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RunInstancesInput {
 	input := &ec2.RunInstancesInput{
@@ -1121,6 +1168,71 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 	return simpleConfig, nil
 }
 
+func (h *EC2Helper) RequestEc2Instance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) ([]string, error) {
+	fmt.Println("Options confirmed! Launching instance...")
+	input := getRunInstanceInput(simpleConfig, detailedConfig)
+	launchedInstances := []string{}
+
+	// Create new stack, if specified.
+	if simpleConfig.NewVPC {
+		subnetId, sgId, err := h.createNetworkConfiguration(simpleConfig)
+		if err != nil {
+			return nil, err
+		}
+		input.SubnetId = subnetId
+		input.SecurityGroups = sgId
+	}
+
+	input.TagSpecifications = detailedConfig.TagSpecs
+
+	resp, err := h.Svc.RunInstances(input)
+	if err != nil {
+		return nil, err
+	} else {
+		fmt.Println("Launch Instance Success!")
+		for _, instance := range resp.Instances {
+			fmt.Println("Instance ID:", *instance.InstanceId)
+			launchedInstances = append(launchedInstances, *instance.InstanceId)
+		}
+		return launchedInstances, nil
+	}
+}
+
+func (h *EC2Helper) RequestSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) ([]string, error) {
+
+	fmt.Println("Options confirmed! Requesting Spot instance...")
+	input := getSpotInstanceInput(simpleConfig, detailedConfig)
+
+	// Create new stack, if specified.
+	if simpleConfig.NewVPC {
+		subnetId, sgId, err := h.createNetworkConfiguration(simpleConfig)
+		if err != nil {
+			return nil,err
+		}
+		input.LaunchSpecification.SubnetId = subnetId
+		input.LaunchSpecification.SecurityGroups = sgId
+	}
+
+	output, err := h.Svc.RequestSpotInstances(input)
+	if err != nil {
+		return nil,err
+	} else {
+		spotRequestIds := make([]*string, len(output.SpotInstanceRequests))
+		for _, request := range output.SpotInstanceRequests{
+			spotRequestIds = append(spotRequestIds, request.SpotInstanceRequestId)
+		}
+		describeInput := &ec2.DescribeSpotInstanceRequestsInput{SpotInstanceRequestIds: spotRequestIds}
+		err := h.Svc.WaitUntilSpotInstanceRequestFulfilled(describeInput)
+		if err != nil{
+			fmt.Println("Unable to fulfill Spot Instance requests at this time. Please try again later")
+			return nil, err
+		}
+		fmt.Println("Spot Instance requests fulfilled!")
+		return aws.StringValueSlice(spotRequestIds), nil
+	}
+
+}
+
 // Launch instances based on input and confirmation. Returning an error means failure, otherwise success
 func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo,
 	confirmation bool) ([]string, error) {
@@ -1129,45 +1241,24 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 
 	if confirmation {
-		fmt.Println("Options confirmed! Launching instance...")
+		switch simpleConfig.Ec2PurchaseInstanceType {
 
-		input := getRunInstanceInput(simpleConfig, detailedConfig)
-		launchedInstances := []string{}
+		case config.OnDemand:
+			return h.RequestEc2Instance(simpleConfig, detailedConfig)
+		case config.SpotInstance:
+			return h.RequestSpotInstance(simpleConfig, detailedConfig)
 
-		// Create new stack, if specified.
-		if simpleConfig.NewVPC {
-			err := h.createNetworkConfiguration(simpleConfig, input)
-			if err != nil {
-				return nil, err
-			}
 		}
-
-		input.TagSpecifications = detailedConfig.TagSpecs
-
-		resp, err := h.Svc.RunInstances(input)
-		if err != nil {
-			return nil, err
-		} else {
-			fmt.Println("Launch Instance Success!")
-			for _, instance := range resp.Instances {
-				fmt.Println("Instance ID:", *instance.InstanceId)
-				launchedInstances = append(launchedInstances, *instance.InstanceId)
-			}
-			return launchedInstances, nil
-		}
-	} else {
-		// Abort
-		return nil, errors.New("Options not confirmed")
 	}
+	return nil, errors.New("Options not confirmed")
 }
 
 // Create a new stack and update simpleConfig for config saving
-func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
-	input *ec2.RunInstancesInput) error {
+func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo) (*string, []*string, error) {
 	// Get all available azs for later use
 	availabilityZones, err := h.GetAvailableAvailabilityZones()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Retrieve resources from the stack
@@ -1175,7 +1266,7 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	vpcId, subnetIds, _, _, err := c.CreateStackAndGetResources(availabilityZones, nil,
 		cfn.SimpleEc2CloudformationTemplate)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	// Find the subnetId with the correct availability zone
@@ -1183,7 +1274,7 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	for _, subnetId := range subnetIds {
 		subnet, err := h.GetSubnetById(subnetId)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		if *subnet.AvailabilityZone == simpleConfig.SubnetId {
@@ -1192,10 +1283,10 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 		}
 	}
 	if selectedSubnetId == nil {
-		return errors.New("No subnet with the selected availability zone found")
+		return nil, nil, errors.New("No subnet with the selected availability zone found")
 	}
 
-	input.SubnetId = selectedSubnetId
+	//input.SubnetId = selectedSubnetId
 
 	/*
 		Get the security group.
@@ -1209,7 +1300,7 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	if securityGroupPlaceholder == cli.ResponseAll {
 		securityGroups, err := h.GetSecurityGroupsByVpc(*vpcId)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		if securityGroups != nil {
@@ -1220,26 +1311,26 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	} else if securityGroupPlaceholder == cli.ResponseNew {
 		groupId, err := h.CreateSecurityGroupForSsh(*vpcId)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		selectedSecurityGroupIds = append(selectedSecurityGroupIds, *groupId)
 	} else {
-		return errors.New("Unknown security group placeholder")
+		return nil, nil, errors.New("Unknown security group placeholder")
 	}
 
 	if len(selectedSecurityGroupIds) <= 0 {
-		return errors.New("No security group available for stack")
+		return nil, nil, errors.New("No security group available for stack")
 	}
 
-	input.SecurityGroupIds = aws.StringSlice(selectedSecurityGroupIds)
+	//input.SecurityGroupIds = aws.StringSlice(selectedSecurityGroupIds)
 
 	// Update simpleConfig for config saving
 	simpleConfig.NewVPC = false
 	simpleConfig.SubnetId = *selectedSubnetId
 	simpleConfig.SecurityGroupIds = selectedSecurityGroupIds
 
-	return nil
+	return selectedSubnetId, aws.StringSlice(selectedSecurityGroupIds), nil
 }
 
 // Terminate the instances based on ids
@@ -1296,6 +1387,16 @@ func ValidateFilepath(h *EC2Helper, userFilePath string) bool {
 	_, err := os.Stat(userFilePath)
 	return err == nil
 }
+
+func ValidateSpotInstancePrice(h *EC2Helper, price string) bool {
+	_, err := strconv.ParseFloat(price, 64)
+	if err != nil {
+		fmt.Println("Invalid Spot price value")
+		return false
+	}
+	return true
+}
+
 
 // Validate user's tag input. Used as a function interface to validate question input
 func ValidateTags(h *EC2Helper, userTags string) bool {

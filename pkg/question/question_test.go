@@ -132,6 +132,19 @@ func TestAskQuestion_FunctionCheckedInput(t *testing.T) {
 	cleanupQuestionTest()
 }
 
+func TestAskQuestion_FunctionCheckSpotPrice(t *testing.T){
+	const expectedSpotInstancePrice = "0.003"
+	input.EC2Helper = testEC2
+	input.Fns = []question.CheckInput{
+		ec2helper.ValidateSpotInstancePrice,
+	}
+	initQuestionTest(t, "Spot Instance"+"\n")
+	answer := question.AskQuestion(input)
+	th.Equals(t, expectedSpotInstancePrice, answer)
+
+	cleanupQuestionTest()
+}
+
 /*
 Other Question Asking Tests
 */
@@ -337,6 +350,17 @@ func TestAskInstanceTypeMemory(t *testing.T) {
 
 	answer := question.AskInstanceTypeMemory()
 	th.Equals(t, expectedMemory, answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskWorkloadType(t *testing.T){
+	const expectedWorkload = config.SpotInstance
+
+	initQuestionTest(t, "2\n")
+
+	answer := question.AskPurchaseInstanceType()
+	th.Equals(t, expectedWorkload, answer)
 
 	cleanupQuestionTest()
 }

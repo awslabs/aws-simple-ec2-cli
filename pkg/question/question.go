@@ -124,6 +124,48 @@ func AskQuestion(input *AskQuestionInput) string {
 	}
 }
 
+
+func AskSpotInstancePrice(h *ec2helper.EC2Helper) (string){
+	question := "Spot instance price that you would like to quote "
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  aws.String("0.032"),
+		EC2Helper:      h,
+		Fns:            []CheckInput{ec2helper.ValidateSpotInstancePrice},
+	})
+	return answer
+}
+
+func AskPurchaseInstanceType() (string){
+	types := []config.Ec2PurchseInstanceType{config.OnDemand, config.SpotInstance, }
+
+	data := [][]string{}
+	indexedOptions := []string{}
+
+	// Fill the data used for drawing a table and the options map
+	for index, purchaseInstanceType := range types {
+		indexedOptions = append(indexedOptions, string(purchaseInstanceType))
+
+		purchaseInstanceTypeName := fmt.Sprintf("%s", purchaseInstanceType)
+		data = append(data, []string{fmt.Sprintf("%d.", index+1), purchaseInstanceTypeName})
+	}
+
+	defaultOptionRepr, defaultOptionValue := "use on demand instances", string(config.OnDemand)
+
+	optionsText := table.BuildTable(data, []string{"Option", "Purchase Instance Type"})
+	question := "Purchase Instance Type"
+
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString:    question,
+		DefaultOptionRepr: &defaultOptionRepr,
+		DefaultOption:     &defaultOptionValue,
+		OptionsString:     &optionsText,
+		IndexedOptions:    indexedOptions,
+	})
+
+	return answer
+}
+
 // Ask for the region to use
 func AskRegion(h *ec2helper.EC2Helper) (*string, error) {
 	defaultRegion := h.Sess.Config.Region
@@ -920,14 +962,19 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 		}
 	}
 
-	// Get display data ready
-	data := [][]string{
-		{cli.ResourceRegion, simpleConfig.Region},
-		{cli.ResourceVpc, vpcInfo},
-		{cli.ResourceSubnet, subnetInfo},
-		{cli.ResourceInstanceType, simpleConfig.InstanceType},
-		{cli.ResourceImage, simpleConfig.ImageId},
+	data := [][]string{{cli.Ec2PurchanceInstanceType, string(simpleConfig.Ec2PurchaseInstanceType)},}
+
+	if simpleConfig.Ec2PurchaseInstanceType == config.SpotInstance{
+		data = append(data, []string{cli.SpotInstancePrice, fmt.Sprint(simpleConfig.SpotInstancePrice)})
 	}
+
+
+	// Get display data ready
+	data = append(data, []string{cli.ResourceRegion, simpleConfig.Region})
+	data = append(data, []string{cli.ResourceVpc, vpcInfo})
+	data = append(data, []string{cli.ResourceSubnet, subnetInfo})
+	data = append(data, []string{cli.ResourceInstanceType, simpleConfig.InstanceType})
+	data = append(data, []string{cli.ResourceImage, simpleConfig.ImageId})
 
 	indexedOptions := []string{}
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}

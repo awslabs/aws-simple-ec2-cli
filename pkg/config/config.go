@@ -15,6 +15,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -34,6 +35,8 @@ A simple config for reading config files or flags into primitive type informatio
 The config will later be used to parse into a detailed config and to launch an instance.
 */
 type SimpleInfo struct {
+	Ec2PurchaseInstanceType       Ec2PurchseInstanceType
+	SpotInstancePrice 			  float64
 	Region                        string
 	ImageId                       string
 	InstanceType                  string
@@ -49,6 +52,40 @@ type SimpleInfo struct {
 	UserTags                      map[string]string
 }
 
+type Ec2PurchseInstanceType string
+
+
+func ToPurchaseInstanceType(enumString string) Ec2PurchseInstanceType{
+	if enumString == "SpotInstance"{
+		return SpotInstance
+	}
+	return OnDemand
+}
+const (
+	OnDemand Ec2PurchseInstanceType = "OnDemand"
+	SpotInstance Ec2PurchseInstanceType = "SpotInstance"
+)
+
+// String is used both by fmt.Print and by Cobra in help text
+func (e *Ec2PurchseInstanceType) String() string {
+	return string(*e)
+}
+
+// Set must have pointer receiver so it doesn't change the value of a copy
+func (e *Ec2PurchseInstanceType) Set(v string) error {
+	switch v {
+	case "OnDemand", "SpotInstance":
+		*e = Ec2PurchseInstanceType(v)
+		return nil
+	default:
+		return errors.New(`must be one of "SpotInstance", "OnDemand"`)
+	}
+}
+
+// Type is only used in help text
+func (e *Ec2PurchseInstanceType) Type() string {
+	return "OnDemand"
+}
 /*
 A detailed config for storing detailed information about resources that will be used to
 launch an instance. This config is usually derived from a simple config.
@@ -103,6 +140,17 @@ func ReadConfig(simpleConfig *SimpleInfo, configFileName *string) error {
 func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	if flagConfig.Region != "" {
 		simpleConfig.Region = flagConfig.Region
+	}
+	if flagConfig.Ec2PurchaseInstanceType != "" {
+		simpleConfig.Ec2PurchaseInstanceType = flagConfig.Ec2PurchaseInstanceType
+	}
+	if flagConfig.SpotInstancePrice != 0 {
+		simpleConfig.SpotInstancePrice = flagConfig.SpotInstancePrice
+	}
+	if flagConfig.Ec2PurchaseInstanceType == SpotInstance{
+		flagConfig.LaunchTemplateVersion = ""
+		flagConfig.LaunchTemplateId = ""
+		flagConfig.AutoTerminationTimerMinutes = 0
 	}
 	if flagConfig.InstanceType != "" {
 		simpleConfig.InstanceType = flagConfig.InstanceType

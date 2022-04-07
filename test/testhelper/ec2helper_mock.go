@@ -36,6 +36,7 @@ type MockedEC2Svc struct {
 	DescribeInstancesPagesError              error
 	CreateTagsError                          error
 	RunInstancesError                        error
+	SpotInstanceRequestError                 error
 	TerminateInstancesError                  error
 	Regions                                  []*ec2.Region
 	AvailabilityZones                        []*ec2.AvailabilityZone
@@ -378,3 +379,20 @@ func findFilter(filters []*ec2.Filter, name string) []*string {
 func (e *MockedEC2Svc) DeleteSecurityGroup(input *ec2.DeleteSecurityGroupInput) (*ec2.DeleteSecurityGroupOutput, error) {
 	return nil, nil
 }
+
+
+func (e *MockedEC2Svc) RequestSpotInstances(input *ec2.RequestSpotInstancesInput) (*ec2.RequestSpotInstancesOutput, error){
+	output := &ec2.RequestSpotInstancesOutput{
+		SpotInstanceRequests: []*ec2.SpotInstanceRequest{
+			{
+				InstanceId: aws.String("i-12345"),
+			},
+		},
+	}
+	return output, e.SpotInstanceRequestError
+}
+
+func (e *MockedEC2Svc) 	WaitUntilSpotInstanceRequestFulfilled(*ec2.DescribeSpotInstanceRequestsInput) error{
+	return nil
+}
+

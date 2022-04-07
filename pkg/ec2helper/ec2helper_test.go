@@ -1154,6 +1154,15 @@ var testDetailedConfig = config.DetailedInfo{
 	},
 }
 
+func TestRequestSpotInstance_Success_NoTemplate(t *testing.T) {
+	testEC2.Svc = launchSvc
+	testSimpleConfig.AutoTerminationTimerMinutes = 5
+	testSimpleConfig.KeepEbsVolumeAfterTermination = true
+
+	_, err := testEC2.RequestSpotInstance(&testSimpleConfig, &testDetailedConfig)
+	th.Ok(t, err)
+}
+
 func TestLaunchInstance_Success_NoTemplate(t *testing.T) {
 	testEC2.Svc = launchSvc
 	testSimpleConfig.AutoTerminationTimerMinutes = 5
@@ -1183,9 +1192,18 @@ func TestLaunchInstance_NoConfig(t *testing.T) {
 }
 
 func TestLaunchInstance_RunInstancesError(t *testing.T) {
+	testEC2.Svc = launchSvc
 	launchSvc.RunInstancesError = errors.New("Test error")
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
+	th.Nok(t, err)
+}
+
+func TestLaunchSpotInstance_RunSpotInstanceRequestError(t *testing.T) {
+	testEC2.Svc = launchSvc
+	launchSvc.SpotInstanceRequestError = errors.New("Test error")
+
+	_, err := testEC2.RequestSpotInstance(&testSimpleConfig, &testDetailedConfig)
 	th.Nok(t, err)
 }
 
