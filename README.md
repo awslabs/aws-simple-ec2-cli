@@ -105,12 +105,18 @@ Flags:
   -g, --security-group-ids strings       The security groups with which the instance will be launched
   -s, --subnet-id string                 The subnet id in which the instance will be launched
       --tags stringToString              The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2) (default [])
+  -x, --spot-price float                 The price at which spot instances
+  -z  --purchase-instance-type string    The purchase instance type of EC2 Instance. Values can be either OnDemand or SpotInstance
+
 ```
 
 **Single Command Launch**
 ```
 $ simple-ec2 launch
-
++--------------------------------------+--------------------------+
+| Ec2 Purchase Instance Type           | OnDemand|SpotInstance    |
++--------------------------------------+--------------------------+
+| Spot Instance Price (optional)       | 0.03                     |
 +--------------------------------------+--------------------------+
 | Region                               | us-east-1                |
 +--------------------------------------+--------------------------+
@@ -141,8 +147,10 @@ Instance ID: i-123example
 **Single Command Launch With Flags**
 
 ```
-$ simple-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example
+$ simple-ec2 launch -r us-east-2 -m ami-123example -t t2.micro -s subnet-123example -g sg-123example -z OnDemand
 
++--------------------------------------+--------------------------+
+| Ec2 Purchase Instance Type           | OnDemand                |
 +--------------------------------------+--------------------------+
 | Region                               | us-east-2                |
 +--------------------------------------+--------------------------+

@@ -961,6 +961,9 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 			vpcInfo = fmt.Sprintf("%s(%s)", *vpcTagName, *vpc.VpcId)
 		}
 	}
+	if simpleConfig.Ec2PurchaseInstanceType == "" {
+		simpleConfig.Ec2PurchaseInstanceType = config.OnDemand
+	}
 
 	data := [][]string{{cli.Ec2PurchanceInstanceType, string(simpleConfig.Ec2PurchaseInstanceType)},}
 
