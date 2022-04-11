@@ -16,8 +16,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials/processcreds"
 	"os"
 	"strconv"
 	"strings"
@@ -83,14 +81,7 @@ func launch(cmd *cobra.Command, args []string) {
 	}
 
 	// Start a new session, with the default credentials and config loading
-	creds := processcreds.NewCredentials("isengardcli credentials --awscli --role Admin carthick+webeip1@amazon.com")
-	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("us-east-1"),
-		Credentials: creds,
-	})
-	if err != nil {
-		fmt.Println("Could not get creads")
-	}
+	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
 
