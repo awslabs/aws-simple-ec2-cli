@@ -989,7 +989,7 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 }
 
 
-func getSpotInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RequestSpotInstancesInput{
+func createSpotInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RequestSpotInstancesInput{
 	input := &ec2.RequestSpotInstancesInput{
 		SpotPrice: aws.String(fmt.Sprint(simpleConfig.SpotInstancePrice)),
 		InstanceCount:  aws.Int64(1),
@@ -1069,7 +1069,7 @@ func createBootScript(simpleConfig *config.SimpleInfo, autoTermCmd string) []byt
 
 
 // Get a RunInstanceInput given a structured config
-func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RunInstancesInput {
+func createOnDemandInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RunInstancesInput {
 	input := &ec2.RunInstancesInput{
 		MaxCount: aws.Int64(1),
 		MinCount: aws.Int64(1),
@@ -1194,9 +1194,10 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 	return simpleConfig, nil
 }
 
-func (h *EC2Helper) RequestEc2Instance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) ([]string, error) {
+// RequestOnDemandInstance Requests an On Demand EC2 instances based on the inputs obtained from the user.
+func (h *EC2Helper) RequestOnDemandInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) ([]string, error) {
 	fmt.Println("Options confirmed! Launching instance...")
-	input := getRunInstanceInput(simpleConfig, detailedConfig)
+	input := createOnDemandInstanceInput(simpleConfig, detailedConfig)
 	launchedInstances := []string{}
 
 	// Create new stack, if specified.
@@ -1224,10 +1225,12 @@ func (h *EC2Helper) RequestEc2Instance(simpleConfig *config.SimpleInfo, detailed
 	}
 }
 
+// RequestSpotInstance Requests an Spot EC2 instances based on the inputs obtained from the user. Spot Requests
+// may or may not succeed based on the Spot Price provided by the user
 func (h *EC2Helper) RequestSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) ([]string, error) {
 
 	fmt.Println("Options confirmed! Requesting Spot instance...")
-	input := getSpotInstanceInput(simpleConfig, detailedConfig)
+	input := createSpotInstanceInput(simpleConfig, detailedConfig)
 
 	// Create new stack, if specified.
 	if simpleConfig.NewVPC {
@@ -1259,7 +1262,7 @@ func (h *EC2Helper) RequestSpotInstance(simpleConfig *config.SimpleInfo, detaile
 
 }
 
-// Launch instances based on input and confirmation. Returning an error means failure, otherwise success
+// LaunchInstance Launch instance based on input and confirmation. Returning an error means failure, otherwise success
 func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo,
 	confirmation bool) ([]string, error) {
 	if simpleConfig == nil {
@@ -1270,7 +1273,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 		switch simpleConfig.EC2PurchaseInstanceType {
 
 		case config.OnDemand:
-			return h.RequestEc2Instance(simpleConfig, detailedConfig)
+			return h.RequestOnDemandInstance(simpleConfig, detailedConfig)
 		case config.SpotInstance:
 			return h.RequestSpotInstance(simpleConfig, detailedConfig)
 

@@ -54,13 +54,15 @@ type SimpleInfo struct {
 
 type EC2PurchseInstanceType string
 
-
+// ToPurchaseInstanceType Sets the default purchase instance type to On Demand EC2 Instances, if purchase-instance-type flag's
+// value entered by the user does not match either "OnDemand or SpotInstance"
 func ToPurchaseInstanceType(enumString string) EC2PurchseInstanceType {
 	if enumString == "SpotInstance"{
 		return SpotInstance
 	}
 	return OnDemand
 }
+
 const (
 	OnDemand     EC2PurchseInstanceType = "OnDemand"
 	SpotInstance EC2PurchseInstanceType = "SpotInstance"
@@ -150,7 +152,6 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	if flagConfig.EC2PurchaseInstanceType == SpotInstance{
 		flagConfig.LaunchTemplateVersion = ""
 		flagConfig.LaunchTemplateId = ""
-		flagConfig.AutoTerminationTimerMinutes = 0
 	}
 	if flagConfig.InstanceType != "" {
 		simpleConfig.InstanceType = flagConfig.InstanceType
