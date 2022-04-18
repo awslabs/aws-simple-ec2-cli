@@ -105,8 +105,8 @@ Flags:
   -g, --security-group-ids strings       The security groups with which the instance will be launched
   -s, --subnet-id string                 The subnet id in which the instance will be launched
       --tags stringToString              The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2) (default [])
-  -x, --spot-price float                 The price at which spot instances
-  -z  --purchase-instance-type string    The purchase instance type of EC2 Instance. Values can be either OnDemand or SpotInstance
+      --spot-price float                 The price at which spot instances
+      --purchase-instance-type string    The purchase instance type of EC2 Instance. Values can be either OnDemand or SpotInstance
 
 ```
 

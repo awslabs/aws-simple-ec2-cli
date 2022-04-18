@@ -27,7 +27,7 @@ const (
 
 // Enum values for displaying resource types in CLI
 const (
-	Ec2PurchanceInstanceType         = "Ec2 Purchase Instance Type"
+	Ec2PurchanceInstanceType         = "EC2 Purchase Instance Type"
 	SpotInstancePrice         		 = "Spot Instance Price"
 	ResourceRegion                   = "Region"
 	ResourceVpc                      = "VPC"

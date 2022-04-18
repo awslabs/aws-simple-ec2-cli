@@ -1014,23 +1014,57 @@ func getSpotInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *confi
 			Name: aws.String(simpleConfig.IamInstanceProfile),
 		}
 	}
+	setAutoTermination := false
 	if detailedConfig != nil {
 		// Set all EBS volumes not to be deleted, if specified
 		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
 			input.LaunchSpecification.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
-			for _, block := range input.LaunchSpecification.BlockDeviceMappings {
-				if block.Ebs != nil {
-					block.Ebs.DeleteOnTermination = aws.Bool(false)
-				}
-			}
+			setEbsDeleteOnTerminationToFalse(input.LaunchSpecification.BlockDeviceMappings)
+		}
+		setAutoTermination = shouldAutoTerminate(simpleConfig, detailedConfig)
+	}
+
+	if setAutoTermination {
+		input.InstanceInterruptionBehavior = aws.String("terminate")
+		autoTermCmd := autoTerminateCommand(simpleConfig)
+		if simpleConfig.BootScriptFilePath == "" {
+			input.LaunchSpecification.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
+		} else {
+			bootScriptRaw := createBootScript(simpleConfig, autoTermCmd)
+			input.LaunchSpecification.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+		}
+	} else {
+		if simpleConfig.BootScriptFilePath != "" {
+			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+			input.LaunchSpecification.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
 		}
 	}
-	if simpleConfig.BootScriptFilePath != "" {
-		bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
-		input.LaunchSpecification.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+	return input
+}
+
+func setEbsDeleteOnTerminationToFalse(deviceMappings []*ec2.BlockDeviceMapping) {
+	for _, block := range deviceMappings {
+		if block.Ebs != nil {
+			block.Ebs.DeleteOnTermination = aws.Bool(false)
+		}
 	}
-	input.InstanceInterruptionBehavior = aws.String(ec2.InstanceInterruptionBehaviorTerminate)
-	return  input
+}
+
+func shouldAutoTerminate(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) bool {
+	return IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
+}
+
+func createBootScript(simpleConfig *config.SimpleInfo, autoTermCmd string) []byte {
+	bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+	bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
+	//if #!/bin/bash is first, then replace first line otherwise, prepend termination
+	if len(bootScriptLines) >= 1 && bootScriptLines[0] == "#!/bin/bash" {
+		bootScriptLines[0] = autoTermCmd
+	} else {
+		bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
+	}
+	bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
+	return bootScriptRaw
 }
 
 
@@ -1073,31 +1107,18 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 		// Set all EBS volumes not to be deleted, if specified
 		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
 			input.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
-			for _, block := range input.BlockDeviceMappings {
-				if block.Ebs != nil {
-					block.Ebs.DeleteOnTermination = aws.Bool(false)
-				}
-			}
+			setEbsDeleteOnTerminationToFalse(input.BlockDeviceMappings)
 		}
-		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
+		setAutoTermination = shouldAutoTerminate(simpleConfig, detailedConfig)
 	}
 
 	if setAutoTermination {
 		input.InstanceInitiatedShutdownBehavior = aws.String("terminate")
-		autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
-			simpleConfig.AutoTerminationTimerMinutes)
+		autoTermCmd := autoTerminateCommand(simpleConfig)
 		if simpleConfig.BootScriptFilePath == "" {
 			input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
 		} else {
-			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
-			bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
-			//if #!/bin/bash is first, then replace first line otherwise, prepend termination
-			if len(bootScriptLines) >= 1 && bootScriptLines[0] == "#!/bin/bash" {
-				bootScriptLines[0] = autoTermCmd
-			} else {
-				bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
-			}
-			bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
+			bootScriptRaw := createBootScript(simpleConfig, autoTermCmd)
 			input.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
 		}
 	} else {
@@ -1107,6 +1128,11 @@ func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config
 		}
 	}
 	return input
+}
+
+func autoTerminateCommand(simpleConfig *config.SimpleInfo) string {
+	return fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
+		simpleConfig.AutoTerminationTimerMinutes)
 }
 
 // Get the default string config
@@ -1241,7 +1267,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 
 	if confirmation {
-		switch simpleConfig.Ec2PurchaseInstanceType {
+		switch simpleConfig.EC2PurchaseInstanceType {
 
 		case config.OnDemand:
 			return h.RequestEc2Instance(simpleConfig, detailedConfig)
@@ -1322,8 +1348,6 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo) 
 	if len(selectedSecurityGroupIds) <= 0 {
 		return nil, nil, errors.New("No security group available for stack")
 	}
-
-	//input.SecurityGroupIds = aws.StringSlice(selectedSecurityGroupIds)
 
 	// Update simpleConfig for config saving
 	simpleConfig.NewVPC = false

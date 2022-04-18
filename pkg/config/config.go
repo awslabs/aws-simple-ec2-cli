@@ -35,8 +35,8 @@ A simple config for reading config files or flags into primitive type informatio
 The config will later be used to parse into a detailed config and to launch an instance.
 */
 type SimpleInfo struct {
-	Ec2PurchaseInstanceType       Ec2PurchseInstanceType
-	SpotInstancePrice 			  float64
+	EC2PurchaseInstanceType EC2PurchseInstanceType
+	SpotInstancePrice       float64
 	Region                        string
 	ImageId                       string
 	InstanceType                  string
@@ -52,30 +52,30 @@ type SimpleInfo struct {
 	UserTags                      map[string]string
 }
 
-type Ec2PurchseInstanceType string
+type EC2PurchseInstanceType string
 
 
-func ToPurchaseInstanceType(enumString string) Ec2PurchseInstanceType{
+func ToPurchaseInstanceType(enumString string) EC2PurchseInstanceType {
 	if enumString == "SpotInstance"{
 		return SpotInstance
 	}
 	return OnDemand
 }
 const (
-	OnDemand Ec2PurchseInstanceType = "OnDemand"
-	SpotInstance Ec2PurchseInstanceType = "SpotInstance"
+	OnDemand     EC2PurchseInstanceType = "OnDemand"
+	SpotInstance EC2PurchseInstanceType = "SpotInstance"
 )
 
 // String is used both by fmt.Print and by Cobra in help text
-func (e *Ec2PurchseInstanceType) String() string {
+func (e *EC2PurchseInstanceType) String() string {
 	return string(*e)
 }
 
 // Set must have pointer receiver so it doesn't change the value of a copy
-func (e *Ec2PurchseInstanceType) Set(v string) error {
+func (e *EC2PurchseInstanceType) Set(v string) error {
 	switch v {
 	case "OnDemand", "SpotInstance":
-		*e = Ec2PurchseInstanceType(v)
+		*e = EC2PurchseInstanceType(v)
 		return nil
 	default:
 		return errors.New(`must be one of "SpotInstance", "OnDemand"`)
@@ -83,7 +83,7 @@ func (e *Ec2PurchseInstanceType) Set(v string) error {
 }
 
 // Type is only used in help text
-func (e *Ec2PurchseInstanceType) Type() string {
+func (e *EC2PurchseInstanceType) Type() string {
 	return "OnDemand"
 }
 /*
@@ -141,13 +141,13 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	if flagConfig.Region != "" {
 		simpleConfig.Region = flagConfig.Region
 	}
-	if flagConfig.Ec2PurchaseInstanceType != "" {
-		simpleConfig.Ec2PurchaseInstanceType = flagConfig.Ec2PurchaseInstanceType
+	if flagConfig.EC2PurchaseInstanceType != "" {
+		simpleConfig.EC2PurchaseInstanceType = flagConfig.EC2PurchaseInstanceType
 	}
 	if flagConfig.SpotInstancePrice != 0 {
 		simpleConfig.SpotInstancePrice = flagConfig.SpotInstancePrice
 	}
-	if flagConfig.Ec2PurchaseInstanceType == SpotInstance{
+	if flagConfig.EC2PurchaseInstanceType == SpotInstance{
 		flagConfig.LaunchTemplateVersion = ""
 		flagConfig.LaunchTemplateId = ""
 		flagConfig.AutoTerminationTimerMinutes = 0

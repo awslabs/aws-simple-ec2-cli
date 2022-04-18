@@ -137,7 +137,7 @@ func AskSpotInstancePrice(h *ec2helper.EC2Helper) (string){
 }
 
 func AskPurchaseInstanceType() (string){
-	types := []config.Ec2PurchseInstanceType{config.OnDemand, config.SpotInstance, }
+	types := []config.EC2PurchseInstanceType{config.OnDemand, config.SpotInstance, }
 
 	data := [][]string{}
 	indexedOptions := []string{}
@@ -961,13 +961,13 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 			vpcInfo = fmt.Sprintf("%s(%s)", *vpcTagName, *vpc.VpcId)
 		}
 	}
-	if simpleConfig.Ec2PurchaseInstanceType == "" {
-		simpleConfig.Ec2PurchaseInstanceType = config.OnDemand
+	if simpleConfig.EC2PurchaseInstanceType == "" {
+		simpleConfig.EC2PurchaseInstanceType = config.OnDemand
 	}
 
-	data := [][]string{{cli.Ec2PurchanceInstanceType, string(simpleConfig.Ec2PurchaseInstanceType)},}
+	data := [][]string{{cli.Ec2PurchanceInstanceType, string(simpleConfig.EC2PurchaseInstanceType)},}
 
-	if simpleConfig.Ec2PurchaseInstanceType == config.SpotInstance{
+	if simpleConfig.EC2PurchaseInstanceType == config.SpotInstance{
 		data = append(data, []string{cli.SpotInstancePrice, fmt.Sprint(simpleConfig.SpotInstancePrice)})
 	}
 

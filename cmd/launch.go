@@ -45,9 +45,9 @@ func init() {
 	launchCmd.Flags().BoolVarP(&isInteractive, "interactive", "i", false, "Interactive mode")
 	launchCmd.Flags().StringVarP(&flagConfig.Region, "region", "r", "",
 		"The region where the instance will be launched")
-	launchCmd.Flags().VarP(&flagConfig.Ec2PurchaseInstanceType, "purchase-instance-type","z",
+	launchCmd.Flags().Var(&flagConfig.EC2PurchaseInstanceType, "purchase-instance-type",
 		`The purchase type of the instance. Allowed values "On Demand" and "Spot Instance"`)
-	launchCmd.Flags().Float64VarP(&flagConfig.SpotInstancePrice, "spot-price", "x", 0,
+	launchCmd.Flags().Float64Var(&flagConfig.SpotInstancePrice, "spot-price",  0,
 		"The quote price to Spot Instance")
 	launchCmd.Flags().StringVarP(&flagConfig.InstanceType, "instance-type", "t", "",
 		"The instance type of the instance")
@@ -109,25 +109,6 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
-	if simpleConfig.Ec2PurchaseInstanceType == "" {
-		workloadType := question.AskPurchaseInstanceType()
-		if cli.ShowError(err, "Asking Purchase Instance type failed") {
-			return
-		}
-		simpleConfig.Ec2PurchaseInstanceType = config.ToPurchaseInstanceType(workloadType)
-	}
-
-	if simpleConfig.Ec2PurchaseInstanceType == config.SpotInstance {
-		if simpleConfig.SpotInstancePrice == 0 {
-			floatVal, err := askAndParseSpotPrice(h)
-			if err != nil {
-				cli.ShowError(err, "Launching instance failed")
-				return
-			}
-			simpleConfig.SpotInstancePrice = floatVal
-		}
-	}
-
 	if simpleConfig.Region == "" {
 		// Ask Region
 		region, err := question.AskRegion(h)
@@ -139,8 +120,27 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 	h.ChangeRegion(simpleConfig.Region)
 
+	if simpleConfig.EC2PurchaseInstanceType == "" {
+		workloadType := question.AskPurchaseInstanceType()
+		if cli.ShowError(err, "Asking Purchase Instance type failed") {
+			return
+		}
+		simpleConfig.EC2PurchaseInstanceType = config.ToPurchaseInstanceType(workloadType)
+	}
+
+	if simpleConfig.EC2PurchaseInstanceType == config.SpotInstance {
+		if simpleConfig.SpotInstancePrice == 0 {
+			floatVal, err := askAndParseSpotPrice(h)
+			if err != nil {
+				cli.ShowError(err, "Launching instance failed")
+				return
+			}
+			simpleConfig.SpotInstancePrice = floatVal
+		}
+	}
+
 	// Ask For launch template details only if Purchase instance type is On Demand
-	if simpleConfig.Ec2PurchaseInstanceType == config.OnDemand {
+	if simpleConfig.EC2PurchaseInstanceType == config.OnDemand {
 		launchTemplateId := &simpleConfig.LaunchTemplateId
 		if simpleConfig.LaunchTemplateId == "" {
 			launchTemplateId = question.AskLaunchTemplate(h)
