@@ -28,6 +28,7 @@ import (
 	"simple-ec2/pkg/tag"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/bytequantity"
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -293,7 +294,7 @@ Get the instance types selected by instance selector.
 Empty result is allowed.
 */
 func (h *EC2Helper) GetInstanceTypesFromInstanceSelector(instanceSelector InstanceSelector, vcpus,
-	memoryGib int) ([]*ec2.InstanceTypeInfo, error) {
+	memoryGib int) ([]*instancetypes.Details, error) {
 	if vcpus <= 0 {
 		return nil, errors.New("Invalid vCPUs: " + fmt.Sprint(vcpus))
 	}
