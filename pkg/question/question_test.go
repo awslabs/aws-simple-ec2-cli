@@ -26,6 +26,7 @@ import (
 	"simple-ec2/pkg/question"
 	th "simple-ec2/test/testhelper"
 
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -961,26 +962,30 @@ Instance Selector Question Tests
 
 const testInstanceType = ec2.InstanceTypeT2Micro
 
-var testInstanceTypeInfos = []*ec2.InstanceTypeInfo{
+var testInstanceTypeInfos = []*instancetypes.Details{
 	{
-		InstanceType: aws.String(testInstanceType),
-		VCpuInfo: &ec2.VCpuInfo{
-			DefaultVCpus: aws.Int64(2),
+		InstanceTypeInfo: ec2.InstanceTypeInfo{
+			InstanceType: aws.String(testInstanceType),
+			VCpuInfo: &ec2.VCpuInfo{
+				DefaultVCpus: aws.Int64(2),
+			},
+			MemoryInfo: &ec2.MemoryInfo{
+				SizeInMiB: aws.Int64(4096),
+			},
+			InstanceStorageSupported: aws.Bool(false),
 		},
-		MemoryInfo: &ec2.MemoryInfo{
-			SizeInMiB: aws.Int64(4096),
-		},
-		InstanceStorageSupported: aws.Bool(false),
 	},
 	{
-		InstanceType: aws.String("t2.nano"),
-		VCpuInfo: &ec2.VCpuInfo{
-			DefaultVCpus: aws.Int64(1),
+		InstanceTypeInfo: ec2.InstanceTypeInfo{
+			InstanceType: aws.String("t2.nano"),
+			VCpuInfo: &ec2.VCpuInfo{
+				DefaultVCpus: aws.Int64(1),
+			},
+			MemoryInfo: &ec2.MemoryInfo{
+				SizeInMiB: aws.Int64(2048),
+			},
+			InstanceStorageSupported: aws.Bool(false),
 		},
-		MemoryInfo: &ec2.MemoryInfo{
-			SizeInMiB: aws.Int64(2048),
-		},
-		InstanceStorageSupported: aws.Bool(false),
 	},
 }
 var testSelector = &th.MockedSelector{
@@ -1017,7 +1022,7 @@ func TestAskInstanceTypeInstanceSelector_BadMemory(t *testing.T) {
 
 func TestAskInstanceTypeInstanceSelector_NoResult(t *testing.T) {
 	testSelector = &th.MockedSelector{
-		InstanceTypes: []*ec2.InstanceTypeInfo{},
+		InstanceTypes: []*instancetypes.Details{},
 	}
 
 	initQuestionTest(t, "1\n")

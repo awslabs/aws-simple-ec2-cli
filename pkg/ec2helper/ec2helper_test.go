@@ -23,6 +23,7 @@ import (
 	"simple-ec2/pkg/ec2helper"
 	th "simple-ec2/test/testhelper"
 
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -384,12 +385,16 @@ func TestGetInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
 Instance Selector Tests
 */
 
-var testInstanceTypeInfos = []*ec2.InstanceTypeInfo{
+var testInstanceTypeInfos = []*instancetypes.Details{
 	{
-		InstanceType: aws.String("t2.micro"),
+		InstanceTypeInfo: ec2.InstanceTypeInfo{
+			InstanceType: aws.String("t2.micro"),
+		},
 	},
 	{
-		InstanceType: aws.String("t2.nano"),
+		InstanceTypeInfo: ec2.InstanceTypeInfo{
+			InstanceType: aws.String("t2.nano"),
+		},
 	},
 }
 var selector = &th.MockedSelector{

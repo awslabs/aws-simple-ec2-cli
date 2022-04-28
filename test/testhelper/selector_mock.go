@@ -14,15 +14,15 @@
 package testhelper
 
 import (
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
-	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
 type MockedSelector struct {
 	SelectorError error
-	InstanceTypes []*ec2.InstanceTypeInfo
+	InstanceTypes []*instancetypes.Details
 }
 
-func (s *MockedSelector) FilterVerbose(filters selector.Filters) ([]*ec2.InstanceTypeInfo, error) {
+func (s *MockedSelector) FilterVerbose(filters selector.Filters) ([]*instancetypes.Details, error) {
 	return s.InstanceTypes, s.SelectorError
 }
