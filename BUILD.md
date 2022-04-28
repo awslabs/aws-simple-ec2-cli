@@ -1,6 +1,6 @@
 # AWS Simple EC2 CLI: Build Instructions
 
-## Install Go version 1.14+
+## Install Go version 1.18+
 
 There are several options for installing go:
 
