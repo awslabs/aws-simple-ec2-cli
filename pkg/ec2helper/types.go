@@ -14,6 +14,7 @@
 package ec2helper
 
 import (
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -44,5 +45,5 @@ type EC2Helper struct {
 }
 
 type InstanceSelector interface {
-	FilterVerbose(filters selector.Filters) ([]*ec2.InstanceTypeInfo, error)
+	FilterVerbose(filters selector.Filters) ([]*instancetypes.Details, error)
 }

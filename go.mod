@@ -3,7 +3,7 @@ module simple-ec2
 go 1.15
 
 require (
-	github.com/aws/amazon-ec2-instance-selector/v2 v2.0.1
+	github.com/aws/amazon-ec2-instance-selector/v2 v2.3.0
 	github.com/aws/aws-sdk-go v1.44.2
 	github.com/briandowns/spinner v1.18.1
 	github.com/fatih/color v1.13.0 // indirect
