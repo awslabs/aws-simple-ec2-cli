@@ -343,7 +343,11 @@ func TestLaunchInstance(t *testing.T) {
 		ImageId:      testAmi,
 		InstanceType: instanceType,
 	}
-	instanceIds, err := h.LaunchInstance(testSimpleConfig, nil, true)
+
+	detailedConfig, err := h.ParseConfig(testSimpleConfig)
+	th.Ok(t, err)
+
+	instanceIds, err := h.LaunchInstance(testSimpleConfig, detailedConfig, true)
 	th.Ok(t, err)
 	th.Assert(t, instanceIds != nil, "instanceIds should not be nil")
 	th.Assert(t, len(instanceIds) > 0, "instanceIds should not be empty")
