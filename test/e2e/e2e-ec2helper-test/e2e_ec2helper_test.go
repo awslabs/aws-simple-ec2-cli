@@ -365,27 +365,33 @@ func TestLaunchInstance(t *testing.T) {
 	th.Assert(t, len(instanceIds) > 0, "instanceIds should not be empty")
 
 	for _, instanceID := range instanceIds {
-		ValidateInstanceMatchesDesiredSpecs(t, instanceID, testSimpleConfig)
+		ValidateInstanceMatchesDesiredSpecs(t, instanceID, detailedConfig)
 	}
 }
 
-func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, simpleConfig *config.SimpleInfo) {
+func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, detailedConfig *config.DetailedInfo) {
 	instance, err := h.GetInstanceById(instanceID)
 	if err != nil {
 		th.Nok(t, err)
 	}
-	th.Assert(t, strings.EqualFold(*instance.InstanceType, simpleConfig.InstanceType), "Instance type does not match")
-	th.Assert(t, strings.EqualFold(*instance.SubnetId, simpleConfig.SubnetId), "Subnet ID does not match")
-	ValidateInstanceTags(t, instance.Tags, simpleConfig.UserTags)
+	th.Assert(t, strings.EqualFold(*instance.InstanceType, *detailedConfig.InstanceTypeInfo.InstanceType), "Instance type does not match")
+	th.Assert(t, strings.EqualFold(*instance.SubnetId, *detailedConfig.Subnet.SubnetId), "Subnet ID does not match")
+	ValidateInstanceTags(t, instance.Tags, detailedConfig.TagSpecs)
 }
 
-func ValidateInstanceTags(t *testing.T, actualTags []*ec2.Tag, expectedTags map[string]string) {
-	countOfExpectedTags := len(expectedTags)
+func ValidateInstanceTags(t *testing.T, actualInstanceTags []*ec2.Tag, launchRequestTags []*ec2.TagSpecification) {
+	flattenedExpectedTags := []*ec2.Tag{}
+	for _, tagGroup := range launchRequestTags {
+		flattenedExpectedTags = append(flattenedExpectedTags, tagGroup.Tags...)
+	}
+	countOfExpectedTags := len(flattenedExpectedTags)
 	countOfActualTagsMatched := 0
-	for _, tag := range actualTags {
-		if val, ok := expectedTags[*tag.Key]; ok {
-			th.Assert(t, strings.EqualFold(*tag.Value, val), fmt.Sprintf("Tag values for key %s don't match (expected: %s, actual: %s)", *tag.Key, val, *tag.Value))
-			countOfActualTagsMatched++
+	for _, actualTag := range actualInstanceTags {
+		for _, expectedTag := range flattenedExpectedTags {
+			if strings.EqualFold(*actualTag.Key, *expectedTag.Key) {
+				th.Assert(t, strings.EqualFold(*actualTag.Value, *expectedTag.Value), fmt.Sprintf("Tag values for key %s don't match (expected: %s, actual: %s)", *actualTag.Key, *expectedTag.Value, *actualTag.Value))
+				countOfActualTagsMatched++
+			}
 		}
 	}
 	th.Assert(t, countOfExpectedTags == countOfActualTagsMatched, "Didn't find all of the expected tags on the actual instance")
