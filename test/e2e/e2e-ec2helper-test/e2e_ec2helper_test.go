@@ -14,6 +14,8 @@
 package ec2helper_e2e
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"simple-ec2/pkg/cfn"
@@ -349,16 +351,44 @@ func TestLaunchInstance(t *testing.T) {
 
 	instanceIds, err := h.LaunchInstance(testSimpleConfig, detailedConfig, true)
 	th.Ok(t, err)
+
+	// Defer the clean up so that even if one of the assertions fail, we still terminate the instance
+	defer func() {
+		input := &ec2.TerminateInstancesInput{
+			InstanceIds: aws.StringSlice(instanceIds),
+		}
+		_, err = h.Svc.TerminateInstances(input)
+		th.Ok(t, err)
+	}()
+
 	th.Assert(t, instanceIds != nil, "instanceIds should not be nil")
 	th.Assert(t, len(instanceIds) > 0, "instanceIds should not be empty")
 
-	// Clean up
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: aws.StringSlice(instanceIds),
+	for _, instanceID := range instanceIds {
+		ValidateInstanceMatchesDesiredSpecs(t, instanceID, testSimpleConfig)
 	}
+}
 
-	_, err = h.Svc.TerminateInstances(input)
-	th.Ok(t, err)
+func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, simpleConfig *config.SimpleInfo) {
+	instance, err := h.GetInstanceById(instanceID)
+	if err != nil {
+		th.Nok(t, err)
+	}
+	th.Assert(t, strings.EqualFold(*instance.InstanceType, simpleConfig.InstanceType), "Instance type does not match")
+	th.Assert(t, strings.EqualFold(*instance.SubnetId, simpleConfig.SubnetId), "Subnet ID does not match")
+	ValidateInstanceTags(t, instance.Tags, simpleConfig.UserTags)
+}
+
+func ValidateInstanceTags(t *testing.T, actualTags []*ec2.Tag, expectedTags map[string]string) {
+	countOfExpectedTags := len(expectedTags)
+	countOfActualTagsMatched := 0
+	for _, tag := range actualTags {
+		if val, ok := expectedTags[*tag.Key]; ok {
+			th.Assert(t, strings.EqualFold(*tag.Value, val), fmt.Sprintf("Tag values for key %s don't match (expected: %s, actual: %s)", *tag.Key, val, *tag.Value))
+			countOfActualTagsMatched++
+		}
+	}
+	th.Assert(t, countOfExpectedTags == countOfActualTagsMatched, "Didn't find all of the expected tags on the actual instance")
 }
 
 func TestTerminateInstances(t *testing.T) {
