@@ -440,7 +440,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 	s.Suffix = " fetching images"
 	s.Color("blue", "bold")
 	s.Start()
-	defaultImages, err := h.GetLatestImages(&rootDeviceType,instanceTypeInfo.ProcessorInfo.SupportedArchitectures)
+	defaultImages, err := h.GetLatestImages(&rootDeviceType, instanceTypeInfo.ProcessorInfo.SupportedArchitectures)
 	if err != nil {
 		return nil, err
 	}

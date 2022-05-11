@@ -402,7 +402,7 @@ func getDescribeImagesInputs(rootDeviceType string, architectures []*string) *ma
 						},
 					},
 					{
-						Name: aws.String("architecture"),
+						Name:   aws.String("architecture"),
 						Values: architectures,
 					},
 				},
@@ -461,7 +461,7 @@ func GetImagePriority() []string {
 Get an appropriate default image, given the information about the latest AMIs.
 Empty result is not allowed.
 */
-func (h *EC2Helper) GetDefaultImage(rootDeviceType *string,architectures []*string) (*ec2.Image, error) {
+func (h *EC2Helper) GetDefaultImage(rootDeviceType *string, architectures []*string) (*ec2.Image, error) {
 	latestImages, err := h.GetLatestImages(rootDeviceType, architectures)
 	if err != nil {
 		return nil, err
@@ -1089,7 +1089,7 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		rootDeviceType = "instance-store"
 	}
 
-	image, err := h.GetDefaultImage(&rootDeviceType,instanceTypeInfo.ProcessorInfo.SupportedArchitectures)
+	image, err := h.GetDefaultImage(&rootDeviceType, instanceTypeInfo.ProcessorInfo.SupportedArchitectures)
 	if err != nil {
 		return nil, err
 	}
