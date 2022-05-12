@@ -376,6 +376,9 @@ func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, detail
 	}
 	th.AssertStringsEqual(t, *detailedConfig.InstanceTypeInfo.InstanceType, *instance.InstanceType, "Instance type does not match")
 	th.AssertStringsEqual(t, *detailedConfig.Subnet.SubnetId, *instance.SubnetId, "Subnet ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Vpc.VpcId, *instance.VpcId, "VPC ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Image.ImageId, *instance.ImageId, "AMI ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.SecurityGroups[0].GroupId, *instance.SecurityGroups[0].GroupId, "Security Group ID does not match")
 	ValidateInstanceTags(t, instance.Tags, detailedConfig.TagSpecs)
 }
 
