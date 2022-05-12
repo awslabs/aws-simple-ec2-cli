@@ -374,8 +374,8 @@ func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, detail
 	if err != nil {
 		th.Nok(t, err)
 	}
-	th.Assert(t, strings.EqualFold(*instance.InstanceType, *detailedConfig.InstanceTypeInfo.InstanceType), "Instance type does not match")
-	th.Assert(t, strings.EqualFold(*instance.SubnetId, *detailedConfig.Subnet.SubnetId), "Subnet ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.InstanceTypeInfo.InstanceType, *instance.InstanceType, "Instance type does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Subnet.SubnetId, *instance.SubnetId, "Subnet ID does not match")
 	ValidateInstanceTags(t, instance.Tags, detailedConfig.TagSpecs)
 }
 
@@ -389,7 +389,7 @@ func ValidateInstanceTags(t *testing.T, actualInstanceTags []*ec2.Tag, launchReq
 	for _, actualTag := range actualInstanceTags {
 		for _, expectedTag := range flattenedExpectedTags {
 			if strings.EqualFold(*actualTag.Key, *expectedTag.Key) {
-				th.Assert(t, strings.EqualFold(*actualTag.Value, *expectedTag.Value), fmt.Sprintf("Tag values for key %s don't match (expected: %s, actual: %s)", *actualTag.Key, *expectedTag.Value, *actualTag.Value))
+				th.AssertStringsEqual(t, *expectedTag.Value, *actualTag.Value, fmt.Sprintf("Tag values for key %s don't match", *actualTag.Key))
 				countOfActualTagsMatched++
 			}
 		}
