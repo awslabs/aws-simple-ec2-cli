@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -89,6 +90,11 @@ func Assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
 		fmt.Printf("\033[31m%s:%d: "+msg+"\033[39m\n\n", append([]interface{}{filepath.Base(file), line}, v...)...)
 		tb.FailNow()
 	}
+}
+
+// AssertStringEquals fails the test if the two strings don't match (case-insensitive)
+func AssertStringsEqual(tb testing.TB, expected string, actual string, msg string) {
+	Assert(tb, strings.EqualFold(expected, actual), fmt.Sprintf("%s (expected: %s, actual: %s)", msg, expected, actual))
 }
 
 // Ok fails the test if an err is not nil.

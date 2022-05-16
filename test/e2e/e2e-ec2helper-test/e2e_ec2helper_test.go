@@ -14,6 +14,8 @@
 package ec2helper_e2e
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"simple-ec2/pkg/cfn"
@@ -343,18 +345,59 @@ func TestLaunchInstance(t *testing.T) {
 		ImageId:      testAmi,
 		InstanceType: instanceType,
 	}
-	instanceIds, err := h.LaunchInstance(testSimpleConfig, nil, true)
+
+	detailedConfig, err := h.ParseConfig(testSimpleConfig)
 	th.Ok(t, err)
+
+	instanceIds, err := h.LaunchInstance(testSimpleConfig, detailedConfig, true)
+	th.Ok(t, err)
+
+	// Defer the clean up so that even if one of the assertions fail, we still terminate the instance
+	defer func() {
+		input := &ec2.TerminateInstancesInput{
+			InstanceIds: aws.StringSlice(instanceIds),
+		}
+		_, err = h.Svc.TerminateInstances(input)
+		th.Ok(t, err)
+	}()
+
 	th.Assert(t, instanceIds != nil, "instanceIds should not be nil")
 	th.Assert(t, len(instanceIds) > 0, "instanceIds should not be empty")
 
-	// Clean up
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: aws.StringSlice(instanceIds),
+	for _, instanceID := range instanceIds {
+		ValidateInstanceMatchesDesiredSpecs(t, instanceID, detailedConfig)
 	}
+}
 
-	_, err = h.Svc.TerminateInstances(input)
-	th.Ok(t, err)
+func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, detailedConfig *config.DetailedInfo) {
+	instance, err := h.GetInstanceById(instanceID)
+	if err != nil {
+		th.Nok(t, err)
+	}
+	th.AssertStringsEqual(t, *detailedConfig.InstanceTypeInfo.InstanceType, *instance.InstanceType, "Instance type does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Subnet.SubnetId, *instance.SubnetId, "Subnet ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Vpc.VpcId, *instance.VpcId, "VPC ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.Image.ImageId, *instance.ImageId, "AMI ID does not match")
+	th.AssertStringsEqual(t, *detailedConfig.SecurityGroups[0].GroupId, *instance.SecurityGroups[0].GroupId, "Security Group ID does not match")
+	ValidateInstanceTags(t, instance.Tags, detailedConfig.TagSpecs)
+}
+
+func ValidateInstanceTags(t *testing.T, actualInstanceTags []*ec2.Tag, launchRequestTags []*ec2.TagSpecification) {
+	flattenedExpectedTags := []*ec2.Tag{}
+	for _, tagGroup := range launchRequestTags {
+		flattenedExpectedTags = append(flattenedExpectedTags, tagGroup.Tags...)
+	}
+	countOfExpectedTags := len(flattenedExpectedTags)
+	countOfActualTagsMatched := 0
+	for _, actualTag := range actualInstanceTags {
+		for _, expectedTag := range flattenedExpectedTags {
+			if strings.EqualFold(*actualTag.Key, *expectedTag.Key) {
+				th.AssertStringsEqual(t, *expectedTag.Value, *actualTag.Value, fmt.Sprintf("Tag values for key %s don't match", *actualTag.Key))
+				countOfActualTagsMatched++
+			}
+		}
+	}
+	th.Assert(t, countOfExpectedTags == countOfActualTagsMatched, "Didn't find all of the expected tags on the actual instance")
 }
 
 func TestTerminateInstances(t *testing.T) {
