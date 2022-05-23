@@ -495,13 +495,11 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 		Fns:               []CheckInput{ec2helper.ValidateImageId},
 	})
 
-	// Find the image information
-	if defaultImages != nil {
-		for _, image := range *defaultImages {
-			if *image.ImageId == answer {
-				return image, nil
-			}
-		}
+	//Find the image information
+	image, _ := h.GetImageById(answer)
+
+	if image != nil {
+		return image, nil
 	}
 
 	return nil, errors.New(fmt.Sprintf("No image information for %s found", answer))

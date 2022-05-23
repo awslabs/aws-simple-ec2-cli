@@ -46,7 +46,7 @@ func New(sess *session.Session) *Cfn {
 	}
 }
 
-// Create a stack and ger resources in it, including VPC ID, subnet ID and instance ID
+// Create a stack and get resources in it, including VPC ID, subnet ID and instance ID
 func (c Cfn) CreateStackAndGetResources(availabilityZones []*ec2.AvailabilityZone,
 	stackName *string, template string) (vpcId *string, subnetIds []string, instanceId *string,
 	stackResources []*cloudformation.StackResource, err error) {

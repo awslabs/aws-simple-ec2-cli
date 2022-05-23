@@ -381,7 +381,7 @@ func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) b
 }
 
 /*
-Ask user input for an image id. The user can select from provided options orenter a valid image id.
+Ask user input for an image id. The user can select from provided options or enter a valid image id.
 Return true if the function is executed successfully, false otherwise
 */
 func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
