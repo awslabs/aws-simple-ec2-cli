@@ -481,7 +481,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 	}
 
 	// Add the option to enter an image id
-	optionsText += "[ any image id ]: Select the image id\n"
+	optionsText += "[ any image id ]: Select the image id or provide your own image id\n"
 
 	question := "AMI"
 
@@ -496,13 +496,13 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string) (*ec2.Image, error) {
 	})
 
 	//Find the image information
-	image, _ := h.GetImageById(answer)
+	image, err := h.GetImageById(answer)
 
-	if image != nil {
-		return image, nil
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("No image information for %s found", answer))
 	}
 
-	return nil, errors.New(fmt.Sprintf("No image information for %s found", answer))
+	return image, nil
 }
 
 // Ask if the users want to keep EBS volumes after instance termination
