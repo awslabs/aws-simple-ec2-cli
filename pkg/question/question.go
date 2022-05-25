@@ -121,6 +121,13 @@ func AskQuestion(input *AskQuestionInput) string {
 
 		// No match at all
 		fmt.Println("Input invalid. Please try again.")
+		if input.DefaultOptionRepr != nil {
+			fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
+		} else if input.DefaultOption != nil {
+			fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOption)
+		} else {
+			fmt.Printf(input.QuestionString + ": ")
+		}
 	}
 }
 
