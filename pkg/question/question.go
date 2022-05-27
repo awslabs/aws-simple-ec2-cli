@@ -60,13 +60,7 @@ func AskQuestion(input *AskQuestionInput) string {
 		fmt.Print(*input.OptionsString)
 	}
 
-	if input.DefaultOptionRepr != nil {
-		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
-	} else if input.DefaultOption != nil {
-		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOption)
-	} else {
-		fmt.Printf(input.QuestionString + ": ")
-	}
+	GetQuestion(input)
 
 	// Keep asking for user input until one valid input in entered
 	for {
@@ -121,13 +115,18 @@ func AskQuestion(input *AskQuestionInput) string {
 
 		// No match at all
 		fmt.Println("Input invalid. Please try again.")
-		if input.DefaultOptionRepr != nil {
-			fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
-		} else if input.DefaultOption != nil {
-			fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOption)
-		} else {
-			fmt.Printf(input.QuestionString + ": ")
-		}
+		GetQuestion(input)
+	}
+}
+
+// Displays question with default values
+func GetQuestion(input *AskQuestionInput) {
+	if input.DefaultOptionRepr != nil {
+		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
+	} else if input.DefaultOption != nil {
+		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOption)
+	} else {
+		fmt.Printf(input.QuestionString + ": ")
 	}
 }
 
