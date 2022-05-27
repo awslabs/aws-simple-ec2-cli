@@ -60,10 +60,11 @@ func AskQuestion(input *AskQuestionInput) string {
 		fmt.Print(*input.OptionsString)
 	}
 
-	GetQuestion(input)
-
 	// Keep asking for user input until one valid input in entered
 	for {
+		// GetQuestion displays question with default values
+		GetQuestion(input)
+
 		// Read input from the user and convert CRLF to LF
 		reader := bufio.NewReader(os.Stdin)
 		answer, _ := reader.ReadString('\n')
@@ -115,11 +116,10 @@ func AskQuestion(input *AskQuestionInput) string {
 
 		// No match at all
 		fmt.Println("Input invalid. Please try again.")
-		GetQuestion(input)
 	}
 }
 
-// Displays question with default values
+// GetQuestion displays question with default values
 func GetQuestion(input *AskQuestionInput) {
 	if input.DefaultOptionRepr != nil {
 		fmt.Printf("%s [%s]:  ", input.QuestionString, *input.DefaultOptionRepr)
