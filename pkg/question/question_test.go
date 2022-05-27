@@ -47,6 +47,9 @@ AskQuestion Tests
 
 const expectedOutput = `
 These are the optionsThis is a question [default option]:  `
+const invalidInputQuestionPrompt = `
+These are the optionsThis is a question [default option]:  Input invalid. Please try again.
+This is a question [default option]:  `
 
 var input = &question.AskQuestionInput{
 	QuestionString:    "This is a question",
@@ -67,6 +70,17 @@ func TestAskQuestion_StringOptionAnswer(t *testing.T) {
 	output := cleanupQuestionTest()
 	th.Equals(t, expectedOutput, output)
 	th.Equals(t, testResponse, answer)
+}
+
+func TestAskQuestion_InvalidInput(t *testing.T) {
+	const expectedInvalidInput = "heap"
+	initQuestionTest(t, expectedInvalidInput+"\n")
+	input.AcceptAnyString = false
+
+	question.AskQuestion(input)
+
+	output := cleanupQuestionTest()
+	th.Equals(t, invalidInputQuestionPrompt, output)
 }
 
 func TestAskQuestion_IndexedOptionAnswer(t *testing.T) {
