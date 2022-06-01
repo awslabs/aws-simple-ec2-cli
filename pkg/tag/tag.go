@@ -25,7 +25,7 @@ import (
 func GetSimpleEc2Tags() *map[string]string {
 	now := time.Now()
 	zone, _ := now.Zone()
-	nowString := fmt.Sprintf("%d-%d-%d %d:%d:%d %s", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(),
+	nowString := fmt.Sprintf("%02d-%02d-%02d %02d:%02d:%02d %s", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(),
 		now.Second(), zone)
 
 	tags := map[string]string{
