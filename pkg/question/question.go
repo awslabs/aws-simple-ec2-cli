@@ -1188,3 +1188,18 @@ func AskTerminationConfirmation(instanceIds []string) string {
 
 	return answer
 }
+
+func AskSpotOrOnDemand() string {
+	question := "Select instance type. Spot is price efficient and effective for short term use"
+	defaultInstanceTypeText := "On-Demand"
+	optionsText := "1. On-Demand\n2. Spot\n"
+	indexedOptions := []string{cli.ResponseYes, cli.ResponseNo}
+
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  &defaultInstanceTypeText,
+		OptionsString:  &optionsText,
+		IndexedOptions: indexedOptions,
+	})
+	return answer
+}

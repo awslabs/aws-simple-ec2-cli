@@ -260,6 +260,13 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
+	isOnDemand := question.AskSpotOrOnDemand()
+
+	if isOnDemand == cli.ResponseNo {
+		LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
+		return
+	}
+
 	// Launch the instance.
 	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	if cli.ShowError(err, "Launching instance failed") {
@@ -633,5 +640,13 @@ func ReadSaveConfig(simpleConfig *config.SimpleInfo) {
 	if isSaveRequired {
 		err := config.SaveConfig(simpleConfig, nil)
 		cli.ShowError(err, "Saving config file failed")
+	}
+}
+
+func LaunchSpotInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) {
+	fmt.Println("Spot Instance Testing")
+	_, err := h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	if cli.ShowError(err, "Launching instance failed") {
+		return
 	}
 }
