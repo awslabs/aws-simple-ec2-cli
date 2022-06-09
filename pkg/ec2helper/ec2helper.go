@@ -1119,6 +1119,8 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		simpleConfig.SecurityGroupIds = []string{*defaultSg.GroupId}
 	}
 
+	simpleConfig.CapacityType = "On-Demand"
+
 	return simpleConfig, nil
 }
 

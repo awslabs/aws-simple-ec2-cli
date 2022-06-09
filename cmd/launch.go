@@ -38,6 +38,8 @@ var launchCmd = &cobra.Command{
 	Run: launch,
 }
 
+const onDemandText = "On-Demand"
+
 // Add flags
 func init() {
 	rootCmd.AddCommand(launchCmd)
@@ -152,12 +154,18 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	// Ask for confirmation or modification. Keep asking until the config is confirmed or denied
 	var detailedConfig *config.DetailedInfo
 	var confirmation string
+	var capacityTypeAnswer string
+	onDemandText := "On-Demand"
 	for {
 		// Parse config first
 		detailedConfig, err = h.ParseConfig(simpleConfig)
 		if cli.ShowError(err, "Parsing config failed") {
 			return
 		}
+
+		// Ask for and set the capacity type
+		capacityTypeAnswer = question.AskCapacityType()
+		simpleConfig.CapacityType = capacityTypeAnswer
 
 		// Ask for confirmation or modification
 		confirmation = question.AskConfirmationWithInput(simpleConfig, detailedConfig, true)
@@ -209,8 +217,13 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 	}
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	// Launch On-Demand or Spot instance based on capacity type
+	if simpleConfig.CapacityType == onDemandText {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	} else {
+		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
+	}
+
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
@@ -260,15 +273,13 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
-	isOnDemand := question.AskSpotOrOnDemand()
-
-	if isOnDemand == cli.ResponseNo {
-		LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
-		return
+	// Launch On-Demand or Spot instance based on capacity type
+	if simpleConfig.CapacityType == onDemandText {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	} else {
+		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
 	}
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
@@ -643,10 +654,8 @@ func ReadSaveConfig(simpleConfig *config.SimpleInfo) {
 	}
 }
 
-func LaunchSpotInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) {
+func LaunchSpotInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
 	fmt.Println("Spot Instance Testing")
-	_, err := h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
-	if cli.ShowError(err, "Launching instance failed") {
-		return
-	}
+	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	return
 }

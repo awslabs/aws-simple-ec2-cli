@@ -53,11 +53,12 @@ const testLaunchTemplateVersion = "1"
 const testNewVPC = true
 const testIamProfile = "iam-profile"
 const testBootScriptFilePath = "some/path/to/bootscript"
+const testCapacityType = "On-Spot-Demand"
 
 var testTags = map[string]string{"testedBy": "BRYAN", "brokenBy": "CBASKIN"}
 var testSecurityGroup = []string{"sg-12345", "sg-67890"}
 
-const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile","BootScriptFilePath":"some/path/to/bootscript","UserTags":{"brokenBy":"CBASKIN","testedBy":"BRYAN"}}`
+const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile","BootScriptFilePath":"some/path/to/bootscript","UserTags":{"brokenBy":"CBASKIN","testedBy":"BRYAN"},"CapacityType":"On-Spot-Demand"}`
 
 func TestSaveConfig(t *testing.T) {
 	testConfig := &config.SimpleInfo{
@@ -72,6 +73,7 @@ func TestSaveConfig(t *testing.T) {
 		IamInstanceProfile:    testIamProfile,
 		BootScriptFilePath:    testBootScriptFilePath,
 		UserTags:              testTags,
+		CapacityType:          testCapacityType,
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
@@ -126,6 +128,7 @@ func TestReadConfig(t *testing.T) {
 		IamInstanceProfile:    testIamProfile,
 		BootScriptFilePath:    testBootScriptFilePath,
 		UserTags:              testTags,
+		CapacityType:          testCapacityType,
 	}
 	th.Equals(t, expectedConfig, actualConfig)
 }
