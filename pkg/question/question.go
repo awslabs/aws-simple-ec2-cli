@@ -38,7 +38,7 @@ import (
 
 const yesNoOption = "[ yes / no ]"
 
-var CapacityTypes = struct {
+var DefaultCapacityTypeText = struct {
 	OnDemand, Spot string
 }{
 	OnDemand: "On-Demand",
@@ -1199,9 +1199,9 @@ func AskTerminationConfirmation(instanceIds []string) string {
 
 func AskCapacityType() string {
 	question := fmt.Sprintf("Select capacity type. Spot instances are available at up to a 90%% discount compared to On-Demand instances,\nbut they may get interrupted by EC2 with a 2-minute warning")
-	defaultInstanceTypeText := CapacityTypes.OnDemand
+	defaultInstanceTypeText := DefaultCapacityTypeText.OnDemand
 	optionsText := "1. On-Demand\n2. Spot\n"
-	indexedOptions := []string{CapacityTypes.OnDemand, CapacityTypes.Spot}
+	indexedOptions := []string{DefaultCapacityTypeText.OnDemand, DefaultCapacityTypeText.Spot}
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,

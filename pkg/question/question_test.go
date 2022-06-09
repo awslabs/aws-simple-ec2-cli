@@ -1108,7 +1108,7 @@ func TestAskIamProfile_Error(t *testing.T) {
 }
 
 func TestAskCapacityType(t *testing.T) {
-	const expectedAnswer = "Spot"
+	expectedAnswer := question.DefaultCapacityTypeText.Spot
 	initQuestionTest(t, "2\n")
 
 	answer := question.AskCapacityType()

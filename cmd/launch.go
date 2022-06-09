@@ -215,16 +215,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Launch On-Demand or Spot instance based on capacity type
-	if simpleConfig.CapacityType == question.CapacityTypes.OnDemand {
-		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
-	} else {
-		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
-	}
-
-	if cli.ShowError(err, "Launching instance failed") {
-		return
-	}
-	ReadSaveConfig(simpleConfig)
+	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
 }
 
 // Launch the instance non-interactively
@@ -270,8 +261,13 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
-	// Launch On-Demand or Spot instance based on capacity type
-	if simpleConfig.CapacityType == question.CapacityTypes.OnDemand {
+	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+}
+
+// Launch On-Demand or Spot instance based on capacity type
+func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) {
+	var err error
+	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
 		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
