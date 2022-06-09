@@ -1191,7 +1191,7 @@ func AskTerminationConfirmation(instanceIds []string) string {
 }
 
 func AskCapacityType() string {
-	question := "Select capacity type. Spot instances are available at up to a 90 %% discount compared to On-Demand instances,\nbut they may get interrupted by EC2 with a 2-minute warning"
+	question := fmt.Sprintf("Select capacity type. Spot instances are available at up to a 90%% discount compared to On-Demand instances,\nbut they may get interrupted by EC2 with a 2-minute warning")
 	defaultInstanceTypeText := "On-Demand"
 	optionsText := "1. On-Demand\n2. Spot\n"
 	indexedOptions := []string{"On-Demand", "Spot"}
