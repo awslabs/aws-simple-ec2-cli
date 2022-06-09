@@ -38,8 +38,6 @@ var launchCmd = &cobra.Command{
 	Run: launch,
 }
 
-const onDemandText = "On-Demand"
-
 // Add flags
 func init() {
 	rootCmd.AddCommand(launchCmd)
@@ -155,7 +153,6 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	var detailedConfig *config.DetailedInfo
 	var confirmation string
 	var capacityTypeAnswer string
-	onDemandText := "On-Demand"
 	for {
 		// Parse config first
 		detailedConfig, err = h.ParseConfig(simpleConfig)
@@ -218,7 +215,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Launch On-Demand or Spot instance based on capacity type
-	if simpleConfig.CapacityType == onDemandText {
+	if simpleConfig.CapacityType == question.CapacityTypes.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
 		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
@@ -274,7 +271,7 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
 	// Launch On-Demand or Spot instance based on capacity type
-	if simpleConfig.CapacityType == onDemandText {
+	if simpleConfig.CapacityType == question.CapacityTypes.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
 		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
