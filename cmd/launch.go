@@ -215,7 +215,12 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Launch On-Demand or Spot instance based on capacity type
-	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+	err = LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+
+	if cli.ShowError(err, "Launching instance failed") {
+		return
+	}
+	ReadSaveConfig(simpleConfig)
 }
 
 // Launch the instance non-interactively
@@ -262,21 +267,21 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
 	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
-}
-
-// Launch On-Demand or Spot instance based on capacity type
-func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) {
-	var err error
-	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
-		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
-	} else {
-		err = LaunchSpotInstance(h, simpleConfig, detailedConfig, confirmation)
-	}
 
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
 	ReadSaveConfig(simpleConfig)
+}
+
+// Launch On-Demand or Spot instance based on capacity type
+func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	} else {
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation)
+	}
+	return
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
@@ -645,10 +650,4 @@ func ReadSaveConfig(simpleConfig *config.SimpleInfo) {
 		err := config.SaveConfig(simpleConfig, nil)
 		cli.ShowError(err, "Saving config file failed")
 	}
-}
-
-func LaunchSpotInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
-	fmt.Println("Spot Instance Testing")
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
-	return
 }

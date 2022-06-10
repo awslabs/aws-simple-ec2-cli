@@ -1164,6 +1164,12 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 }
 
+func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+	fmt.Println("Spot Instance Testing")
+	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	return
+}
+
 // Create a new stack and update simpleConfig for config saving
 func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 	input *ec2.RunInstancesInput) error {
