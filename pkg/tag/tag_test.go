@@ -56,7 +56,7 @@ func TestGetTagAsFilter(t *testing.T) {
 	actualTagFilter, err := tag.GetTagAsFilter(*tags)
 	now := time.Now()
 	zone, _ := now.Zone()
-	currTimeStr := fmt.Sprintf("%d-%d-%d %d:%d:%d %s", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(),
+	currTimeStr := fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d %s", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(),
 		now.Second(), zone)
 	// assign current time to avoid manually traversing map and checking time format
 	expectedTagAsFilter[1].Values = aws.StringSlice([]string{currTimeStr})

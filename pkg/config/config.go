@@ -47,6 +47,7 @@ type SimpleInfo struct {
 	IamInstanceProfile            string
 	BootScriptFilePath            string
 	UserTags                      map[string]string
+	CapacityType                  string
 }
 
 /*

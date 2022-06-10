@@ -152,12 +152,17 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	// Ask for confirmation or modification. Keep asking until the config is confirmed or denied
 	var detailedConfig *config.DetailedInfo
 	var confirmation string
+	var capacityTypeAnswer string
 	for {
 		// Parse config first
 		detailedConfig, err = h.ParseConfig(simpleConfig)
 		if cli.ShowError(err, "Parsing config failed") {
 			return
 		}
+
+		// Ask for and set the capacity type
+		capacityTypeAnswer = question.AskCapacityType()
+		simpleConfig.CapacityType = capacityTypeAnswer
 
 		// Ask for confirmation or modification
 		confirmation = question.AskConfirmationWithInput(simpleConfig, detailedConfig, true)
@@ -209,8 +214,9 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 	}
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	// Launch On-Demand or Spot instance based on capacity type
+	err = LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
@@ -260,12 +266,22 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
 	ReadSaveConfig(simpleConfig)
+}
+
+// Launch On-Demand or Spot instance based on capacity type
+func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	} else {
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation)
+	}
+	return
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise

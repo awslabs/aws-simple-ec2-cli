@@ -38,6 +38,13 @@ import (
 
 const yesNoOption = "[ yes / no ]"
 
+var DefaultCapacityTypeText = struct {
+	OnDemand, Spot string
+}{
+	OnDemand: "On-Demand",
+	Spot:     "Spot",
+}
+
 type CheckInput func(*ec2helper.EC2Helper, string) bool
 
 type AskQuestionInput struct {
@@ -932,6 +939,7 @@ func AskConfirmationWithInput(simpleConfig *config.SimpleInfo, detailedConfig *c
 		{cli.ResourceVpc, vpcInfo},
 		{cli.ResourceSubnet, subnetInfo},
 		{cli.ResourceInstanceType, simpleConfig.InstanceType},
+		{cli.ResourceCapacityType, simpleConfig.CapacityType},
 		{cli.ResourceImage, simpleConfig.ImageId},
 	}
 
@@ -1184,6 +1192,22 @@ func AskTerminationConfirmation(instanceIds []string) string {
 		DefaultOption:  aws.String(cli.ResponseNo),
 		OptionsString:  &optionsText,
 		StringOptions:  stringOptions,
+	})
+
+	return answer
+}
+
+func AskCapacityType() string {
+	question := fmt.Sprintf("Select capacity type. Spot instances are available at up to a 90%% discount compared to On-Demand instances,\nbut they may get interrupted by EC2 with a 2-minute warning")
+	defaultInstanceTypeText := DefaultCapacityTypeText.OnDemand
+	optionsText := "1. On-Demand\n2. Spot\n"
+	indexedOptions := []string{DefaultCapacityTypeText.OnDemand, DefaultCapacityTypeText.Spot}
+
+	answer := AskQuestion(&AskQuestionInput{
+		QuestionString: question,
+		DefaultOption:  &defaultInstanceTypeText,
+		OptionsString:  &optionsText,
+		IndexedOptions: indexedOptions,
 	})
 
 	return answer

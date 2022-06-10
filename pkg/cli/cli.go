@@ -40,6 +40,7 @@ const (
 	ResourceIamInstanceProfile       = "IAM Instance Profile"
 	ResourceBootScriptFilePath       = "Boot Script Filepath"
 	ResourceUserTags                 = "Tag Specification(key|value)"
+	ResourceCapacityType             = "Capacity Type"
 )
 
 // Show errors if there are any. Return true when there are errors, and false when there is none

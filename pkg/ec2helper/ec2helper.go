@@ -1119,6 +1119,8 @@ func (h *EC2Helper) GetDefaultSimpleConfig() (*config.SimpleInfo, error) {
 		simpleConfig.SecurityGroupIds = []string{*defaultSg.GroupId}
 	}
 
+	simpleConfig.CapacityType = "On-Demand"
+
 	return simpleConfig, nil
 }
 
@@ -1160,6 +1162,12 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 		// Abort
 		return nil, errors.New("Options not confirmed")
 	}
+}
+
+func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+	fmt.Println("Spot Instance Testing")
+	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	return
 }
 
 // Create a new stack and update simpleConfig for config saving
