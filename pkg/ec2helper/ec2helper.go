@@ -1171,9 +1171,9 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 	if template != nil {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
 	} else {
-		err = CreateUserLaunchTemplate(simpleConfig)
+		err = h.CreateUserLaunchTemplate(simpleConfig)
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
-		err = DeleteUserLaunchTemplate(simpleConfig)
+		err = h.DeleteUserLaunchTemplate(simpleConfig)
 	}
 
 	return
@@ -1349,8 +1349,7 @@ func HasEbsVolume(image *ec2.Image) bool {
 	return false
 }
 
-func CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
-	svc := ec2.New(session.New())
+func (h *EC2Helper) CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
 	launchIdentifier := uuid.New()
 
 	fmt.Println("Creating Launch Template...")
@@ -1382,7 +1381,7 @@ func CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
 		VersionDescription: aws.String(fmt.Sprintf("Lauch Template %s", launchIdentifier)),
 	}
 
-	result, err := svc.CreateLaunchTemplate(input)
+	result, err := h.Svc.CreateLaunchTemplate(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			fmt.Println(aerr.Error())
@@ -1396,15 +1395,13 @@ func CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
 	return
 }
 
-func DeleteUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
-	svc := ec2.New(session.New())
-
+func (h *EC2Helper) DeleteUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
 	fmt.Println("Deleting Launch Template...")
 	input := &ec2.DeleteLaunchTemplateInput{
 		LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
 	}
 
-	_, err = svc.DeleteLaunchTemplate(input)
+	_, err = h.Svc.DeleteLaunchTemplate(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			fmt.Println(aerr.Error())

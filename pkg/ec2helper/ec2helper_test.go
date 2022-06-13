@@ -225,6 +225,29 @@ func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
 	th.Nok(t, err)
 }
 
+func TestCreateUserLaunchTemplate(t *testing.T) {
+	config := config.NewSimpleInfo()
+	config.ImageId = "ami-12345"
+	config.InstanceType = "t2.micro"
+	config.SubnetId = "subnet-12345"
+	testEC2.Svc = &th.MockedEC2Svc{}
+	testEC2.CreateUserLaunchTemplate(config)
+	th.Assert(t, config.LaunchTemplateId == "lt-12345", "Launch Template was not successfully created")
+}
+
+func TestDeleteUserLaunchTemplate(t *testing.T) {
+	templateId := "lt-12345"
+	config := config.NewSimpleInfo()
+	config.LaunchTemplateId = templateId
+	testEC2.Svc = &th.MockedEC2Svc{
+		LaunchTemplates: []*ec2.LaunchTemplate{
+			{LaunchTemplateId: &templateId},
+		},
+	}
+	testEC2.DeleteUserLaunchTemplate(config)
+	th.Assert(t, config.LaunchTemplateId == "", "Launch Template was not successfully created")
+}
+
 /*
 Launch Template Version Tests
 */
