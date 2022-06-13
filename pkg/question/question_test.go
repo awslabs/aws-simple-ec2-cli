@@ -40,6 +40,7 @@ var testEC2 = &ec2helper.EC2Helper{
 		},
 	},
 }
+var defaultArchitecture = aws.StringSlice([]string{"x86_64"})
 
 /*
 AskQuestion Tests
@@ -366,6 +367,7 @@ func TestAskImage_Success(t *testing.T) {
 			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
+				ProcessorInfo:            &ec2.ProcessorInfo{SupportedArchitectures: defaultArchitecture},
 			},
 		},
 		Images: []*ec2.Image{
@@ -392,6 +394,7 @@ func TestAskImage_NoImage(t *testing.T) {
 			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
+				ProcessorInfo:            &ec2.ProcessorInfo{SupportedArchitectures: defaultArchitecture},
 			},
 		},
 	}
@@ -425,6 +428,7 @@ func TestAskImage_DescribeImagesError(t *testing.T) {
 			{
 				InstanceType:             aws.String(testInstanceType),
 				InstanceStorageSupported: aws.Bool(true),
+				ProcessorInfo:            &ec2.ProcessorInfo{SupportedArchitectures: defaultArchitecture},
 			},
 		},
 		DescribeImagesError: errors.New("Test error"),

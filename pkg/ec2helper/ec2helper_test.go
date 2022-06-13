@@ -42,6 +42,8 @@ Region Tests
 
 const testRegion = "Test Region"
 
+var defaultArchitecture = aws.StringSlice([]string{"x86_64"})
+
 func TestChangeRegion(t *testing.T) {
 	testEC2.Sess = session.Must(session.NewSession())
 	testEC2.ChangeRegion(testRegion)
@@ -460,13 +462,13 @@ func TestGetLatestImages_Success_Ebs(t *testing.T) {
 		Images: testImages,
 	}
 
-	actualImages, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
+	actualImages, err := testEC2.GetLatestImages(nil, defaultArchitecture)
 	th.Ok(t, err)
 	th.Equals(t, testMapEbs, *actualImages)
 }
 
 func TestGetLatestImages_Success_InstanceStore(t *testing.T) {
-	actualImages, err := testEC2.GetLatestImages(aws.String("instance-store"), aws.StringSlice([]string{"x86_64"}))
+	actualImages, err := testEC2.GetLatestImages(aws.String("instance-store"), defaultArchitecture)
 	th.Ok(t, err)
 	th.Equals(t, testMapInstanceStore, *actualImages)
 }
@@ -476,7 +478,7 @@ func TestGetLatestImages_NoResult(t *testing.T) {
 		Images: []*ec2.Image{},
 	}
 
-	_, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
+	_, err := testEC2.GetLatestImages(nil, defaultArchitecture)
 	th.Ok(t, err)
 }
 
@@ -485,7 +487,7 @@ func TestGetLatestImages_DescribeImagesError(t *testing.T) {
 		DescribeImagesError: errors.New("Test error"),
 	}
 
-	_, err := testEC2.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
+	_, err := testEC2.GetLatestImages(nil, defaultArchitecture)
 	th.Nok(t, err)
 }
 
@@ -494,7 +496,7 @@ func TestGetDefaultImage_Success(t *testing.T) {
 		Images: testImages,
 	}
 
-	actualImage, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
+	actualImage, err := testEC2.GetDefaultImage(nil, defaultArchitecture)
 	th.Ok(t, err)
 	th.Equals(t, *lastImage.ImageId, *actualImage.ImageId)
 }
@@ -504,7 +506,7 @@ func TestGetDefaultImage_NoResult(t *testing.T) {
 		Images: []*ec2.Image{},
 	}
 
-	_, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
+	_, err := testEC2.GetDefaultImage(nil, defaultArchitecture)
 	th.Nok(t, err)
 }
 
@@ -513,7 +515,7 @@ func TestGetDefaultImage_DescribeImagesError(t *testing.T) {
 		DescribeImagesError: errors.New("Test error"),
 	}
 
-	_, err := testEC2.GetDefaultImage(nil, aws.StringSlice([]string{"x86_64"}))
+	_, err := testEC2.GetDefaultImage(nil, defaultArchitecture)
 	th.Nok(t, err)
 }
 
@@ -1023,6 +1025,7 @@ var defaultConfigSvc = &th.MockedEC2Svc{
 			InstanceType:             aws.String(testInstanceType),
 			FreeTierEligible:         aws.Bool(true),
 			InstanceStorageSupported: aws.Bool(true),
+			ProcessorInfo:            &ec2.ProcessorInfo{SupportedArchitectures: defaultArchitecture},
 		},
 	},
 	Images: []*ec2.Image{
@@ -1054,6 +1057,7 @@ var defaultConfigSvc = &th.MockedEC2Svc{
 
 func TestGetDefaultSimpleConfig_Success(t *testing.T) {
 	testEC2.Svc = defaultConfigSvc
+	testEC2.Sess = session.Must(session.NewSession())
 
 	actualSimpleConfig, err := testEC2.GetDefaultSimpleConfig()
 	th.Ok(t, err)
