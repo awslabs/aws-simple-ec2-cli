@@ -31,8 +31,10 @@ import (
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/selector"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/google/uuid"
 )
 
 const DefaultRegion = "us-east-2"
@@ -1164,9 +1166,16 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 }
 
-func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string, template *ec2.LaunchTemplate) (err error) {
 	fmt.Println("Spot Instance Testing")
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	if template != nil {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
+	} else {
+		err = CreateUserLaunchTemplate(simpleConfig)
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
+		err = DeleteUserLaunchTemplate(simpleConfig)
+	}
+
 	return
 }
 
@@ -1338,4 +1347,71 @@ func HasEbsVolume(image *ec2.Image) bool {
 	}
 
 	return false
+}
+
+func CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
+	svc := ec2.New(session.New())
+	launchIdentifier := uuid.New()
+
+	fmt.Println("Creating Launch Template...")
+	input := &ec2.CreateLaunchTemplateInput{
+		LaunchTemplateData: &ec2.RequestLaunchTemplateData{
+			ImageId:      &simpleConfig.ImageId,
+			InstanceType: &simpleConfig.InstanceType,
+			NetworkInterfaces: []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+				{
+					AssociatePublicIpAddress: aws.Bool(true),
+					DeviceIndex:              aws.Int64(0),
+					Ipv6AddressCount:         aws.Int64(1),
+					SubnetId:                 aws.String(simpleConfig.SubnetId),
+				},
+			},
+		},
+		TagSpecifications: []*ec2.TagSpecification{
+			{
+				ResourceType: aws.String("launch-template"),
+				Tags: []*ec2.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String("Ec2-LaunchTemplate"),
+					},
+				},
+			},
+		},
+		LaunchTemplateName: aws.String(fmt.Sprintf("SimpleEC2LaunchTemplate-%s", launchIdentifier)),
+		VersionDescription: aws.String(fmt.Sprintf("Lauch Template %s", launchIdentifier)),
+	}
+
+	result, err := svc.CreateLaunchTemplate(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			fmt.Println(aerr.Error())
+		} else {
+			fmt.Println(err.Error())
+		}
+		return
+	}
+
+	simpleConfig.LaunchTemplateId = *result.LaunchTemplate.LaunchTemplateId
+	return
+}
+
+func DeleteUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
+	svc := ec2.New(session.New())
+
+	fmt.Println("Deleting Launch Template...")
+	input := &ec2.DeleteLaunchTemplateInput{
+		LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
+	}
+
+	_, err = svc.DeleteLaunchTemplate(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			fmt.Println(aerr.Error())
+		}
+		return
+	}
+
+	simpleConfig.LaunchTemplateId = ""
+	return
 }

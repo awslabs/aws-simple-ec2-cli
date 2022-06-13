@@ -15,6 +15,7 @@ require (
 require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
