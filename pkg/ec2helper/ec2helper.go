@@ -1171,9 +1171,17 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 	if template != nil {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
 	} else {
-		err = h.CreateUserLaunchTemplate(simpleConfig)
+		template, err = h.CreateLaunchTemplate(simpleConfig)
+		if err != nil {
+			if aerr, ok := err.(awserr.Error); ok {
+				fmt.Println(aerr.Error())
+			} else {
+				fmt.Println(err.Error())
+			}
+			return
+		}
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
-		err = h.DeleteUserLaunchTemplate(simpleConfig)
+		err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
 	}
 
 	return
@@ -1349,7 +1357,7 @@ func HasEbsVolume(image *ec2.Image) bool {
 	return false
 }
 
-func (h *EC2Helper) CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
+func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (template *ec2.LaunchTemplate, err error) {
 	launchIdentifier := uuid.New()
 
 	fmt.Println("Creating Launch Template...")
@@ -1382,33 +1390,16 @@ func (h *EC2Helper) CreateUserLaunchTemplate(simpleConfig *config.SimpleInfo) (e
 	}
 
 	result, err := h.Svc.CreateLaunchTemplate(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			fmt.Println(aerr.Error())
-		} else {
-			fmt.Println(err.Error())
-		}
-		return
-	}
-
-	simpleConfig.LaunchTemplateId = *result.LaunchTemplate.LaunchTemplateId
+	template = result.LaunchTemplate
 	return
 }
 
-func (h *EC2Helper) DeleteUserLaunchTemplate(simpleConfig *config.SimpleInfo) (err error) {
+func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) (err error) {
 	fmt.Println("Deleting Launch Template...")
 	input := &ec2.DeleteLaunchTemplateInput{
-		LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
+		LaunchTemplateId: templateId,
 	}
 
 	_, err = h.Svc.DeleteLaunchTemplate(input)
-	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			fmt.Println(aerr.Error())
-		}
-		return
-	}
-
-	simpleConfig.LaunchTemplateId = ""
 	return
 }

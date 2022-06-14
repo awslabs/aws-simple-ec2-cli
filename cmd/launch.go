@@ -114,7 +114,6 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	if *launchTemplateId != cli.ResponseNo {
 		// Use a launch template in this case.
 		simpleConfig.LaunchTemplateId = *launchTemplateId
-		//ec2helper.DeleteUserLaunchTemplate(simpleConfig) --Delete this. Deletes a LAunch Template
 		UseLaunchTemplate(h, simpleConfig)
 		return
 	}
