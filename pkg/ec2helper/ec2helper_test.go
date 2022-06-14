@@ -152,6 +152,8 @@ func TestGetAvailableAvailabilityZones_NoResult(t *testing.T) {
 Launch Template Tests
 */
 
+var testLaunchId = "lt-12345"
+
 func TestGetLaunchTemplatesInRegion_Success(t *testing.T) {
 	expectedTemplates := []*ec2.LaunchTemplate{
 		{
@@ -223,6 +225,34 @@ func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
 
 	_, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
 	th.Nok(t, err)
+}
+
+func TestCreateLaunchTemplate(t *testing.T) {
+	config := config.NewSimpleInfo()
+	config.ImageId = "ami-12345"
+	config.InstanceType = "t2.micro"
+	config.SubnetId = "subnet-12345"
+	testEC2.Svc = &th.MockedEC2Svc{}
+	testEC2.CreateLaunchTemplate(config)
+
+	launchTemplatesOutput, _ := testEC2.Svc.DescribeLaunchTemplates(&ec2.DescribeLaunchTemplatesInput{})
+	templates := launchTemplatesOutput.LaunchTemplates
+	th.Equals(t, 1, len(templates))
+	th.Equals(t, testLaunchId, *templates[0].LaunchTemplateId)
+}
+
+func TestDeleteLaunchTemplate(t *testing.T) {
+	testEC2.Svc = &th.MockedEC2Svc{
+		LaunchTemplates: []*ec2.LaunchTemplate{
+			{LaunchTemplateId: &testLaunchId},
+		},
+	}
+	testEC2.DeleteLaunchTemplate(&testLaunchId)
+
+	launchTemplatesOutput, _ := testEC2.Svc.DescribeLaunchTemplates(&ec2.DescribeLaunchTemplatesInput{})
+	templates := launchTemplatesOutput.LaunchTemplates
+
+	th.Equals(t, 0, len(templates))
 }
 
 /*
