@@ -1169,7 +1169,7 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string, template *ec2.LaunchTemplate) (err error) {
 	fmt.Println("Spot Instance Testing")
 	if template != nil {
-		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
+		err = h.LaunchFleet(template.LaunchTemplateId)
 	} else {
 		template, err = h.CreateLaunchTemplate(simpleConfig)
 		if err != nil {
@@ -1180,7 +1180,7 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 			}
 			return
 		}
-		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes) // Replace with CreateFleet
+		err = h.LaunchFleet(template.LaunchTemplateId)
 		err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
 	}
 
@@ -1401,5 +1401,52 @@ func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) (err error) {
 	}
 
 	_, err = h.Svc.DeleteLaunchTemplate(input)
+	return
+}
+
+func (h *EC2Helper) LaunchFleet(templateId *string) (err error) {
+	svc := ec2.New(session.New())
+
+	fleetTemplateSpecs := &ec2.FleetLaunchTemplateSpecificationRequest{
+		LaunchTemplateId: templateId,
+		Version:          aws.String("$Latest"),
+	}
+
+	fleetTemplateConfig := []*ec2.FleetLaunchTemplateConfigRequest{
+		{
+			LaunchTemplateSpecification: fleetTemplateSpecs,
+		},
+	}
+
+	spotRequest := &ec2.SpotOptionsRequest{
+		AllocationStrategy: aws.String("capacity-optimized"),
+	}
+
+	targetCapacity := &ec2.TargetCapacitySpecificationRequest{
+		DefaultTargetCapacityType: aws.String("spot"),
+		OnDemandTargetCapacity:    aws.Int64(0),
+		SpotTargetCapacity:        aws.Int64(1),
+		TotalTargetCapacity:       aws.Int64(1),
+	}
+
+	input := &ec2.CreateFleetInput{
+		LaunchTemplateConfigs:       fleetTemplateConfig,
+		SpotOptions:                 spotRequest,
+		TargetCapacitySpecification: targetCapacity,
+		Type:                        aws.String("instant"),
+	}
+
+	result, err := svc.CreateFleet(input)
+
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			fmt.Println(aerr.Error())
+		} else {
+			fmt.Println(err.Error())
+		}
+		return
+	}
+
+	fmt.Printf("Created Spot Instance: %#v\n", result)
 	return
 }
