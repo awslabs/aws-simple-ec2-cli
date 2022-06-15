@@ -235,10 +235,23 @@ func TestCreateLaunchTemplate(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{}
 	testEC2.CreateLaunchTemplate(config)
 
-	launchTemplatesOutput, _ := testEC2.Svc.DescribeLaunchTemplates(&ec2.DescribeLaunchTemplatesInput{})
-	templates := launchTemplatesOutput.LaunchTemplates
-	th.Equals(t, 1, len(templates))
-	th.Equals(t, testLaunchId, *templates[0].LaunchTemplateId)
+	templates := []*ec2.LaunchTemplate{}
+
+	err := testEC2.Svc.DescribeLaunchTemplatesPages(&ec2.DescribeLaunchTemplatesInput{}, func(page *ec2.DescribeLaunchTemplatesOutput, lastPage bool) bool {
+		templates = append(templates, page.LaunchTemplates...)
+		return !lastPage
+	})
+	th.Equals(t, nil, err)
+
+	isCreated := false
+
+	for _, template := range templates {
+		if *template.LaunchTemplateId == testLaunchId {
+			isCreated = true
+			break
+		}
+	}
+	th.Equals(t, true, isCreated)
 }
 
 func TestDeleteLaunchTemplate(t *testing.T) {
@@ -249,10 +262,23 @@ func TestDeleteLaunchTemplate(t *testing.T) {
 	}
 	testEC2.DeleteLaunchTemplate(&testLaunchId)
 
-	launchTemplatesOutput, _ := testEC2.Svc.DescribeLaunchTemplates(&ec2.DescribeLaunchTemplatesInput{})
-	templates := launchTemplatesOutput.LaunchTemplates
+	templates := []*ec2.LaunchTemplate{}
 
-	th.Equals(t, 0, len(templates))
+	err := testEC2.Svc.DescribeLaunchTemplatesPages(&ec2.DescribeLaunchTemplatesInput{}, func(page *ec2.DescribeLaunchTemplatesOutput, lastPage bool) bool {
+		templates = append(templates, page.LaunchTemplates...)
+		return !lastPage
+	})
+	th.Equals(t, nil, err)
+
+	isDeleted := true
+
+	for _, template := range templates {
+		if *template.LaunchTemplateId == testLaunchId {
+			isDeleted = false
+			break
+		}
+	}
+	th.Equals(t, true, isDeleted)
 }
 
 /*

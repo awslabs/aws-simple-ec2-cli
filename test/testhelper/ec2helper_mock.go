@@ -394,13 +394,6 @@ func (e *MockedEC2Svc) DeleteLaunchTemplate(input *ec2.DeleteLaunchTemplateInput
 	return nil, nil
 }
 
-func (e *MockedEC2Svc) DescribeLaunchTemplates(input *ec2.DescribeLaunchTemplatesInput) (*ec2.DescribeLaunchTemplatesOutput, error) {
-	output := &ec2.DescribeLaunchTemplatesOutput{
-		LaunchTemplates: e.LaunchTemplates,
-	}
-	return output, nil
-}
-
 // Placeholder functions
 func (e *MockedEC2Svc) DeleteSecurityGroup(input *ec2.DeleteSecurityGroupInput) (*ec2.DeleteSecurityGroupOutput, error) {
 	return nil, nil
