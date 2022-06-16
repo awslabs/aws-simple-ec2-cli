@@ -24,6 +24,8 @@ import (
 var backupSimpleEc2String = cfn.SimpleEc2CloudformationTemplateEncoded
 
 func TestDecodeTemplateVariables_Success(t *testing.T) {
+	// Note that this test will fail when run through VSCode because it relies on some variable substitution
+	// done by the way the makefile invokes `go test`. It should pass via `make unit-test`.
 	err := cfn.DecodeTemplateVariables()
 	th.Ok(t, err)
 }
