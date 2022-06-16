@@ -1166,22 +1166,28 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 }
 
-func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string, template *ec2.LaunchTemplate) (err error) {
-	fmt.Println("Spot Instance Testing")
-	if template != nil {
-		err = h.LaunchFleet(template.LaunchTemplateId)
-	} else {
-		template, err = h.CreateLaunchTemplate(simpleConfig)
-		if err != nil {
-			if aerr, ok := err.(awserr.Error); ok {
-				fmt.Println(aerr.Error())
-			} else {
-				fmt.Println(err.Error())
+func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation bool,
+	template *ec2.LaunchTemplate) (err error) {
+	if confirmation {
+		fmt.Println("Options confirmed! Launching spot instance...")
+		if template != nil {
+			_, err = h.LaunchFleet(template.LaunchTemplateId)
+		} else {
+			template, err = h.CreateLaunchTemplate(simpleConfig)
+			if err != nil {
+				if aerr, ok := err.(awserr.Error); ok {
+					fmt.Println(aerr.Error())
+				} else {
+					fmt.Println(err.Error())
+				}
+				return
 			}
-			return
+			_, err = h.LaunchFleet(template.LaunchTemplateId)
+			err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
 		}
-		err = h.LaunchFleet(template.LaunchTemplateId)
-		err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
+	} else {
+		// Abort
+		return errors.New("Options not confirmed")
 	}
 
 	return
@@ -1369,8 +1375,6 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (templ
 				{
 					AssociatePublicIpAddress: aws.Bool(true),
 					DeviceIndex:              aws.Int64(0),
-					Ipv6AddressCount:         aws.Int64(1),
-					SubnetId:                 aws.String(simpleConfig.SubnetId),
 				},
 			},
 		},
@@ -1386,7 +1390,7 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (templ
 			},
 		},
 		LaunchTemplateName: aws.String(fmt.Sprintf("SimpleEC2LaunchTemplate-%s", launchIdentifier)),
-		VersionDescription: aws.String(fmt.Sprintf("Lauch Template %s", launchIdentifier)),
+		VersionDescription: aws.String(fmt.Sprintf("Launch Template %s", launchIdentifier)),
 	}
 
 	result, err := h.Svc.CreateLaunchTemplate(input)
@@ -1404,7 +1408,7 @@ func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) (err error) {
 	return
 }
 
-func (h *EC2Helper) LaunchFleet(templateId *string) (err error) {
+func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, error) {
 	svc := ec2.New(session.New())
 
 	fleetTemplateSpecs := &ec2.FleetLaunchTemplateSpecificationRequest{
@@ -1444,9 +1448,15 @@ func (h *EC2Helper) LaunchFleet(templateId *string) (err error) {
 		} else {
 			fmt.Println(err.Error())
 		}
-		return
+		return nil, err
 	}
 
-	fmt.Printf("Created Spot Instance: %#v\n", result)
-	return
+	fmt.Println("Launch Spot Instance Success!")
+	for _, instance := range result.Instances {
+		for _, id := range instance.InstanceIds {
+			fmt.Printf("Spot Instance ID: %s\n", *id)
+		}
+	}
+
+	return result, err
 }

@@ -277,7 +277,7 @@ func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleI
 	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
-		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation, nil)
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes, nil)
 	}
 	return
 }
