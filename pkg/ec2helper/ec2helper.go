@@ -1167,20 +1167,21 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 }
 
 func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation bool,
-	template *ec2.LaunchTemplate) (err error) {
+	templateID *string) error {
+	var err error
 	if confirmation {
 		fmt.Println("Options confirmed! Launching spot instance...")
-		if template != nil {
-			_, err = h.LaunchFleet(template.LaunchTemplateId)
+		if templateID != nil {
+			_, err = h.LaunchFleet(templateID)
 		} else {
-			template, err = h.CreateLaunchTemplate(simpleConfig)
+			template, err := h.CreateLaunchTemplate(simpleConfig)
 			if err != nil {
 				if aerr, ok := err.(awserr.Error); ok {
 					fmt.Println(aerr.Error())
 				} else {
 					fmt.Println(err.Error())
 				}
-				return
+				return err
 			}
 			_, err = h.LaunchFleet(template.LaunchTemplateId)
 			err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
@@ -1190,7 +1191,7 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 		return errors.New("Options not confirmed")
 	}
 
-	return
+	return err
 }
 
 // Create a new stack and update simpleConfig for config saving
@@ -1366,6 +1367,11 @@ func HasEbsVolume(image *ec2.Image) bool {
 func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (template *ec2.LaunchTemplate, err error) {
 	launchIdentifier := uuid.New()
 
+	securityGroupIDs := []*string{}
+	for _, groupID := range simpleConfig.SecurityGroupIds {
+		securityGroupIDs = append(securityGroupIDs, &groupID)
+	}
+
 	fmt.Println("Creating Launch Template...")
 	input := &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2.RequestLaunchTemplateData{
@@ -1375,6 +1381,8 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (templ
 				{
 					AssociatePublicIpAddress: aws.Bool(true),
 					DeviceIndex:              aws.Int64(0),
+					Groups:                   securityGroupIDs,
+					SubnetId:                 &simpleConfig.SubnetId,
 				},
 			},
 		},
