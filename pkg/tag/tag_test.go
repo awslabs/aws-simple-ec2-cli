@@ -37,7 +37,7 @@ var expectedTagAsFilter = []*ec2.Filter{
 	},
 }
 
-const createTimeRegex = "^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2} [0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2} [A-Z]{3}"
+const createTimeRegex = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} [A-Z]{3}"
 
 func TestGetTags(t *testing.T) {
 	tags := tag.GetSimpleEc2Tags()
@@ -63,5 +63,15 @@ func TestGetTagAsFilter(t *testing.T) {
 
 	th.Ok(t, err)
 	th.Assert(t, len(actualTagFilter) == 2, "TagFilters length should be 2")
-	th.Equals(t, expectedTagAsFilter, actualTagFilter)
+	for _, expectedTag := range expectedTagAsFilter {
+		thisTagMatches := false
+		for _, actualTag := range actualTagFilter {
+			if *expectedTag.Name == *actualTag.Name {
+				th.Equals(t, expectedTag, actualTag)
+				thisTagMatches = true
+				break
+			}
+		}
+		th.Assert(t, thisTagMatches, fmt.Sprintf("Unable to find matching actual tag filter for expected tag filter %s", *expectedTag.Name))
+	}
 }
