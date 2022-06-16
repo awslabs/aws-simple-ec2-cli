@@ -394,6 +394,18 @@ func (e *MockedEC2Svc) DeleteLaunchTemplate(input *ec2.DeleteLaunchTemplateInput
 	return nil, nil
 }
 
+func (e *MockedEC2Svc) CreateFleet(input *ec2.CreateFleetInput) (*ec2.CreateFleetOutput, error) {
+	output := &ec2.CreateFleetOutput{
+		Instances: []*ec2.CreateFleetInstance{
+			{
+				InstanceIds: []*string{aws.String("i-12345")},
+				Lifecycle:   aws.String("spot"),
+			},
+		},
+	}
+	return output, nil
+}
+
 // Placeholder functions
 func (e *MockedEC2Svc) DeleteSecurityGroup(input *ec2.DeleteSecurityGroupInput) (*ec2.DeleteSecurityGroupOutput, error) {
 	return nil, nil
