@@ -1257,6 +1257,15 @@ func TestLaunchInstance_DescribeImagesError(t *testing.T) {
 	th.Nok(t, err)
 }
 
+func TestLaunchFleet(t *testing.T) {
+	const testInstanceId = ("i-12345")
+	testEC2.Svc = &th.MockedEC2Svc{}
+	fleetOutput, _ := testEC2.LaunchFleet(&testLaunchId)
+
+	th.Equals(t, 1, len(fleetOutput.Instances))
+	th.Equals(t, testInstanceId, *fleetOutput.Instances[0].InstanceIds[0])
+}
+
 /*
 Terminate Tests
 */

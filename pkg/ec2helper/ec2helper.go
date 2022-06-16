@@ -1409,8 +1409,6 @@ func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) (err error) {
 }
 
 func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, error) {
-	svc := ec2.New(session.New())
-
 	fleetTemplateSpecs := &ec2.FleetLaunchTemplateSpecificationRequest{
 		LaunchTemplateId: templateId,
 		Version:          aws.String("$Latest"),
@@ -1440,7 +1438,7 @@ func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, err
 		Type:                        aws.String("instant"),
 	}
 
-	result, err := svc.CreateFleet(input)
+	result, err := h.Svc.CreateFleet(input)
 
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
