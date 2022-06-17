@@ -78,7 +78,8 @@ build-docker-images:
 	${MAKEFILE_PATH}/scripts/build-docker-images -p ${SUPPORTED_PLATFORMS} -r ${IMG} -v ${VERSION}
 
 unit-test:
-	${GO_TEST}/pkg/... -v -coverprofile=coverage.out -covermode=atomic -outputdir=${BUILD_DIR_PATH}; go tool cover -func ${BUILD_DIR_PATH}/coverage.out
+	${GO_TEST}/pkg/... -v -coverprofile=coverage.out -covermode=atomic -outputdir=${BUILD_DIR_PATH}
+	go tool cover -func ${BUILD_DIR_PATH}/coverage.out
 
 e2e-test:
 	${GO_TEST}/test/e2e/... -v
