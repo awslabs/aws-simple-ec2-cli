@@ -15,6 +15,7 @@ package ec2helper_test
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -230,12 +231,21 @@ func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
 }
 
 func TestCreateLaunchTemplate(t *testing.T) {
-	config := config.NewSimpleInfo()
-	config.ImageId = "ami-12345"
-	config.InstanceType = "t2.micro"
-	config.SubnetId = "subnet-12345"
+	simpleConfig := &config.SimpleInfo{
+		ImageId:      "ami-12345",
+		InstanceType: "t2.micro",
+		SubnetId:     "subnet-12345",
+	}
+	detailedConfig := &config.DetailedInfo{
+		Image: &ec2.Image{
+			ImageId:         aws.String("ami-12345"),
+			PlatformDetails: aws.String("test deatils"),
+		},
+	}
+	fmt.Println(*detailedConfig)
+	fmt.Println(*detailedConfig.Image)
 	testEC2.Svc = &th.MockedEC2Svc{}
-	testEC2.CreateLaunchTemplate(config)
+	testEC2.CreateLaunchTemplate(simpleConfig, detailedConfig)
 
 	templates := []*ec2.LaunchTemplate{}
 
