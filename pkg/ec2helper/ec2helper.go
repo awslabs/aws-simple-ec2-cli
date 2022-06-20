@@ -992,77 +992,20 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 
 // Get a RunInstanceInput given a structured config
 func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RunInstancesInput {
-	input := &ec2.RunInstancesInput{
-		MaxCount: aws.Int64(1),
-		MinCount: aws.Int64(1),
+	dataConfig := createRequestInstanceConfig(simpleConfig, detailedConfig)
+	return &ec2.RunInstancesInput{
+		MaxCount:                          aws.Int64(1),
+		MinCount:                          aws.Int64(1),
+		LaunchTemplate:                    dataConfig.LaunchTemplate,
+		ImageId:                           dataConfig.ImageId,
+		InstanceType:                      dataConfig.InstanceType,
+		SubnetId:                          dataConfig.SubnetId,
+		SecurityGroupIds:                  dataConfig.SecurityGroupIds,
+		IamInstanceProfile:                dataConfig.IamInstanceProfile,
+		BlockDeviceMappings:               dataConfig.BlockDeviceMappings,
+		InstanceInitiatedShutdownBehavior: dataConfig.InstanceInitiatedShutdownBehavior,
+		UserData:                          dataConfig.UserData,
 	}
-
-	// Add launch template if present
-	if simpleConfig.LaunchTemplateId != "" {
-		input.LaunchTemplate = &ec2.LaunchTemplateSpecification{
-			LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
-			Version:          aws.String(simpleConfig.LaunchTemplateVersion),
-		}
-	}
-
-	//Override settings if applicable
-	if simpleConfig.ImageId != "" {
-		input.ImageId = aws.String(simpleConfig.ImageId)
-	}
-	if simpleConfig.InstanceType != "" {
-		input.InstanceType = aws.String(simpleConfig.InstanceType)
-	}
-	if simpleConfig.SubnetId != "" {
-		input.SubnetId = aws.String(simpleConfig.SubnetId)
-	}
-	if simpleConfig.SecurityGroupIds != nil && len(simpleConfig.SecurityGroupIds) > 0 {
-		input.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
-	}
-	if simpleConfig.IamInstanceProfile != "" {
-		input.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
-			Name: aws.String(simpleConfig.IamInstanceProfile),
-		}
-	}
-
-	setAutoTermination := false
-	if detailedConfig != nil {
-		// Set all EBS volumes not to be deleted, if specified
-		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
-			input.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
-			for _, block := range input.BlockDeviceMappings {
-				if block.Ebs != nil {
-					block.Ebs.DeleteOnTermination = aws.Bool(false)
-				}
-			}
-		}
-		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
-	}
-
-	if setAutoTermination {
-		input.InstanceInitiatedShutdownBehavior = aws.String("terminate")
-		autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
-			simpleConfig.AutoTerminationTimerMinutes)
-		if simpleConfig.BootScriptFilePath == "" {
-			input.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
-		} else {
-			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
-			bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
-			//if #!/bin/bash is first, then replace first line otherwise, prepend termination
-			if len(bootScriptLines) >= 1 && bootScriptLines[0] == "#!/bin/bash" {
-				bootScriptLines[0] = autoTermCmd
-			} else {
-				bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
-			}
-			bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
-			input.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
-		}
-	} else {
-		if simpleConfig.BootScriptFilePath != "" {
-			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
-			input.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
-		}
-	}
-	return input
 }
 
 // Get the default string config
@@ -1166,21 +1109,21 @@ func (h *EC2Helper) LaunchInstance(simpleConfig *config.SimpleInfo, detailedConf
 	}
 }
 
-func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation bool,
-	template *ec2.LaunchTemplate) (err error) {
+func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation bool) error {
+	var err error
 	if confirmation {
 		fmt.Println("Options confirmed! Launching spot instance...")
-		if template != nil {
-			_, err = h.LaunchFleet(template.LaunchTemplateId)
+		if simpleConfig.LaunchTemplateId != "" {
+			_, err = h.LaunchFleet(aws.String(simpleConfig.LaunchTemplateId))
 		} else {
-			template, err = h.CreateLaunchTemplate(simpleConfig)
+			template, err := h.CreateLaunchTemplate(simpleConfig, detailedConfig)
 			if err != nil {
 				if aerr, ok := err.(awserr.Error); ok {
 					fmt.Println(aerr.Error())
 				} else {
 					fmt.Println(err.Error())
 				}
-				return
+				return err
 			}
 			_, err = h.LaunchFleet(template.LaunchTemplateId)
 			err = h.DeleteLaunchTemplate(template.LaunchTemplateId)
@@ -1190,7 +1133,7 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 		return errors.New("Options not confirmed")
 	}
 
-	return
+	return err
 }
 
 // Create a new stack and update simpleConfig for config saving
@@ -1363,49 +1306,137 @@ func HasEbsVolume(image *ec2.Image) bool {
 	return false
 }
 
-func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo) (template *ec2.LaunchTemplate, err error) {
+func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) (*ec2.LaunchTemplate, error) {
 	launchIdentifier := uuid.New()
 
 	fmt.Println("Creating Launch Template...")
+
+	dataConfig := createRequestInstanceConfig(simpleConfig, detailedConfig)
 	input := &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2.RequestLaunchTemplateData{
-			ImageId:      &simpleConfig.ImageId,
-			InstanceType: &simpleConfig.InstanceType,
 			NetworkInterfaces: []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
 				{
 					AssociatePublicIpAddress: aws.Bool(true),
 					DeviceIndex:              aws.Int64(0),
+					Groups:                   dataConfig.SecurityGroupIds,
+					SubnetId:                 dataConfig.SubnetId,
 				},
 			},
-		},
-		TagSpecifications: []*ec2.TagSpecification{
-			{
-				ResourceType: aws.String("launch-template"),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String("Ec2-LaunchTemplate"),
-					},
-				},
-			},
+			IamInstanceProfile:                (*ec2.LaunchTemplateIamInstanceProfileSpecificationRequest)(dataConfig.IamInstanceProfile),
+			ImageId:                           dataConfig.ImageId,
+			InstanceType:                      dataConfig.InstanceType,
+			BlockDeviceMappings:               dataConfig.LaunchTemplateBlockMappings,
+			InstanceInitiatedShutdownBehavior: dataConfig.InstanceInitiatedShutdownBehavior,
+			UserData:                          dataConfig.UserData,
 		},
 		LaunchTemplateName: aws.String(fmt.Sprintf("SimpleEC2LaunchTemplate-%s", launchIdentifier)),
 		VersionDescription: aws.String(fmt.Sprintf("Launch Template %s", launchIdentifier)),
 	}
 
 	result, err := h.Svc.CreateLaunchTemplate(input)
-	template = result.LaunchTemplate
-	return
+	return result.LaunchTemplate, err
 }
 
-func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) (err error) {
+func createRequestInstanceConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) config.RequestInstanceInfo {
+	requestInstanceConfig := config.RequestInstanceInfo{}
+
+	if simpleConfig.LaunchTemplateId != "" {
+		requestInstanceConfig.LaunchTemplate = &ec2.LaunchTemplateSpecification{
+			LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
+			Version:          aws.String(simpleConfig.LaunchTemplateVersion),
+		}
+	}
+
+	if simpleConfig.ImageId != "" {
+		requestInstanceConfig.ImageId = aws.String(simpleConfig.ImageId)
+	}
+	if simpleConfig.InstanceType != "" {
+		requestInstanceConfig.InstanceType = aws.String(simpleConfig.InstanceType)
+	}
+	if simpleConfig.SubnetId != "" {
+		requestInstanceConfig.SubnetId = aws.String(simpleConfig.SubnetId)
+	}
+	if simpleConfig.SecurityGroupIds != nil && len(simpleConfig.SecurityGroupIds) > 0 {
+		requestInstanceConfig.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
+	}
+	if simpleConfig.IamInstanceProfile != "" {
+		requestInstanceConfig.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+			Name: aws.String(simpleConfig.IamInstanceProfile),
+		}
+	}
+
+	setAutoTermination := false
+	if detailedConfig != nil {
+		// Set all EBS volumes not to be deleted, if specified
+		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
+			requestInstanceConfig.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
+			for _, block := range requestInstanceConfig.BlockDeviceMappings {
+				if block.Ebs != nil {
+					block.Ebs.DeleteOnTermination = aws.Bool(false)
+				}
+			}
+			blockDevices := []*ec2.LaunchTemplateBlockDeviceMappingRequest{}
+			for index, block := range detailedConfig.Image.BlockDeviceMappings {
+				blockDevices = append(blockDevices, &ec2.LaunchTemplateBlockDeviceMappingRequest{
+					DeviceName:  block.DeviceName,
+					NoDevice:    block.NoDevice,
+					VirtualName: block.VirtualName,
+				})
+				if block.Ebs != nil {
+					blockDeviceEbs := &ec2.LaunchTemplateEbsBlockDeviceRequest{
+						DeleteOnTermination: aws.Bool(false),
+						Encrypted:           block.Ebs.Encrypted,
+						Iops:                block.Ebs.Iops,
+						KmsKeyId:            block.Ebs.KmsKeyId,
+						SnapshotId:          block.Ebs.SnapshotId,
+						Throughput:          block.Ebs.Throughput,
+						VolumeSize:          block.Ebs.VolumeSize,
+						VolumeType:          block.Ebs.VolumeType,
+					}
+					blockDevices[index].SetEbs(blockDeviceEbs)
+				}
+			}
+			requestInstanceConfig.LaunchTemplateBlockMappings = blockDevices
+		}
+		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
+	}
+
+	if setAutoTermination {
+		requestInstanceConfig.InstanceInitiatedShutdownBehavior = aws.String("terminate")
+		autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
+			simpleConfig.AutoTerminationTimerMinutes)
+		if simpleConfig.BootScriptFilePath == "" {
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
+		} else {
+			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+			bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
+			//if #!/bin/bash is first, then replace first line otherwise, prepend termination
+			if len(bootScriptLines) >= 1 && bootScriptLines[0] == "#!/bin/bash" {
+				bootScriptLines[0] = autoTermCmd
+			} else {
+				bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
+			}
+			bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+		}
+	} else {
+		if simpleConfig.BootScriptFilePath != "" {
+			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+		}
+	}
+
+	return requestInstanceConfig
+}
+
+func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) error {
 	fmt.Println("Deleting Launch Template...")
 	input := &ec2.DeleteLaunchTemplateInput{
 		LaunchTemplateId: templateId,
 	}
 
-	_, err = h.Svc.DeleteLaunchTemplate(input)
-	return
+	_, err := h.Svc.DeleteLaunchTemplate(input)
+	return err
 }
 
 func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, error) {

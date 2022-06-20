@@ -273,13 +273,15 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 }
 
 // Launch On-Demand or Spot instance based on capacity type
-func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo, confirmation string) (err error) {
+func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo,
+	confirmation string) error {
+	var err error
 	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
-		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes, nil)
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	}
-	return
+	return err
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
