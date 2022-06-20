@@ -1115,7 +1115,7 @@ func TestAskCapacityType(t *testing.T) {
 	expectedAnswer := question.DefaultCapacityTypeText.Spot
 	initQuestionTest(t, "2\n")
 
-	answer := question.AskCapacityType()
+	answer := question.AskCapacityType(testInstanceType)
 	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()

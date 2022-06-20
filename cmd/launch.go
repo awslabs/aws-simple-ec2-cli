@@ -160,7 +160,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 
 		// Ask for and set the capacity type
-		simpleConfig.CapacityType = question.AskCapacityType()
+		simpleConfig.CapacityType = question.AskCapacityType(simpleConfig.InstanceType)
 
 		// Ask for confirmation or modification
 		confirmation = question.AskConfirmationWithInput(simpleConfig, detailedConfig, true)
@@ -337,7 +337,10 @@ func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.Si
 
 // Launch an instance with a launch template
 func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
-	simpleConfig.CapacityType = question.AskCapacityType()
+	versions, err := h.GetLaunchTemplateVersions(simpleConfig.LaunchTemplateId,
+		&simpleConfig.LaunchTemplateVersion)
+	templateData := versions[0].LaunchTemplateData
+	simpleConfig.CapacityType = question.AskCapacityType(*templateData.InstanceType)
 	confirmation, err := question.AskConfirmationWithTemplate(h, simpleConfig)
 	if cli.ShowError(err, "Asking confirmation with launch template failed") {
 		return
