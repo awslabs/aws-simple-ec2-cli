@@ -115,10 +115,16 @@ func TestAskQuestion_IntegerAnswer(t *testing.T) {
 }
 
 func TestAskQuestion_AnyStringAnswer(t *testing.T) {
+	// This test needs its own copy of the AskQuestionInput object to prevent some kind of race condition with the other
+	// tests when running the whole test suite. We don't exactly know why, but it works.
+	var anyStringQuestion = &question.AskQuestionInput{
+		QuestionString:  "This is a question?",
+		AcceptAnyString: true,
+	}
 	const expectedString = "any string"
 	initQuestionTest(t, expectedString+"\n")
 
-	answer := question.AskQuestion(input)
+	answer := question.AskQuestion(anyStringQuestion)
 	th.Equals(t, expectedString, answer)
 
 	cleanupQuestionTest()
