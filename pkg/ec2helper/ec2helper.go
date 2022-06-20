@@ -992,7 +992,7 @@ func (h *EC2Helper) ParseConfig(simpleConfig *config.SimpleInfo) (*config.Detail
 
 // Get a RunInstanceInput given a structured config
 func getRunInstanceInput(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) *ec2.RunInstancesInput {
-	dataConfig := createDataConfig(simpleConfig, detailedConfig)
+	dataConfig := createRequestInstanceConfig(simpleConfig, detailedConfig)
 	return &ec2.RunInstancesInput{
 		MaxCount:                          aws.Int64(1),
 		MinCount:                          aws.Int64(1),
@@ -1311,7 +1311,7 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo, detail
 
 	fmt.Println("Creating Launch Template...")
 
-	dataConfig := createDataConfig(simpleConfig, detailedConfig)
+	dataConfig := createRequestInstanceConfig(simpleConfig, detailedConfig)
 	input := &ec2.CreateLaunchTemplateInput{
 		LaunchTemplateData: &ec2.RequestLaunchTemplateData{
 			NetworkInterfaces: []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
@@ -1331,60 +1331,36 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo, detail
 		},
 		LaunchTemplateName: aws.String(fmt.Sprintf("SimpleEC2LaunchTemplate-%s", launchIdentifier)),
 		VersionDescription: aws.String(fmt.Sprintf("Launch Template %s", launchIdentifier)),
-		TagSpecifications: []*ec2.TagSpecification{
-			{
-				ResourceType: aws.String("launch-template"),
-				Tags: []*ec2.Tag{
-					{
-						Key:   aws.String("Name"),
-						Value: aws.String("Ec2-LaunchTemplate"),
-					},
-				},
-			},
-		},
 	}
 
 	result, err := h.Svc.CreateLaunchTemplate(input)
 	return result.LaunchTemplate, err
 }
 
-type DataConfig struct {
-	ImageId                           *string
-	InstanceType                      *string
-	SubnetId                          *string
-	SecurityGroupIds                  []*string
-	IamInstanceProfile                *ec2.IamInstanceProfileSpecification
-	LaunchTemplate                    *ec2.LaunchTemplateSpecification
-	BlockDeviceMappings               []*ec2.BlockDeviceMapping
-	LaunchTemplateBlockMappings       []*ec2.LaunchTemplateBlockDeviceMappingRequest
-	InstanceInitiatedShutdownBehavior *string
-	UserData                          *string
-}
-
-func createDataConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) DataConfig {
-	dataConfig := DataConfig{}
+func createRequestInstanceConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo) config.RequestInstanceInfo {
+	requestInstanceConfig := config.RequestInstanceInfo{}
 
 	if simpleConfig.LaunchTemplateId != "" {
-		dataConfig.LaunchTemplate = &ec2.LaunchTemplateSpecification{
+		requestInstanceConfig.LaunchTemplate = &ec2.LaunchTemplateSpecification{
 			LaunchTemplateId: aws.String(simpleConfig.LaunchTemplateId),
 			Version:          aws.String(simpleConfig.LaunchTemplateVersion),
 		}
 	}
 
 	if simpleConfig.ImageId != "" {
-		dataConfig.ImageId = aws.String(simpleConfig.ImageId)
+		requestInstanceConfig.ImageId = aws.String(simpleConfig.ImageId)
 	}
 	if simpleConfig.InstanceType != "" {
-		dataConfig.InstanceType = aws.String(simpleConfig.InstanceType)
+		requestInstanceConfig.InstanceType = aws.String(simpleConfig.InstanceType)
 	}
 	if simpleConfig.SubnetId != "" {
-		dataConfig.SubnetId = aws.String(simpleConfig.SubnetId)
+		requestInstanceConfig.SubnetId = aws.String(simpleConfig.SubnetId)
 	}
 	if simpleConfig.SecurityGroupIds != nil && len(simpleConfig.SecurityGroupIds) > 0 {
-		dataConfig.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
+		requestInstanceConfig.SecurityGroupIds = aws.StringSlice(simpleConfig.SecurityGroupIds)
 	}
 	if simpleConfig.IamInstanceProfile != "" {
-		dataConfig.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
+		requestInstanceConfig.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
 			Name: aws.String(simpleConfig.IamInstanceProfile),
 		}
 	}
@@ -1393,8 +1369,8 @@ func createDataConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.De
 	if detailedConfig != nil {
 		// Set all EBS volumes not to be deleted, if specified
 		if HasEbsVolume(detailedConfig.Image) && simpleConfig.KeepEbsVolumeAfterTermination {
-			dataConfig.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
-			for _, block := range dataConfig.BlockDeviceMappings {
+			requestInstanceConfig.BlockDeviceMappings = detailedConfig.Image.BlockDeviceMappings
+			for _, block := range requestInstanceConfig.BlockDeviceMappings {
 				if block.Ebs != nil {
 					block.Ebs.DeleteOnTermination = aws.Bool(false)
 				}
@@ -1420,17 +1396,17 @@ func createDataConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.De
 					blockDevices[index].SetEbs(blockDeviceEbs)
 				}
 			}
-			dataConfig.LaunchTemplateBlockMappings = blockDevices
+			requestInstanceConfig.LaunchTemplateBlockMappings = blockDevices
 		}
 		setAutoTermination = IsLinux(*detailedConfig.Image.PlatformDetails) && simpleConfig.AutoTerminationTimerMinutes > 0
 	}
 
 	if setAutoTermination {
-		dataConfig.InstanceInitiatedShutdownBehavior = aws.String("terminate")
+		requestInstanceConfig.InstanceInitiatedShutdownBehavior = aws.String("terminate")
 		autoTermCmd := fmt.Sprintf("#!/bin/bash\necho \"sudo poweroff\" | at now + %d minutes\n",
 			simpleConfig.AutoTerminationTimerMinutes)
 		if simpleConfig.BootScriptFilePath == "" {
-			dataConfig.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString([]byte(autoTermCmd)))
 		} else {
 			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
 			bootScriptLines := strings.Split(string(bootScriptRaw), "\n")
@@ -1441,16 +1417,16 @@ func createDataConfig(simpleConfig *config.SimpleInfo, detailedConfig *config.De
 				bootScriptLines = append([]string{autoTermCmd}, bootScriptLines...)
 			}
 			bootScriptRaw = []byte(strings.Join(bootScriptLines, "\n"))
-			dataConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
 		}
 	} else {
 		if simpleConfig.BootScriptFilePath != "" {
 			bootScriptRaw, _ := ioutil.ReadFile(simpleConfig.BootScriptFilePath)
-			dataConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
+			requestInstanceConfig.UserData = aws.String(base64.StdEncoding.EncodeToString(bootScriptRaw))
 		}
 	}
 
-	return dataConfig
+	return requestInstanceConfig
 }
 
 func (h *EC2Helper) DeleteLaunchTemplate(templateId *string) error {
