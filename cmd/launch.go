@@ -213,7 +213,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Launch On-Demand or Spot instance based on capacity type
-	err = LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation, nil)
+	err = LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
 
 	if cli.ShowError(err, "Launching instance failed") {
 		return
@@ -264,7 +264,7 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
-	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation, nil)
+	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
 
 	if cli.ShowError(err, "Launching instance failed") {
 		return
@@ -274,13 +274,14 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 // Launch On-Demand or Spot instance based on capacity type
 func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo,
-	confirmation string, templateID *string) (err error) {
+	confirmation string) error {
+	var err error
 	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
 		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	} else {
-		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes, templateID)
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
 	}
-	return
+	return err
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
@@ -343,7 +344,7 @@ func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	}
 
 	// Launch the instance.
-	err = LaunchCapacityInstance(h, simpleConfig, nil, *confirmation, &simpleConfig.LaunchTemplateId)
+	err = LaunchCapacityInstance(h, simpleConfig, nil, *confirmation)
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
