@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -29,8 +30,10 @@ import (
 	"simple-ec2/pkg/iamhelper"
 	"simple-ec2/pkg/table"
 
+	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/ec2pricing"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/briandowns/spinner"
@@ -1197,10 +1200,28 @@ func AskTerminationConfirmation(instanceIds []string) string {
 	return answer
 }
 
-func AskCapacityType() string {
-	question := fmt.Sprintf("Select capacity type. Spot instances are available at up to a 90%% discount compared to On-Demand instances,\nbut they may get interrupted by EC2 with a 2-minute warning")
+func AskCapacityType(instanceType string) string {
+	ec2Pricing := ec2pricing.New(session.New())
+	onDemandPrice, err := ec2Pricing.GetOnDemandInstanceTypeCost(instanceType)
+	formattedOnDemandPrice := ""
+	if err == nil {
+		onDemandPrice = math.Round(onDemandPrice*10000) / 10000
+		formattedOnDemandPrice = fmt.Sprintf("($%s/hr)", strconv.FormatFloat(onDemandPrice, 'f', -1, 64))
+	}
+
+	spotPrice, err := ec2Pricing.GetSpotInstanceTypeNDayAvgCost(instanceType, []string{}, 1)
+	formattedSpotPrice := ""
+	if err == nil {
+		spotPrice = math.Round(spotPrice*10000) / 10000
+		formattedSpotPrice = fmt.Sprintf("($%s/hr)", strconv.FormatFloat(spotPrice, 'f', -1, 64))
+	}
+
+	question := fmt.Sprintf("Select capacity type. Spot instances are available at up to a 90%% discount compared to On-Demand instances,\n" +
+		"but they may get interrupted by EC2 with a 2-minute warning")
+
 	defaultInstanceTypeText := DefaultCapacityTypeText.OnDemand
-	optionsText := "1. On-Demand\n2. Spot\n"
+	optionsText := fmt.Sprintf("1. On-Demand%s\n2. Spot%s\n", formattedOnDemandPrice,
+		formattedSpotPrice)
 	indexedOptions := []string{DefaultCapacityTypeText.OnDemand, DefaultCapacityTypeText.Spot}
 
 	answer := AskQuestion(&AskQuestionInput{
