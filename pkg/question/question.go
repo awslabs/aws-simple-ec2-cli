@@ -880,9 +880,8 @@ func AskConfirmationWithTemplate(h *ec2helper.EC2Helper,
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 
 	configText := table.BuildTable(data, nil)
-	optionsText := yesNoOption + "\n"
-	question := "Please confirm if you would like to launch instance with following options: \n" +
-		configText
+	optionsText := configText + yesNoOption + "\n"
+	question := "Please confirm if you would like to launch instance with following options"
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
