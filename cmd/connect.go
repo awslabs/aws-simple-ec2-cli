@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"simple-ec2/pkg/cli"
+	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
 	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
 	"simple-ec2/pkg/question"
@@ -69,7 +70,12 @@ func connectInteractive(h *ec2helper.EC2Helper) {
 	var region *string
 	var err error
 	if regionFlag == "" {
-		region, err = question.AskRegion(h)
+		defaultsConfig := config.NewSimpleInfo()
+		err = config.ReadConfig(defaultsConfig, nil)
+		if err != nil {
+			defaultsConfig = config.NewSimpleInfo()
+		}
+		region, err = question.AskRegion(h, defaultsConfig.Region)
 		if cli.ShowError(err, "Asking region failed") {
 			return
 		}
