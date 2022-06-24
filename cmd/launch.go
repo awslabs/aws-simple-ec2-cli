@@ -511,8 +511,8 @@ func ReadSecurityGroups(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo,
 	retrievedGroups, err := h.GetSecurityGroupsByVpc(vpcId)
 	cli.ShowError(err, "Getting security groups in VPC failed")
 
-	// Keep asking for security groups
-	for {
+	// Keep asking for security groups while there are less than 5 security groups
+	for len(groups) < 5 {
 		securityGroupAnswer := question.AskSecurityGroups(retrievedGroups, groups)
 
 		// End questions if the user selects "no"

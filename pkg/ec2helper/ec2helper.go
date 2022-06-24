@@ -33,6 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/google/uuid"
 )
 
 const DefaultRegion = "us-east-2"
@@ -755,10 +756,11 @@ func (h *EC2Helper) GetSecurityGroupsByVpc(vpcId string) ([]*ec2.SecurityGroup, 
 func (h *EC2Helper) CreateSecurityGroupForSsh(vpcId string) (*string, error) {
 	fmt.Println("Creating new security group...")
 
+	groupNameUuid := uuid.New()
 	// Create a new security group
 	creationInput := &ec2.CreateSecurityGroupInput{
 		Description: aws.String("Created by simple-ec2 for SSH connection to instances"),
-		GroupName:   aws.String("simple-ec2 SSH"),
+		GroupName:   aws.String(fmt.Sprintf("simple-ec2 SSH-%s", groupNameUuid)),
 		VpcId:       aws.String(vpcId),
 	}
 
