@@ -776,6 +776,13 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 		return cli.ResponseNo
 	}
 
+	// Add "add all" option
+	if len(groups) <= 5 {
+		indexedOptions = append(indexedOptions, cli.ResponseAll)
+		data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
+			"Add all available security groups"})
+	}
+
 	// Add "new" option
 	indexedOptions = append(indexedOptions, cli.ResponseNew)
 	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),

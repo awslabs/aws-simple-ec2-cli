@@ -534,6 +534,21 @@ func ReadSecurityGroups(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo,
 			continue
 		}
 
+		// Add all security groups available if the user selects "all"
+		if securityGroupAnswer == cli.ResponseAll {
+			allSecurityGroups, err := h.GetSecurityGroupsByVpc(vpcId)
+			if cli.ShowError(err, "Getting security groups in VPC failed") {
+				return false
+			}
+
+			groups = []string{}
+			for _, group := range allSecurityGroups {
+				groups = append(groups, *group.GroupId)
+			}
+
+			break
+		}
+
 		// Simply add the selected security group in this case
 		groups = append(groups, securityGroupAnswer)
 	}
