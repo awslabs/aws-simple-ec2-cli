@@ -511,8 +511,8 @@ func ReadSecurityGroups(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo,
 	retrievedGroups, err := h.GetSecurityGroupsByVpc(vpcId)
 	cli.ShowError(err, "Getting security groups in VPC failed")
 
-	// Keep asking for security groups
-	for {
+	// Keep asking for security groups while there are less than 5 security groups
+	for len(groups) < 5 {
 		securityGroupAnswer := question.AskSecurityGroups(retrievedGroups, groups)
 
 		// End questions if the user selects "no"
@@ -532,21 +532,6 @@ func ReadSecurityGroups(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo,
 			cli.ShowError(err, "Getting security gtoups in VPC failed")
 
 			continue
-		}
-
-		// Add all security groups available if the user selects "all"
-		if securityGroupAnswer == cli.ResponseAll {
-			allSecurityGroups, err := h.GetSecurityGroupsByVpc(vpcId)
-			if cli.ShowError(err, "Getting security groups in VPC failed") {
-				return false
-			}
-
-			groups = []string{}
-			for _, group := range allSecurityGroups {
-				groups = append(groups, *group.GroupId)
-			}
-
-			break
 		}
 
 		// Simply add the selected security group in this case

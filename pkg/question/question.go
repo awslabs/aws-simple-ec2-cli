@@ -776,11 +776,6 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 		return cli.ResponseNo
 	}
 
-	// Add "add all" option
-	indexedOptions = append(indexedOptions, cli.ResponseAll)
-	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
-		"Add all available security groups"})
-
 	// Add "new" option
 	indexedOptions = append(indexedOptions, cli.ResponseNew)
 	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
@@ -788,7 +783,7 @@ func AskSecurityGroups(groups []*ec2.SecurityGroup, addedGroups []string) string
 
 	// Add "done" option, if the added security group slice is not empty
 	if len(addedGroups) > 0 {
-		question = fmt.Sprintf("If you wish to add additional security group(s), add from the following:\nSecurity Group(s) already selected: %s", addedGroups)
+		question = fmt.Sprintf("Up to 5 security groups may be added. If you wish to add additional security group(s), add from the following:\nSecurity Group(s) already selected: %s", addedGroups)
 		indexedOptions = append(indexedOptions, cli.ResponseNo)
 		data = append(data, []string{fmt.Sprintf("%d.", len(data)+1),
 			"Don't add any more security group"})
