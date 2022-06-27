@@ -147,10 +147,14 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Ask for user boot data
-	ReadBootScript(h, simpleConfig, simpleDefaultsConfig.BootScriptFilePath)
+	if simpleConfig.BootScriptFilePath == "" {
+		ReadBootScript(h, simpleConfig, simpleDefaultsConfig.BootScriptFilePath)
+	}
 
 	// Ask for tags
-	ReadUserTags(h, simpleConfig, simpleDefaultsConfig.UserTags)
+	if len(simpleConfig.UserTags) == 0 {
+		ReadUserTags(h, simpleConfig, simpleDefaultsConfig.UserTags)
+	}
 
 	// Ask for confirmation or modification. Keep asking until the config is confirmed or denied
 	var detailedConfig *config.DetailedInfo
