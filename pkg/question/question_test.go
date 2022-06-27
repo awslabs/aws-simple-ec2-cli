@@ -491,7 +491,7 @@ func TestAskVpc_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskVpc(testEC2, nil)
+	answer, err := question.AskVpc(testEC2, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedVpc, *answer)
 
@@ -505,7 +505,7 @@ func TestAskVpc_DescribeVpcsPagesError(t *testing.T) {
 		DescribeVpcsPagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskVpc(testEC2, nil)
+	_, err := question.AskVpc(testEC2, "")
 	th.Nok(t, err)
 
 	cleanupQuestionTest()
@@ -539,7 +539,7 @@ func TestAskSubnet_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnet(testEC2, testVpc, nil)
+	answer, err := question.AskSubnet(testEC2, testVpc, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedSubnet, *answer)
 
@@ -554,7 +554,7 @@ func TestAskSubnet_DescribeSubnetsPagesError(t *testing.T) {
 		DescribeSubnetsPagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskSubnet(testEC2, testVpc, nil)
+	_, err := question.AskSubnet(testEC2, testVpc, "")
 	th.Nok(t, err)
 
 	cleanupQuestionTest()
@@ -577,7 +577,7 @@ func TestAskSubnetPlaceholder_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnetPlaceholder(testEC2, nil)
+	answer, err := question.AskSubnetPlaceholder(testEC2, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedAz, *answer)
 
@@ -592,7 +592,7 @@ func TestAskSubnetPlaceholder_DescribeAvailabilityZonesError(t *testing.T) {
 		DescribeAvailabilityZonesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskSubnetPlaceholder(testEC2, nil)
+	_, err := question.AskSubnetPlaceholder(testEC2, "")
 	th.Nok(t, err)
 
 	cleanupQuestionTest()
