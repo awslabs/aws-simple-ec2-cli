@@ -286,9 +286,7 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, u
 
 		data = append(data, []string{fmt.Sprintf("%s.", versionString), versionDescription})
 
-		if versionString == userDefaultTemplateVersion {
-			defaultVersion = versionString
-		} else if defaultVersion == "" && *launchTemplateVersion.DefaultVersion {
+		if versionString == userDefaultTemplateVersion || defaultVersion == "" && *launchTemplateVersion.DefaultVersion {
 			defaultVersion = versionString
 		}
 	}
@@ -314,11 +312,14 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType stri
 	// If no default instance type available, simply don't give default option
 	var defaultInstanceTypeText *string
 	instanceTypeNames := []string{}
-	if err == nil {
-		for _, instanceTypeInfo := range instanceTypes {
-			instanceTypeNames = append(instanceTypeNames, *instanceTypeInfo.InstanceType)
-		}
+	if err != nil {
+		return nil, err
 	}
+
+	for _, instanceTypeInfo := range instanceTypes {
+		instanceTypeNames = append(instanceTypeNames, *instanceTypeInfo.InstanceType)
+	}
+
 	if slices.Contains(instanceTypeNames, userDefaultInstanceType) {
 		defaultInstanceTypeText = &userDefaultInstanceType
 	} else {
@@ -561,12 +562,12 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string, userDefaultImageId st
 }
 
 // Ask if the users want to keep EBS volumes after instance termination
-func AskKeepEbsVolume(userDefualtKeepEbs bool) string {
+func AskKeepEbsVolume(userDefaultKeepEbs bool) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
 	question := "Persist EBS volume(s) after the instance is terminated?"
 	defaultOption := aws.String(cli.ResponseNo)
-	if userDefualtKeepEbs {
+	if userDefaultKeepEbs {
 		defaultOption = aws.String(cli.ResponseYes)
 	}
 
@@ -610,6 +611,9 @@ func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string
 		}
 	}
 
+	defaultOptionRepr, defaultOptionValue := "Do not attach IAM profile", cli.ResponseNo
+	noOptionRepr, noOptionValue := "Do not attach IAM profile", cli.ResponseNo
+
 	data := [][]string{}
 	indexedOptions := []string{}
 	var optionsText string
@@ -619,6 +623,9 @@ func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string
 			indexedOptions = append(indexedOptions, *profile.InstanceProfileName)
 			data = append(data, []string{fmt.Sprintf("%d.", counter+1), *profile.InstanceProfileName, *profile.InstanceProfileId,
 				profile.CreateDate.String()})
+			if userDefaultIamProfile == *profile.InstanceProfileName {
+				defaultOptionRepr, defaultOptionValue = *profile.InstanceProfileName, *profile.InstanceProfileName
+			}
 			counter++
 		}
 	} else {
@@ -626,9 +633,8 @@ func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string
 	}
 
 	// Add the do not attach IAM profile option at the end
-	defaultOptionRepr, defaultOptionValue := "Do not attach IAM profile", cli.ResponseNo
-	indexedOptions = append(indexedOptions, defaultOptionValue)
-	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1), defaultOptionRepr, "", ""})
+	indexedOptions = append(indexedOptions, noOptionValue)
+	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1), noOptionRepr, "", ""})
 	optionsText = table.BuildTable(data, []string{"Option", "PROFILE NAME", "PROFILE ID",
 		"Creation Date"})
 
@@ -666,7 +672,7 @@ func AskAutoTerminationTimerMinutes(userDefaultTimer int) string {
 }
 
 // Ask the users to select a VPC
-func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId *string) (*string, error) {
+func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId string) (*string, error) {
 	vpcs, err := h.GetAllVpcs()
 	if err != nil {
 		return nil, err
@@ -687,9 +693,7 @@ func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId *string) (*string, error) {
 				vpcName = fmt.Sprintf("%s(%s)", *vpcTagName, *vpc.VpcId)
 			}
 
-			if userDefaultVpcId != nil && *vpc.VpcId == *userDefaultVpcId {
-				defaultOptionRepr, defaultOptionValue = vpcName, *vpc.VpcId
-			} else if *vpc.IsDefault && defaultOptionValue == cli.ResponseNew {
+			if userDefaultVpcId != "" && *vpc.VpcId == userDefaultVpcId || *vpc.IsDefault && defaultOptionValue == cli.ResponseNew {
 				defaultOptionRepr, defaultOptionValue = vpcName, *vpc.VpcId
 			}
 
@@ -716,7 +720,7 @@ func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId *string) (*string, error) {
 }
 
 // Ask the users to select a subnet
-func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId *string) (*string, error) {
+func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId string) (*string, error) {
 	subnets, err := h.GetSubnetsByVpc(vpcId)
 	if err != nil {
 		return nil, err
@@ -728,7 +732,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId *string
 
 	// Add security groups to the data for table
 	for index, subnet := range subnets {
-		if userDefaultSubnetId != nil && *subnet.SubnetId == *userDefaultSubnetId {
+		if userDefaultSubnetId != "" && *subnet.SubnetId == userDefaultSubnetId {
 			defaultOptionRepr, defaultOptionValue = subnet.SubnetId, subnet.SubnetId
 		}
 		indexedOptions = append(indexedOptions, *subnet.SubnetId)
@@ -759,7 +763,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId *string
 }
 
 // Ask the users to select a subnet placeholder
-func AskSubnetPlaceholder(h *ec2helper.EC2Helper, userDefaultAzId *string) (*string, error) {
+func AskSubnetPlaceholder(h *ec2helper.EC2Helper, userDefaultAzId string) (*string, error) {
 	availabilityZones, err := h.GetAvailableAvailabilityZones()
 	if err != nil {
 		return nil, err
@@ -769,27 +773,25 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper, userDefaultAzId *string) (*str
 	indexedOptions := []string{}
 
 	// Add availability zones to the data for table
-	var defaultOptionRepr *string
 	var defaultOptionValue *string
 	for index, zone := range availabilityZones {
-		if userDefaultAzId != nil && *zone.ZoneId == *userDefaultAzId {
-			defaultOptionRepr, defaultOptionValue = zone.ZoneName, zone.ZoneName
+		if userDefaultAzId != "" && *zone.ZoneId == userDefaultAzId {
+			defaultOptionValue = zone.ZoneName
 		}
 		indexedOptions = append(indexedOptions, *zone.ZoneName)
 
 		data = append(data, []string{fmt.Sprintf("%d.", index+1), *zone.ZoneName, *zone.ZoneId})
 	}
-	defaultOptionRepr, defaultOptionValue = &data[0][1], &data[0][1]
+	defaultOptionValue = &data[0][1]
 
 	question := "Availability Zone"
 	optionsText := table.BuildTable(data, []string{"Option", "Zone Name", "Zone ID"})
 
 	answer := AskQuestion(&AskQuestionInput{
-		QuestionString:    question,
-		DefaultOptionRepr: defaultOptionRepr,
-		DefaultOption:     defaultOptionValue,
-		OptionsString:     &optionsText,
-		IndexedOptions:    indexedOptions,
+		QuestionString: question,
+		DefaultOption:  defaultOptionValue,
+		OptionsString:  &optionsText,
+		IndexedOptions: indexedOptions,
 	})
 
 	return &answer, nil
@@ -1215,14 +1217,18 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	return &answer, err
 }
 
-func AskBootScriptConfirmation(h *ec2helper.EC2Helper) string {
+func AskBootScriptConfirmation(h *ec2helper.EC2Helper, userDefaultBootScript string) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
 	question := "Confirm to add a filepath to an instance boot script"
+	defaultOption := aws.String(cli.ResponseNo)
+	if userDefaultBootScript != "" {
+		defaultOption = aws.String(cli.ResponseYes)
+	}
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  aws.String(cli.ResponseNo),
+		DefaultOption:  defaultOption,
 		EC2Helper:      h,
 		Fns:            []CheckInput{ec2helper.ValidateFilepath},
 		OptionsString:  &optionsText,
@@ -1243,14 +1249,18 @@ func AskBootScript(h *ec2helper.EC2Helper, userDefaultBootScript string) string 
 	return answer
 }
 
-func AskUserTagsConfirmation(h *ec2helper.EC2Helper) string {
+func AskUserTagsConfirmation(h *ec2helper.EC2Helper, userDefaultTags map[string]string) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
 	question := "Confirm to add tags to instances and persisted volumes"
+	defaultOption := aws.String(cli.ResponseNo)
+	if len(userDefaultTags) != 0 {
+		defaultOption = aws.String(cli.ResponseYes)
+	}
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  aws.String(cli.ResponseNo),
+		DefaultOption:  defaultOption,
 		EC2Helper:      h,
 		Fns:            []CheckInput{ec2helper.ValidateFilepath},
 		OptionsString:  &optionsText,
@@ -1260,16 +1270,22 @@ func AskUserTagsConfirmation(h *ec2helper.EC2Helper) string {
 }
 
 // AskUserTags prompts the user for optional tags
-func AskUserTags(h *ec2helper.EC2Helper, userDefaultTags string) string {
-	question := "Tags to instances and persisted volumes" + "\n" + "format: tag1|val1,tag2|val2"
-	if userDefaultTags != "" {
-		question += "\n"
+func AskUserTags(h *ec2helper.EC2Helper, userDefaultTags map[string]string) string {
+	question := "Tags to instances and persisted volumes" + "\n" + "format: tag1|val1,tag2|val2\n"
+	var defaultOption, defaultOptionRepr string
+	if len(userDefaultTags) != 0 {
+		kvs := make([]string, 0, len(userDefaultTags))
+		for key, value := range userDefaultTags {
+			kvs = append(kvs, fmt.Sprintf("%s|%s", key, value))
+		}
+		defaultOption, defaultOptionRepr = strings.Join(kvs, ","), strings.Join(kvs, "\n  ")
 	}
 	answer := AskQuestion(&AskQuestionInput{
-		QuestionString: question,
-		DefaultOption:  &userDefaultTags,
-		EC2Helper:      h,
-		Fns:            []CheckInput{ec2helper.ValidateTags},
+		QuestionString:    question,
+		DefaultOption:     &defaultOption,
+		DefaultOptionRepr: &defaultOptionRepr,
+		EC2Helper:         h,
+		Fns:               []CheckInput{ec2helper.ValidateTags},
 	})
 	return answer
 }
