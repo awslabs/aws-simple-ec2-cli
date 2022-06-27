@@ -147,14 +147,10 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 	}
 
 	// Ask for user boot data
-	if simpleConfig.BootScriptFilePath == "" && !ReadBootScript(h, simpleConfig, simpleDefaultsConfig.BootScriptFilePath) {
-		return
-	}
+	ReadBootScript(h, simpleConfig, simpleDefaultsConfig.BootScriptFilePath)
 
 	// Ask for tags
-	if len(simpleConfig.UserTags) == 0 && !ReadUserTags(h, simpleConfig, createDefaultTagString(simpleDefaultsConfig.UserTags)) {
-		return
-	}
+	ReadUserTags(h, simpleConfig, simpleDefaultsConfig.UserTags)
 
 	// Ask for confirmation or modification. Keep asking until the config is confirmed or denied
 	var detailedConfig *config.DetailedInfo
@@ -381,7 +377,7 @@ func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaul
 	simpleConfig.ImageId = *image.ImageId
 
 	if !simpleConfig.KeepEbsVolumeAfterTermination && ec2helper.HasEbsVolume(image) {
-		ReadKeepEbsVolume(simpleConfig, defaultsConfig.KeepEbsVolumeAfterTermination)
+		ReadKeepEbsVolume(simpleConfig, question.AskKeepEbsVolume(defaultsConfig.KeepEbsVolumeAfterTermination))
 	}
 
 	// Auto-termination only supports Linux for now
@@ -417,13 +413,8 @@ func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo, userDefaultTimer 
 Ask user input for keeping EBS volumes after instance termination.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadKeepEbsVolume(simpleConfig *config.SimpleInfo, userDefaultKeepEbs bool) {
-	isKeepVolume := question.AskKeepEbsVolume(userDefaultKeepEbs)
-	if isKeepVolume == cli.ResponseYes {
-		simpleConfig.KeepEbsVolumeAfterTermination = true
-	} else {
-		simpleConfig.KeepEbsVolumeAfterTermination = false
-	}
+func ReadKeepEbsVolume(simpleConfig *config.SimpleInfo, isKeepVolume string) {
+	simpleConfig.KeepEbsVolumeAfterTermination = isKeepVolume == cli.ResponseYes
 }
 
 /*
@@ -432,11 +423,15 @@ The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
 func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultsConfig *config.DetailedInfo) bool {
-	var defaultAzId, defaultSubnetId, defaultVpcId *string
+	var defaultAzId, defaultSubnetId, defaultVpcId string
 	if defaultsConfig != nil {
-		defaultAzId = defaultsConfig.Subnet.AvailabilityZoneId
-		defaultSubnetId = defaultsConfig.Subnet.SubnetId
-		defaultVpcId = defaultsConfig.Vpc.VpcId
+		if defaultsConfig.Subnet != nil {
+			defaultAzId = *defaultsConfig.Subnet.AvailabilityZoneId
+			defaultSubnetId = *defaultsConfig.Subnet.SubnetId
+		}
+		if defaultsConfig.Vpc != nil {
+			defaultVpcId = *defaultsConfig.Vpc.VpcId
+		}
 	}
 
 	vpcId, err := question.AskVpc(h, defaultVpcId)
@@ -450,8 +445,8 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	*/
 	if *vpcId == cli.ResponseNew {
 		simpleConfig.NewVPC = true
-
-		return ReadSubnetPlaceholder(h, simpleConfig, defaultAzId) && ReadSecurityGroupPlaceholder(h, simpleConfig)
+		ReadSecurityGroupPlaceholder(h, simpleConfig)
+		return ReadSubnetPlaceholder(h, simpleConfig, defaultAzId)
 	} else {
 		// If the resources are not specified in the config, ask for them
 		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
@@ -467,7 +462,7 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 Ask user input for subnet. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string, userDefaultSubnetId *string) bool {
+func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string, userDefaultSubnetId string) bool {
 	// Ask for subnet
 	subnetIdAnswer, err := question.AskSubnet(h, vpcId, userDefaultSubnetId)
 	if cli.ShowError(err, "Asking subnet failed") {
@@ -484,7 +479,7 @@ func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId s
 Ask user input for subnet placeholder. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, userDefaultAzId *string) bool {
+func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, userDefaultAzId string) bool {
 	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, userDefaultAzId)
 	if cli.ShowError(err, "Asking subnet placeholder failed") {
 		return false
@@ -556,14 +551,12 @@ Ask user input for security group placeholder.
 The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
 	securityGroupPlaceholder := question.AskSecurityGroupPlaceholder()
 
 	simpleConfig.SecurityGroupIds = []string{
 		securityGroupPlaceholder,
 	}
-
-	return true
 }
 
 /*
@@ -587,49 +580,37 @@ func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, def
 Ask user input for filepath containing boot script.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultBootScript string) bool {
-	if question.AskBootScriptConfirmation(h) != cli.ResponseNo {
-		bootScriptAnswer := question.AskBootScript(h, defaultBootScript)
-		if bootScriptAnswer != "" {
-			simpleConfig.BootScriptFilePath = bootScriptAnswer
-		}
+func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultBootScript string) {
+	if question.AskBootScriptConfirmation(h, defaultBootScript) == cli.ResponseNo {
+		return
 	}
-	return true
+
+	bootScriptAnswer := question.AskBootScript(h, defaultBootScript)
+	if bootScriptAnswer != "" {
+		simpleConfig.BootScriptFilePath = bootScriptAnswer
+	}
 }
 
 /*
 Ask user input for tags applied to launched instances and volumes.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultTagString string) bool {
-	if question.AskUserTagsConfirmation(h) != cli.ResponseNo {
-		userTagsAnswer := question.AskUserTags(h, defaultTagString)
-		if userTagsAnswer != cli.ResponseNo {
-			//convert user input tag1|val1,tag2|val2 to map
-			tags := strings.Split(userTagsAnswer, ",") //[tag1|val1, tag2|val2]
-			for _, tag := range tags {
-				kv := strings.Split(tag, "|") //[tag1, val1]
-				simpleConfig.UserTags[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
-			}
-		}
+func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultTags map[string]string) {
+	if question.AskUserTagsConfirmation(h, defaultTags) == cli.ResponseNo {
+		return
 	}
-	return true
-}
 
-func createDefaultTagString(defaultTags map[string]string) string {
-	var tagString string
-	index := 0
-	for key, val := range defaultTags {
-		if index != 0 {
-			tagString += "  "
-		}
-		tagString += fmt.Sprintf("%s|%s", key, val)
-		if index != len(defaultTags)-1 {
-			tagString += "\n"
-		}
-		index++
+	userTagsAnswer := question.AskUserTags(h, defaultTags)
+	if userTagsAnswer == cli.ResponseNo {
+		return
 	}
-	return tagString
+
+	//convert user input tag1|val1,tag2|val2 to map
+	tags := strings.Split(userTagsAnswer, ",") //[tag1|val1, tag2|val2]
+	for _, tag := range tags {
+		kv := strings.Split(tag, "|") //[tag1, val1]
+		simpleConfig.UserTags[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+	}
 }
 
 /*
