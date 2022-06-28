@@ -91,13 +91,15 @@ func launch(cmd *cobra.Command, args []string) {
 func launchInteractive(h *ec2helper.EC2Helper) {
 	var err error
 	simpleConfig := config.NewSimpleInfo()
+
+	// Override config with flags if applicable
+	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
+
 	simpleDefaultsConfig := config.NewSimpleInfo()
 	err = config.ReadConfig(simpleDefaultsConfig, nil)
 	if err != nil {
 		simpleDefaultsConfig = config.NewSimpleInfo()
 	}
-	// Override config with flags if applicable
-	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
 	if simpleConfig.Region == "" {
 		// Ask Region
@@ -197,7 +199,6 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	// Try to get config from the config file
 	err := config.ReadConfig(simpleConfig, nil)
-	h.ChangeRegion(simpleConfig.Region)
 	if cli.ShowError(err, "Loading config failed") {
 		// If getting config file fails, go for default values
 		fmt.Println("Generating default config...")
@@ -325,9 +326,9 @@ func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 Ask user input for an instance type, resource definition (using instance selector) or fall back to using default.
 Return true if the function is executed successfully, false otherwise.
 */
-func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, userDefaultInstanceType string) bool {
+func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultInstanceType string) bool {
 	// Ask if the users want to enter an instance type
-	instanceTypeResponse, err := question.AskIfEnterInstanceType(h, userDefaultInstanceType)
+	instanceTypeResponse, err := question.AskIfEnterInstanceType(h, defaultInstanceType)
 	if cli.ShowError(err, "Asking instance type failed") {
 		return false
 	}
@@ -339,7 +340,7 @@ func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, u
 	*/
 	var instanceType *string
 	if *instanceTypeResponse == cli.ResponseYes {
-		instanceType, err = question.AskInstanceType(h, userDefaultInstanceType)
+		instanceType, err = question.AskInstanceType(h, defaultInstanceType)
 		if cli.ShowError(err, "Asking instance type failed") {
 			return false
 		}
@@ -397,9 +398,9 @@ func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaul
 Ask user input for the auto-termination timer.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo, userDefaultTimer int) bool {
+func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo, defaultTimer int) bool {
 	// Ask for auto-termination timer
-	timerResponse := question.AskAutoTerminationTimerMinutes(userDefaultTimer)
+	timerResponse := question.AskAutoTerminationTimerMinutes(defaultTimer)
 	if timerResponse != cli.ResponseNo {
 		timer, err := strconv.Atoi(timerResponse)
 		if cli.ShowError(err, "Asking auto-termination timer failed") {
@@ -449,8 +450,11 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	*/
 	if *vpcId == cli.ResponseNew {
 		simpleConfig.NewVPC = true
-		ReadSecurityGroupPlaceholder(h, simpleConfig)
-		return ReadSubnetPlaceholder(h, simpleConfig, defaultAzId)
+		if ReadSubnetPlaceholder(h, simpleConfig, defaultAzId) {
+			ReadSecurityGroupPlaceholder(h, simpleConfig)
+			return true
+		}
+		return false
 	} else {
 		// If the resources are not specified in the config, ask for them
 		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
@@ -466,9 +470,9 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 Ask user input for subnet. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string, userDefaultSubnetId string) bool {
+func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string, defaultSubnetId string) bool {
 	// Ask for subnet
-	subnetIdAnswer, err := question.AskSubnet(h, vpcId, userDefaultSubnetId)
+	subnetIdAnswer, err := question.AskSubnet(h, vpcId, defaultSubnetId)
 	if cli.ShowError(err, "Asking subnet failed") {
 		return false
 	}
@@ -483,9 +487,9 @@ func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId s
 Ask user input for subnet placeholder. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, userDefaultAzId string) bool {
-	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, userDefaultAzId)
-	if cli.ShowError(err, "Asking subnet placeholder failed") {
+func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAzId string) bool {
+	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAzId)
+	if cli.ShowError(err, "Asking availability zone failed") {
 		return false
 	}
 
