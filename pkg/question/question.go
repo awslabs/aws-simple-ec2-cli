@@ -142,7 +142,7 @@ func GetQuestion(input *AskQuestionInput) {
 }
 
 // Ask for the region to use
-func AskRegion(h *ec2helper.EC2Helper, userDefaultRegion string) (*string, error) {
+func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	regionDescription := getRegionDescriptions()
 	const regionPerRow = 1
 	const elementPerRegion = 3
@@ -178,9 +178,9 @@ func AskRegion(h *ec2helper.EC2Helper, userDefaultRegion string) (*string, error
 		}
 	}
 
-	defaultRegion := h.Sess.Config.Region
-	if slices.Contains(indexedOptions, userDefaultRegion) {
-		defaultRegion = &userDefaultRegion
+	defaultOption := h.Sess.Config.Region
+	if slices.Contains(indexedOptions, defaultRegion) {
+		defaultOption = &defaultRegion
 	}
 
 	optionsText := table.BuildTable(data, []string{"Option", "Region", "Description"})
@@ -188,7 +188,7 @@ func AskRegion(h *ec2helper.EC2Helper, userDefaultRegion string) (*string, error
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  defaultRegion,
+		DefaultOption:  defaultOption,
 		OptionsString:  &optionsText,
 		IndexedOptions: indexedOptions,
 	})
@@ -216,7 +216,7 @@ func getRegionDescriptions() *map[string]string {
 Ask for the launch template to use. The result will either be a launch template id or response.No,
 indicating not using a launch template.
 */
-func AskLaunchTemplate(h *ec2helper.EC2Helper, userDefaultLaunchId string) *string {
+func AskLaunchTemplate(h *ec2helper.EC2Helper, defaultLaunchTemplateId string) *string {
 	// Get all launch templates. If no launch template is available, skip this question
 	launchTemplates, err := h.GetLaunchTemplatesInRegion()
 	if err != nil || len(launchTemplates) <= 0 {
@@ -230,8 +230,8 @@ func AskLaunchTemplate(h *ec2helper.EC2Helper, userDefaultLaunchId string) *stri
 	defaultOptionRepr, defaultOptionValue := noUseOptionRepr, noUseOptionValue
 	// Fill the data used for drawing a table and the options map
 	for index, launchTemplate := range launchTemplates {
-		if *launchTemplate.LaunchTemplateId == userDefaultLaunchId {
-			defaultOptionRepr, defaultOptionValue = userDefaultLaunchId, userDefaultLaunchId
+		if *launchTemplate.LaunchTemplateId == defaultLaunchTemplateId {
+			defaultOptionRepr, defaultOptionValue = defaultLaunchTemplateId, defaultLaunchTemplateId
 		}
 		indexedOptions = append(indexedOptions, *launchTemplate.LaunchTemplateId)
 
@@ -260,7 +260,7 @@ func AskLaunchTemplate(h *ec2helper.EC2Helper, userDefaultLaunchId string) *stri
 }
 
 // Ask for the launch template version to use. The result will be a launch template version
-func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, userDefaultTemplateVersion string) (*string, error) {
+func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, defaultTemplateVersion string) (*string, error) {
 	launchTemplateVersions, err := h.GetLaunchTemplateVersions(launchTemplateId, nil)
 	if err != nil || launchTemplateVersions == nil {
 		return nil, err
@@ -270,7 +270,7 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, u
 	indexedOptions := []string{}
 
 	// Fill the data used for drawing a table and the options map
-	var defaultVersion string
+	var defaultOption string
 	for _, launchTemplateVersion := range launchTemplateVersions {
 		versionString := strconv.FormatInt(*launchTemplateVersion.VersionNumber, 10)
 		// Note that launch template versions are sorted, so basically index+1 = version
@@ -286,8 +286,8 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, u
 
 		data = append(data, []string{fmt.Sprintf("%s.", versionString), versionDescription})
 
-		if versionString == userDefaultTemplateVersion || defaultVersion == "" && *launchTemplateVersion.DefaultVersion {
-			defaultVersion = versionString
+		if versionString == defaultTemplateVersion || defaultOption == "" && *launchTemplateVersion.DefaultVersion {
+			defaultOption = versionString
 		}
 	}
 
@@ -296,7 +296,7 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, u
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  &defaultVersion,
+		DefaultOption:  &defaultOption,
 		OptionsString:  &optionsText,
 		IndexedOptions: indexedOptions,
 	})
@@ -305,12 +305,12 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, u
 }
 
 // Ask whether the users want to enter instance type themselves or seek advice
-func AskIfEnterInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType string) (*string, error) {
+func AskIfEnterInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) (*string, error) {
 	instanceTypes, err := h.GetInstanceTypesInRegion()
 
-	// Use user default instance type if applicable. In not find the default free instance type.
+	// Use user default instance type if applicable. If not, find the default free instance type.
 	// If no default instance type available, simply don't give default option
-	var defaultInstanceTypeText *string
+	var defaultOption *string
 	instanceTypeNames := []string{}
 	if err != nil {
 		return nil, err
@@ -320,15 +320,15 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType stri
 		instanceTypeNames = append(instanceTypeNames, *instanceTypeInfo.InstanceType)
 	}
 
-	if slices.Contains(instanceTypeNames, userDefaultInstanceType) {
-		defaultInstanceTypeText = &userDefaultInstanceType
+	if slices.Contains(instanceTypeNames, defaultInstanceType) {
+		defaultOption = &defaultInstanceType
 	} else {
 		defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
 		if err != nil {
 			return nil, err
 		}
 		if defaultInstanceType != nil {
-			defaultInstanceTypeText = defaultInstanceType.InstanceType
+			defaultOption = defaultInstanceType.InstanceType
 		}
 	}
 
@@ -339,7 +339,7 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType stri
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  defaultInstanceTypeText,
+		DefaultOption:  defaultOption,
 		OptionsString:  &optionsText,
 		IndexedOptions: indexedOptions,
 	})
@@ -348,7 +348,7 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType stri
 }
 
 // Ask the users to enter instace type
-func AskInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType string) (*string, error) {
+func AskInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) (*string, error) {
 	instanceTypes, err := h.GetInstanceTypesInRegion()
 	if err != nil {
 		return nil, err
@@ -361,18 +361,18 @@ func AskInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType string) (*s
 		stringOptions = append(stringOptions, *instanceTypeInfo.InstanceType)
 	}
 
-	// Use user default instance type if applicable. In not find the default free instance type.
+	// Use user default instance type if applicable. If not, find the default free instance type.
 	// If no default instance type available, simply don't give default option
-	var defaultInstanceTypeText *string
-	if slices.Contains(stringOptions, userDefaultInstanceType) {
-		defaultInstanceTypeText = &userDefaultInstanceType // Set to User default instance type
+	var defaultOption *string
+	if slices.Contains(stringOptions, defaultInstanceType) {
+		defaultOption = &defaultInstanceType // Set to User default instance type
 	} else {
 		defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
 		if err != nil {
 			return nil, err
 		}
 		if defaultInstanceType != nil {
-			defaultInstanceTypeText = defaultInstanceType.InstanceType
+			defaultOption = defaultInstanceType.InstanceType
 		}
 	}
 
@@ -380,7 +380,7 @@ func AskInstanceType(h *ec2helper.EC2Helper, userDefaultInstanceType string) (*s
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  defaultInstanceTypeText,
+		DefaultOption:  defaultOption,
 		StringOptions:  stringOptions,
 	})
 
@@ -469,7 +469,7 @@ func AskInstanceTypeInstanceSelector(h *ec2helper.EC2Helper, instanceSelector ec
 Ask the users to select an image. This function is different from other question-asking functions.
 It returns not a string but an ec2.Image object
 */
-func AskImage(h *ec2helper.EC2Helper, instanceType string, userDefaultImageId string) (*ec2.Image, error) {
+func AskImage(h *ec2helper.EC2Helper, instanceType string, defaultImageId string) (*ec2.Image, error) {
 	// get info about the instance type
 	instanceTypeInfo, err := h.GetInstanceType(instanceType)
 	if err != nil {
@@ -495,22 +495,22 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string, userDefaultImageId st
 	data := [][]string{}
 	indexedOptions := []string{}
 
-	var defaultImageRepr, defaultImageId, optionsText string
+	var defaultOptionRepr, defaultOption, optionsText string
 	if defaultImages != nil && len(*defaultImages) > 0 {
 		priority := ec2helper.GetImagePriority()
 		// Use the user default image if available as the default choice. If not then pick the available image with the highest priority.
 		for osName, image := range *defaultImages {
-			if *image.ImageId == userDefaultImageId {
-				defaultImageRepr = fmt.Sprintf("Latest %s image", osName)
-				defaultImageId = userDefaultImageId
+			if *image.ImageId == defaultImageId {
+				defaultOptionRepr = fmt.Sprintf("Latest %s image", osName)
+				defaultOption = defaultImageId
 			}
 		}
-		if defaultImageId == "" {
+		if defaultOption == "" {
 			for _, osName := range priority {
 				image, found := (*defaultImages)[osName]
 				if found {
-					defaultImageRepr = fmt.Sprintf("Latest %s image", osName)
-					defaultImageId = *image.ImageId
+					defaultOptionRepr = fmt.Sprintf("Latest %s image", osName)
+					defaultOption = *image.ImageId
 					break
 				}
 			}
@@ -541,8 +541,8 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string, userDefaultImageId st
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:    question,
-		DefaultOptionRepr: &defaultImageRepr,
-		DefaultOption:     &defaultImageId,
+		DefaultOptionRepr: &defaultOptionRepr,
+		DefaultOption:     &defaultOption,
 		OptionsString:     &optionsText,
 		IndexedOptions:    indexedOptions,
 		EC2Helper:         h,
@@ -562,12 +562,12 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string, userDefaultImageId st
 }
 
 // Ask if the users want to keep EBS volumes after instance termination
-func AskKeepEbsVolume(userDefaultKeepEbs bool) string {
+func AskKeepEbsVolume(defaultKeepEbs bool) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
 	question := "Persist EBS volume(s) after the instance is terminated?"
 	defaultOption := aws.String(cli.ResponseNo)
-	if userDefaultKeepEbs {
+	if defaultKeepEbs {
 		defaultOption = aws.String(cli.ResponseYes)
 	}
 
@@ -582,7 +582,7 @@ func AskKeepEbsVolume(userDefaultKeepEbs bool) string {
 }
 
 // Ask if the users want to attach IAM profile to instance
-func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string, error) {
+func AskIamProfile(i *iamhelper.IAMHelper, defaultIamProfile string) (string, error) {
 	input := &iam.ListInstanceProfilesInput{
 		MaxItems: aws.Int64(10),
 	}
@@ -623,7 +623,7 @@ func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string
 			indexedOptions = append(indexedOptions, *profile.InstanceProfileName)
 			data = append(data, []string{fmt.Sprintf("%d.", counter+1), *profile.InstanceProfileName, *profile.InstanceProfileId,
 				profile.CreateDate.String()})
-			if userDefaultIamProfile == *profile.InstanceProfileName {
+			if defaultIamProfile == *profile.InstanceProfileName {
 				defaultOptionRepr, defaultOptionValue = *profile.InstanceProfileName, *profile.InstanceProfileName
 			}
 			counter++
@@ -651,13 +651,13 @@ func AskIamProfile(i *iamhelper.IAMHelper, userDefaultIamProfile string) (string
 }
 
 // Ask if the users want to set an auto-termination timer for the instance
-func AskAutoTerminationTimerMinutes(userDefaultTimer int) string {
+func AskAutoTerminationTimerMinutes(defaultTimer int) string {
 	stringOptions := []string{cli.ResponseNo}
-	optionsText := "[ integer ] Auto-termination timer in minutes\n" + "[ no ] No auto-termination" + "\n"
+	optionsText := "[ integer ] Auto-termination timer in minutes\n" + "[ no ] No auto-termination\n"
 	question := "Auto-termination timer"
 	defaultOption := aws.String(cli.ResponseNo)
-	if userDefaultTimer != 0 {
-		defaultOption = aws.String(strconv.FormatInt(int64(userDefaultTimer), 10))
+	if defaultTimer != 0 {
+		defaultOption = aws.String(strconv.FormatInt(int64(defaultTimer), 10))
 	}
 
 	answer := AskQuestion(&AskQuestionInput{
@@ -672,7 +672,7 @@ func AskAutoTerminationTimerMinutes(userDefaultTimer int) string {
 }
 
 // Ask the users to select a VPC
-func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId string) (*string, error) {
+func AskVpc(h *ec2helper.EC2Helper, defaultVpcId string) (*string, error) {
 	vpcs, err := h.GetAllVpcs()
 	if err != nil {
 		return nil, err
@@ -693,7 +693,7 @@ func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId string) (*string, error) {
 				vpcName = fmt.Sprintf("%s(%s)", *vpcTagName, *vpc.VpcId)
 			}
 
-			if userDefaultVpcId != "" && *vpc.VpcId == userDefaultVpcId || *vpc.IsDefault && defaultOptionValue == cli.ResponseNew {
+			if defaultVpcId != "" && *vpc.VpcId == defaultVpcId || *vpc.IsDefault && defaultOptionValue == cli.ResponseNew {
 				defaultOptionRepr, defaultOptionValue = vpcName, *vpc.VpcId
 			}
 
@@ -720,7 +720,7 @@ func AskVpc(h *ec2helper.EC2Helper, userDefaultVpcId string) (*string, error) {
 }
 
 // Ask the users to select a subnet
-func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId string) (*string, error) {
+func AskSubnet(h *ec2helper.EC2Helper, vpcId string, defaultSubnetId string) (*string, error) {
 	subnets, err := h.GetSubnetsByVpc(vpcId)
 	if err != nil {
 		return nil, err
@@ -732,7 +732,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId string)
 
 	// Add security groups to the data for table
 	for index, subnet := range subnets {
-		if userDefaultSubnetId != "" && *subnet.SubnetId == userDefaultSubnetId {
+		if defaultSubnetId != "" && *subnet.SubnetId == defaultSubnetId {
 			defaultOptionRepr, defaultOptionValue = subnet.SubnetId, subnet.SubnetId
 		}
 		indexedOptions = append(indexedOptions, *subnet.SubnetId)
@@ -747,7 +747,10 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId string)
 			*subnet.CidrBlock})
 	}
 
-	defaultOptionRepr, defaultOptionValue = &data[0][1], subnets[0].SubnetId
+	if defaultOptionValue == nil && defaultOptionRepr == nil {
+		defaultOptionRepr, defaultOptionValue = &data[0][1], subnets[0].SubnetId
+	}
+
 	question := "Subnet"
 	optionsText := table.BuildTable(data, []string{"Option", "Subnet", "Availability Zone", "CIDR Block"})
 
@@ -763,7 +766,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, userDefaultSubnetId string)
 }
 
 // Ask the users to select a subnet placeholder
-func AskSubnetPlaceholder(h *ec2helper.EC2Helper, userDefaultAzId string) (*string, error) {
+func AskSubnetPlaceholder(h *ec2helper.EC2Helper, defaultAzId string) (*string, error) {
 	availabilityZones, err := h.GetAvailableAvailabilityZones()
 	if err != nil {
 		return nil, err
@@ -775,14 +778,17 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper, userDefaultAzId string) (*stri
 	// Add availability zones to the data for table
 	var defaultOptionValue *string
 	for index, zone := range availabilityZones {
-		if userDefaultAzId != "" && *zone.ZoneId == userDefaultAzId {
+		if defaultAzId != "" && *zone.ZoneId == defaultAzId {
 			defaultOptionValue = zone.ZoneName
 		}
 		indexedOptions = append(indexedOptions, *zone.ZoneName)
 
 		data = append(data, []string{fmt.Sprintf("%d.", index+1), *zone.ZoneName, *zone.ZoneId})
 	}
-	defaultOptionValue = &data[0][1]
+
+	if defaultOptionValue != nil {
+		defaultOptionValue = &data[0][1]
+	}
 
 	question := "Availability Zone"
 	optionsText := table.BuildTable(data, []string{"Option", "Zone Name", "Zone ID"})
@@ -1216,12 +1222,12 @@ func AskInstanceIds(h *ec2helper.EC2Helper, addedInstanceIds []string) (*string,
 	return &answer, err
 }
 
-func AskBootScriptConfirmation(h *ec2helper.EC2Helper, userDefaultBootScript string) string {
+func AskBootScriptConfirmation(h *ec2helper.EC2Helper, defaultBootScript string) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
-	question := "Confirm to add a filepath to an instance boot script"
+	question := "Would you like to add a filepath to the instance boot script?"
 	defaultOption := aws.String(cli.ResponseNo)
-	if userDefaultBootScript != "" {
+	if defaultBootScript != "" {
 		defaultOption = aws.String(cli.ResponseYes)
 	}
 
@@ -1237,23 +1243,23 @@ func AskBootScriptConfirmation(h *ec2helper.EC2Helper, userDefaultBootScript str
 }
 
 // AskBootScript prompts the user for a filepath to an optional boot script
-func AskBootScript(h *ec2helper.EC2Helper, userDefaultBootScript string) string {
-	question := "Filepath to instance boot script " + "\n" + "format: absolute file path"
+func AskBootScript(h *ec2helper.EC2Helper, defaultBootScript string) string {
+	question := "Filepath to instance boot script \nformat: absolute file path"
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  &userDefaultBootScript,
+		DefaultOption:  &defaultBootScript,
 		EC2Helper:      h,
 		Fns:            []CheckInput{ec2helper.ValidateFilepath},
 	})
 	return answer
 }
 
-func AskUserTagsConfirmation(h *ec2helper.EC2Helper, userDefaultTags map[string]string) string {
+func AskUserTagsConfirmation(h *ec2helper.EC2Helper, defaultTags map[string]string) string {
 	stringOptions := []string{cli.ResponseYes, cli.ResponseNo}
 	optionsText := yesNoOption + "\n"
-	question := "Confirm to add tags to instances and persisted volumes"
+	question := "Would you like to add tags to instances and persisted volumes?"
 	defaultOption := aws.String(cli.ResponseNo)
-	if len(userDefaultTags) != 0 {
+	if len(defaultTags) != 0 {
 		defaultOption = aws.String(cli.ResponseYes)
 	}
 
@@ -1269,16 +1275,14 @@ func AskUserTagsConfirmation(h *ec2helper.EC2Helper, userDefaultTags map[string]
 }
 
 // AskUserTags prompts the user for optional tags
-func AskUserTags(h *ec2helper.EC2Helper, userDefaultTags map[string]string) string {
-	question := "Tags to instances and persisted volumes" + "\n" + "format: tag1|val1,tag2|val2\n"
-	var defaultOption, defaultOptionRepr string
-	if len(userDefaultTags) != 0 {
-		kvs := make([]string, 0, len(userDefaultTags))
-		for key, value := range userDefaultTags {
-			kvs = append(kvs, fmt.Sprintf("%s|%s", key, value))
-		}
-		defaultOption, defaultOptionRepr = strings.Join(kvs, ","), strings.Join(kvs, "\n  ")
+func AskUserTags(h *ec2helper.EC2Helper, defaultTags map[string]string) string {
+	question := "Tags to instances and persisted volumes\nformat: tag1|val1,tag2|val2\n"
+	kvs := make([]string, 0, len(defaultTags))
+	for key, value := range defaultTags {
+		kvs = append(kvs, fmt.Sprintf("%s|%s", key, value))
 	}
+	defaultOption, defaultOptionRepr := strings.Join(kvs, ","), strings.Join(kvs, "\n  ")
+
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString:    question,
 		DefaultOption:     &defaultOption,
@@ -1306,7 +1310,7 @@ func AskTerminationConfirmation(instanceIds []string) string {
 	return answer
 }
 
-func AskCapacityType(instanceType string, userDefaultCapacityType string) string {
+func AskCapacityType(instanceType string, defaultCapacityType string) string {
 	ec2Pricing := ec2pricing.New(session.New())
 	onDemandPrice, err := ec2Pricing.GetOnDemandInstanceTypeCost(instanceType)
 	formattedOnDemandPrice := ""
@@ -1328,14 +1332,14 @@ func AskCapacityType(instanceType string, userDefaultCapacityType string) string
 	optionsText := fmt.Sprintf("1. On-Demand%s\n2. Spot%s\n", formattedOnDemandPrice,
 		formattedSpotPrice)
 	indexedOptions := []string{DefaultCapacityTypeText.OnDemand, DefaultCapacityTypeText.Spot}
-	defaultInstanceTypeText := DefaultCapacityTypeText.OnDemand
-	if slices.Contains(indexedOptions, userDefaultCapacityType) {
-		defaultInstanceTypeText = userDefaultCapacityType
+	defaultOption := DefaultCapacityTypeText.OnDemand
+	if slices.Contains(indexedOptions, defaultCapacityType) {
+		defaultOption = defaultCapacityType
 	}
 
 	answer := AskQuestion(&AskQuestionInput{
 		QuestionString: question,
-		DefaultOption:  &defaultInstanceTypeText,
+		DefaultOption:  &defaultOption,
 		OptionsString:  &optionsText,
 		IndexedOptions: indexedOptions,
 	})
