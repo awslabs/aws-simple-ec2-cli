@@ -450,11 +450,9 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	*/
 	if *vpcId == cli.ResponseNew {
 		simpleConfig.NewVPC = true
-		if ReadSubnetPlaceholder(h, simpleConfig, defaultAzId) {
-			ReadSecurityGroupPlaceholder(h, simpleConfig)
-			return true
-		}
-		return false
+		result := ReadSubnetPlaceholder(h, simpleConfig, defaultAzId)
+		ReadSecurityGroupPlaceholder(h, simpleConfig)
+		return result
 	} else {
 		// If the resources are not specified in the config, ask for them
 		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
@@ -594,9 +592,11 @@ func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, def
 	}
 
 	bootScriptAnswer := question.AskBootScript(h, defaultBootScript)
-	if bootScriptAnswer != "" {
-		simpleConfig.BootScriptFilePath = bootScriptAnswer
+	if bootScriptAnswer == "" {
+		return
 	}
+
+	simpleConfig.BootScriptFilePath = bootScriptAnswer
 }
 
 /*
