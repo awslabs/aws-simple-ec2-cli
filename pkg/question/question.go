@@ -307,14 +307,14 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, d
 // Ask whether the users want to enter instance type themselves or seek advice
 func AskIfEnterInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) (*string, error) {
 	instanceTypes, err := h.GetInstanceTypesInRegion()
+	if err != nil {
+		return nil, err
+	}
 
 	// Use user default instance type if applicable. If not, find the default free instance type.
 	// If no default instance type available, simply don't give default option
 	var defaultOption *string
 	instanceTypeNames := []string{}
-	if err != nil {
-		return nil, err
-	}
 
 	for _, instanceTypeInfo := range instanceTypes {
 		instanceTypeNames = append(instanceTypeNames, *instanceTypeInfo.InstanceType)
@@ -503,6 +503,7 @@ func AskImage(h *ec2helper.EC2Helper, instanceType string, defaultImageId string
 			if *image.ImageId == defaultImageId {
 				defaultOptionRepr = fmt.Sprintf("Latest %s image", osName)
 				defaultOption = defaultImageId
+				break
 			}
 		}
 		if defaultOption == "" {
