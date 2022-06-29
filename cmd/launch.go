@@ -455,8 +455,12 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 		return result
 	} else {
 		// If the resources are not specified in the config, ask for them
-		return !(flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
-			(flagConfig.SecurityGroupIds == nil && !ReadSecurityGroups(h, simpleConfig, *vpcId))
+		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
+			(flagConfig.SecurityGroupIds == nil && !ReadSecurityGroups(h, simpleConfig, *vpcId)) {
+			return false
+		}
+
+		return true
 	}
 }
 

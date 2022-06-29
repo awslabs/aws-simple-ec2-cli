@@ -16,6 +16,8 @@ package question_test
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -1134,17 +1136,21 @@ func TestAskBootScriptConfirmation(t *testing.T) {
 	initQuestionTest(t, cli.ResponseYes+"\n")
 
 	answer := question.AskBootScriptConfirmation(testEC2, "")
-	th.Equals(t, answer, expectedConfirmation)
+	th.Equals(t, expectedConfirmation, answer)
 
 	cleanupQuestionTest()
 }
 
 func TestAskBootScript(t *testing.T) {
-	expectedBootScript := ""
-	initQuestionTest(t, expectedBootScript+"\n")
+	expectedBootScript, err := ioutil.TempFile("", "mocked_filepath")
+	defer os.Remove(expectedBootScript.Name())
+	if err != nil {
+		t.Errorf("There was an error creating tempfile: %v", err)
+	}
+	initQuestionTest(t, expectedBootScript.Name()+"\n")
 
 	answer := question.AskBootScript(testEC2, "")
-	th.Equals(t, expectedBootScript, answer)
+	th.Equals(t, expectedBootScript.Name(), answer)
 
 	cleanupQuestionTest()
 }
@@ -1156,7 +1162,7 @@ func TestAskUserTagsConfirmation(t *testing.T) {
 	userTags := make(map[string]string)
 
 	answer := question.AskUserTagsConfirmation(testEC2, userTags)
-	th.Equals(t, answer, expectedConfirmation)
+	th.Equals(t, expectedConfirmation, answer)
 
 	cleanupQuestionTest()
 }
@@ -1168,7 +1174,7 @@ func TestAskUserTags(t *testing.T) {
 	userTags := make(map[string]string)
 
 	answer := question.AskUserTags(testEC2, userTags)
-	th.Equals(t, answer, expectedTags)
+	th.Equals(t, expectedTags, answer)
 
 	cleanupQuestionTest()
 }
@@ -1284,7 +1290,7 @@ func TestAskIfEnterInstanceType_WithDefault(t *testing.T) {
 			},
 			{
 				InstanceType:     aws.String(defaultInstanceType),
-				FreeTierEligible: aws.Bool(true),
+				FreeTierEligible: aws.Bool(false),
 			},
 		},
 	}
@@ -1308,7 +1314,7 @@ func TestAskInstanceType_WithDefault(t *testing.T) {
 			},
 			{
 				InstanceType:     aws.String(defaultInstanceType),
-				FreeTierEligible: aws.Bool(true),
+				FreeTierEligible: aws.Bool(false),
 			},
 		},
 	}
@@ -1510,22 +1516,26 @@ func TestAskSubnetPlaceholder_WithDefault(t *testing.T) {
 }
 
 func TestAskBootScriptConfirmation_WithDefault(t *testing.T) {
-	defaultBootScript := ""
-	defaultConfirmation := cli.ResponseNo
+	defaultBootScript := "BootScript/FilePath"
+	defaultConfirmation := cli.ResponseYes
 	initQuestionTest(t, "\n")
 
 	confirmation := question.AskBootScriptConfirmation(testEC2, defaultBootScript)
-	th.Equals(t, confirmation, defaultConfirmation)
+	th.Equals(t, defaultConfirmation, confirmation)
 
 	cleanupQuestionTest()
 }
 
 func TestAskBootScript_WithDefault(t *testing.T) {
-	defaultBootScript := ""
+	defaultBootScript, err := ioutil.TempFile("", "mocked_filepath")
+	defer os.Remove(defaultBootScript.Name())
+	if err != nil {
+		t.Errorf("There was an error creating tempfile: %v", err)
+	}
 	initQuestionTest(t, "\n")
 
-	answer := question.AskBootScript(testEC2, defaultBootScript)
-	th.Equals(t, defaultBootScript, answer)
+	answer := question.AskBootScript(testEC2, defaultBootScript.Name())
+	th.Equals(t, defaultBootScript.Name(), answer)
 
 	cleanupQuestionTest()
 }
@@ -1538,7 +1548,7 @@ func TestAskUserTagsConfirmation_WithDefault(t *testing.T) {
 	userTags["key"] = "value"
 
 	confirmation := question.AskUserTagsConfirmation(testEC2, userTags)
-	th.Equals(t, confirmation, defaultConfirmation)
+	th.Equals(t, defaultConfirmation, confirmation)
 
 	cleanupQuestionTest()
 }
