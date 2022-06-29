@@ -15,7 +15,9 @@ package question_test
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -1118,11 +1120,55 @@ func TestAskIamProfile_Error(t *testing.T) {
 }
 
 func TestAskCapacityType(t *testing.T) {
-	expectedAnswer := question.DefaultCapacityTypeText.Spot
+	expectedCapacity := question.DefaultCapacityTypeText.Spot
 	initQuestionTest(t, "2\n")
 
 	answer := question.AskCapacityType(testInstanceType, "")
-	th.Equals(t, expectedAnswer, answer)
+	th.Equals(t, expectedCapacity, answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskBootScriptConfirmation(t *testing.T) {
+	expectedConfirmation := cli.ResponseYes
+	initQuestionTest(t, cli.ResponseYes+"\n")
+
+	answer := question.AskBootScriptConfirmation(testEC2, "")
+	th.Equals(t, answer, expectedConfirmation)
+
+	cleanupQuestionTest()
+}
+
+func TestAskBootScript(t *testing.T) {
+	expectedBootScript := ""
+	initQuestionTest(t, expectedBootScript+"\n")
+
+	answer := question.AskBootScript(testEC2, "")
+	th.Equals(t, expectedBootScript, answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskUserTagsConfirmation(t *testing.T) {
+	expectedConfirmation := cli.ResponseNo
+	initQuestionTest(t, cli.ResponseNo+"\n")
+
+	userTags := make(map[string]string)
+
+	answer := question.AskUserTagsConfirmation(testEC2, userTags)
+	th.Equals(t, answer, expectedConfirmation)
+
+	cleanupQuestionTest()
+}
+
+func TestAskUserTags(t *testing.T) {
+	expectedTags := "Key1|Value1,Key2|Value2,Key3|Value3,Key4|Value4"
+	initQuestionTest(t, expectedTags+"\n")
+
+	userTags := make(map[string]string)
+
+	answer := question.AskUserTags(testEC2, userTags)
+	th.Equals(t, answer, expectedTags)
 
 	cleanupQuestionTest()
 }
@@ -1138,4 +1184,401 @@ func initQuestionTest(t *testing.T, input string) {
 func cleanupQuestionTest() string {
 	th.RestoreStdin()
 	return th.ReadStdout()
+}
+
+/*
+Question Default Testing
+*/
+
+func TestAskRegion_WithDefault(t *testing.T) {
+	const defaultRegion = "us-west-1"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		Regions: []*ec2.Region{
+			{
+				RegionName: aws.String("us-east-1"),
+			},
+			{
+				RegionName: aws.String("us-east-2"),
+			},
+			{
+				RegionName: aws.String(defaultRegion),
+			},
+			{
+				RegionName: aws.String("us-west-2"),
+			},
+		},
+	}
+
+	answer, err := question.AskRegion(testEC2, defaultRegion)
+	th.Ok(t, err)
+
+	th.Equals(t, defaultRegion, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskLaunchTemplate_WithDefault(t *testing.T) {
+	const defaultTemplateId = "lt-67890"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		LaunchTemplates: []*ec2.LaunchTemplate{
+			{
+				LaunchTemplateId:    aws.String("lt-12345"),
+				LaunchTemplateName:  aws.String("lt-12345"),
+				LatestVersionNumber: aws.Int64(1),
+			},
+			{
+				LaunchTemplateId:    aws.String(defaultTemplateId),
+				LaunchTemplateName:  aws.String(defaultTemplateId),
+				LatestVersionNumber: aws.Int64(1),
+			},
+		},
+	}
+
+	answer := question.AskLaunchTemplate(testEC2, defaultTemplateId)
+	th.Equals(t, defaultTemplateId, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskLaunchTemplateVersion_WithDefault(t *testing.T) {
+	const testTemplateId = "lt-12345"
+	const defaultVersion = 2
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
+			{
+				LaunchTemplateId:   aws.String(testTemplateId),
+				VersionDescription: aws.String("description"),
+				VersionNumber:      aws.Int64(1),
+				DefaultVersion:     aws.Bool(true),
+			},
+			{
+				LaunchTemplateId: aws.String(testTemplateId),
+				VersionNumber:    aws.Int64(defaultVersion),
+				DefaultVersion:   aws.Bool(false),
+			},
+		},
+	}
+
+	answer, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId, strconv.Itoa(defaultVersion))
+	th.Ok(t, err)
+	th.Equals(t, strconv.Itoa(defaultVersion), *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskIfEnterInstanceType_WithDefault(t *testing.T) {
+	const defaultInstanceType = "t3.medium"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		InstanceTypes: []*ec2.InstanceTypeInfo{
+			{
+				InstanceType:     aws.String(ec2.InstanceTypeT2Micro),
+				FreeTierEligible: aws.Bool(true),
+			},
+			{
+				InstanceType:     aws.String(defaultInstanceType),
+				FreeTierEligible: aws.Bool(true),
+			},
+		},
+	}
+
+	answer, err := question.AskIfEnterInstanceType(testEC2, defaultInstanceType)
+	th.Ok(t, err)
+	th.Equals(t, defaultInstanceType, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskInstanceType_WithDefault(t *testing.T) {
+	const defaultInstanceType = "t1.micro"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		InstanceTypes: []*ec2.InstanceTypeInfo{
+			{
+				InstanceType:     aws.String(ec2.InstanceTypeT2Micro),
+				FreeTierEligible: aws.Bool(true),
+			},
+			{
+				InstanceType:     aws.String(defaultInstanceType),
+				FreeTierEligible: aws.Bool(true),
+			},
+		},
+	}
+
+	answer, err := question.AskInstanceType(testEC2, defaultInstanceType)
+	th.Ok(t, err)
+	th.Equals(t, defaultInstanceType, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskImage_WithDefault(t *testing.T) {
+	const defaultImage = "ami-12345"
+	const testInstanceType = ec2.InstanceTypeT2Micro
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		InstanceTypes: []*ec2.InstanceTypeInfo{
+			{
+				InstanceType:             aws.String(testInstanceType),
+				InstanceStorageSupported: aws.Bool(true),
+				ProcessorInfo:            &ec2.ProcessorInfo{SupportedArchitectures: defaultArchitecture},
+			},
+		},
+		Images: []*ec2.Image{
+			{
+				ImageId:      aws.String("ami-92307"),
+				CreationDate: aws.String("some time"),
+			},
+			{
+				ImageId:      aws.String(defaultImage),
+				CreationDate: aws.String("some time"),
+			},
+			{
+				ImageId:      aws.String("ami-13458"),
+				CreationDate: aws.String("some other time"),
+			},
+		},
+	}
+
+	answer, err := question.AskImage(testEC2, testInstanceType, defaultImage)
+	th.Ok(t, err)
+	th.Equals(t, defaultImage, *answer.ImageId)
+
+	cleanupQuestionTest()
+}
+
+func TestAskIamProfile_WithDefault(t *testing.T) {
+	defaultProfileName := "profile2"
+	testProfiles := []*iam.InstanceProfile{
+		{
+			InstanceProfileName: aws.String("profile1"),
+			InstanceProfileId:   aws.String("id1"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+		{
+			InstanceProfileName: aws.String(defaultProfileName),
+			InstanceProfileId:   aws.String("id2"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+		{
+			InstanceProfileName: aws.String("profile3"),
+			InstanceProfileId:   aws.String("id3"),
+			CreateDate:          aws.Time(time.Now()),
+		},
+	}
+	mockedIam := &th.MockedIAMSvc{
+		InstanceProfiles: testProfiles,
+	}
+	iam := &iamhelper.IAMHelper{Client: mockedIam}
+	initQuestionTest(t, "\n")
+
+	answer, err := question.AskIamProfile(iam, defaultProfileName)
+	th.Ok(t, err)
+	th.Equals(t, defaultProfileName, answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskVpc_WithDefault(t *testing.T) {
+	const defaultVpc = "vpc-91378"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		Vpcs: []*ec2.Vpc{
+			{
+				VpcId:     aws.String("vpc-12345"),
+				CidrBlock: aws.String("some block"),
+				Tags: []*ec2.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String("test vpc"),
+					},
+				},
+				IsDefault: aws.Bool(true),
+			},
+			{
+				VpcId:     aws.String("vpc-67890"),
+				CidrBlock: aws.String("some block"),
+				IsDefault: aws.Bool(false),
+			},
+			{
+				VpcId:     aws.String(defaultVpc),
+				CidrBlock: aws.String("some block"),
+				IsDefault: aws.Bool(false),
+			},
+			{
+				VpcId:     aws.String("vpc-41239"),
+				CidrBlock: aws.String("some block"),
+				IsDefault: aws.Bool(false),
+			},
+		},
+	}
+
+	answer, err := question.AskVpc(testEC2, defaultVpc)
+	th.Ok(t, err)
+	th.Equals(t, defaultVpc, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskSubnet_WithDefault(t *testing.T) {
+	const testVpc = "vpc-12345"
+	const defaultSubnet = "subnet-12345"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		Subnets: []*ec2.Subnet{
+			{
+				SubnetId:         aws.String("subnet-01894"),
+				VpcId:            aws.String(testVpc),
+				CidrBlock:        aws.String("some block"),
+				AvailabilityZone: aws.String("some az"),
+				Tags: []*ec2.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String("test subnet"),
+					},
+				},
+			},
+			{
+				SubnetId:         aws.String("subnet-67890"),
+				VpcId:            aws.String(testVpc),
+				CidrBlock:        aws.String("some block"),
+				AvailabilityZone: aws.String("some az"),
+			},
+			{
+				SubnetId:         aws.String("subnet-77245"),
+				VpcId:            aws.String(testVpc),
+				CidrBlock:        aws.String("some block"),
+				AvailabilityZone: aws.String("some other az"),
+			},
+			{
+				SubnetId:         aws.String(defaultSubnet),
+				VpcId:            aws.String(testVpc),
+				CidrBlock:        aws.String("some block"),
+				AvailabilityZone: aws.String("some az"),
+			},
+		},
+	}
+
+	answer, err := question.AskSubnet(testEC2, testVpc, defaultSubnet)
+	th.Ok(t, err)
+	th.Equals(t, defaultSubnet, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskSubnetPlaceholder_WithDefault(t *testing.T) {
+	const defaultAz = "us-east-2"
+	initQuestionTest(t, "\n")
+
+	testEC2.Svc = &th.MockedEC2Svc{
+		AvailabilityZones: []*ec2.AvailabilityZone{
+			{
+				ZoneName: aws.String("us-east-1"),
+				ZoneId:   aws.String("some id"),
+			},
+			{
+				ZoneName: aws.String(defaultAz),
+				ZoneId:   aws.String("some id"),
+			},
+			{
+				ZoneName: aws.String("us-west-1"),
+				ZoneId:   aws.String("some id"),
+			},
+			{
+				ZoneName: aws.String("us-west-2"),
+				ZoneId:   aws.String("some id"),
+			},
+		},
+	}
+
+	answer, err := question.AskSubnetPlaceholder(testEC2, defaultAz)
+	th.Ok(t, err)
+	th.Equals(t, defaultAz, *answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskBootScriptConfirmation_WithDefault(t *testing.T) {
+	defaultBootScript := ""
+	defaultConfirmation := cli.ResponseNo
+	initQuestionTest(t, "\n")
+
+	confirmation := question.AskBootScriptConfirmation(testEC2, defaultBootScript)
+	th.Equals(t, confirmation, defaultConfirmation)
+
+	cleanupQuestionTest()
+}
+
+func TestAskBootScript_WithDefault(t *testing.T) {
+	defaultBootScript := ""
+	initQuestionTest(t, "\n")
+
+	answer := question.AskBootScript(testEC2, defaultBootScript)
+	th.Equals(t, defaultBootScript, answer)
+
+	cleanupQuestionTest()
+}
+
+func TestAskUserTagsConfirmation_WithDefault(t *testing.T) {
+	defaultConfirmation := cli.ResponseYes
+	initQuestionTest(t, "\n")
+
+	userTags := make(map[string]string)
+	userTags["key"] = "value"
+
+	confirmation := question.AskUserTagsConfirmation(testEC2, userTags)
+	th.Equals(t, confirmation, defaultConfirmation)
+
+	cleanupQuestionTest()
+}
+
+func TestAskUserTags_WithDefault(t *testing.T) {
+	expectedTagString := "Key1|Value1,Key2|Value2,Key3|Value3,Key4|Value4"
+	expectedTags := strings.Split(expectedTagString, ",")
+	initQuestionTest(t, "\n")
+
+	userTags := make(map[string]string)
+	userTags["Key1"] = "Value1"
+	userTags["Key2"] = "Value2"
+	userTags["Key3"] = "Value3"
+	userTags["Key4"] = "Value4"
+
+	answer := question.AskUserTags(testEC2, userTags)
+	actualTags := strings.Split(answer, ",")
+
+	th.Assert(t, len(actualTags) == 4, "ActualTags length should be 4")
+	for _, expectedTag := range expectedTags {
+		thisTagMatches := false
+		for _, actualTag := range actualTags {
+			if expectedTag == actualTag {
+				th.Equals(t, expectedTag, actualTag)
+				thisTagMatches = true
+				break
+			}
+		}
+		th.Assert(t, thisTagMatches, fmt.Sprintf("Unable to find matching actual tag for expected tag %s", expectedTag))
+	}
+
+	cleanupQuestionTest()
+}
+
+func TestAskCapacityType_WithDefault(t *testing.T) {
+	defaultCapacity := question.DefaultCapacityTypeText.Spot
+	initQuestionTest(t, "\n")
+
+	answer := question.AskCapacityType(testInstanceType, defaultCapacity)
+	th.Equals(t, defaultCapacity, answer)
+
+	cleanupQuestionTest()
 }

@@ -428,10 +428,10 @@ The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
 func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultsConfig *config.DetailedInfo) bool {
-	var defaultAzId, defaultSubnetId, defaultVpcId string
+	var defaultAz, defaultSubnetId, defaultVpcId string
 	if defaultsConfig != nil {
 		if defaultsConfig.Subnet != nil {
-			defaultAzId = *defaultsConfig.Subnet.AvailabilityZoneId
+			defaultAz = *defaultsConfig.Subnet.AvailabilityZoneId
 			defaultSubnetId = *defaultsConfig.Subnet.SubnetId
 		}
 		if defaultsConfig.Vpc != nil {
@@ -450,17 +450,13 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	*/
 	if *vpcId == cli.ResponseNew {
 		simpleConfig.NewVPC = true
-		result := ReadSubnetPlaceholder(h, simpleConfig, defaultAzId)
+		result := ReadSubnetPlaceholder(h, simpleConfig, defaultAz)
 		ReadSecurityGroupPlaceholder(h, simpleConfig)
 		return result
 	} else {
 		// If the resources are not specified in the config, ask for them
-		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
-			(flagConfig.SecurityGroupIds == nil && !ReadSecurityGroups(h, simpleConfig, *vpcId)) {
-			return false
-		}
-
-		return true
+		return !(flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
+			(flagConfig.SecurityGroupIds == nil && !ReadSecurityGroups(h, simpleConfig, *vpcId))
 	}
 }
 
@@ -485,8 +481,8 @@ func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId s
 Ask user input for subnet placeholder. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAzId string) bool {
-	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAzId)
+func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAz string) bool {
+	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAz)
 	if cli.ShowError(err, "Asking availability zone failed") {
 		return false
 	}
