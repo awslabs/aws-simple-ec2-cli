@@ -767,7 +767,7 @@ func AskSubnet(h *ec2helper.EC2Helper, vpcId string, defaultSubnetId string) (*s
 }
 
 // Ask the users to select a subnet placeholder
-func AskSubnetPlaceholder(h *ec2helper.EC2Helper, defaultAzId string) (*string, error) {
+func AskSubnetPlaceholder(h *ec2helper.EC2Helper, defaultAz string) (*string, error) {
 	availabilityZones, err := h.GetAvailableAvailabilityZones()
 	if err != nil {
 		return nil, err
@@ -779,7 +779,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper, defaultAzId string) (*string, 
 	// Add availability zones to the data for table
 	var defaultOptionValue *string
 	for index, zone := range availabilityZones {
-		if defaultAzId != "" && *zone.ZoneId == defaultAzId {
+		if defaultAz != "" && *zone.ZoneName == defaultAz {
 			defaultOptionValue = zone.ZoneName
 		}
 		indexedOptions = append(indexedOptions, *zone.ZoneName)
@@ -787,7 +787,7 @@ func AskSubnetPlaceholder(h *ec2helper.EC2Helper, defaultAzId string) (*string, 
 		data = append(data, []string{fmt.Sprintf("%d.", index+1), *zone.ZoneName, *zone.ZoneId})
 	}
 
-	if defaultOptionValue != nil {
+	if defaultOptionValue == nil {
 		defaultOptionValue = &data[0][1]
 	}
 
