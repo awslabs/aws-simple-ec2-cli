@@ -51,22 +51,22 @@ brew install aws-simple-ec2-cli
 
 #### MacOS/Linux
 ```
-curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.1/simple-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.2/simple-ec2-`uname | tr '[:upper:]' '[:lower:]'`-amd64
 chmod +x simple-ec2
 ```
 
 #### ARM Linux
 ```
-curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.1/simple-ec2-linux-arm
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.2/simple-ec2-linux-arm
 ```
 
 ```
-curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.1/simple-ec2-linux-arm64
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.2/simple-ec2-linux-arm64
 ```
 
 #### Windows
 ```
-curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.1/simple-ec2-windows-amd64.exe
+curl -Lo simple-ec2 https://github.com/awslabs/aws-simple-ec2-cli/releases/download/v0.8.2/simple-ec2-windows-amd64.exe
 ```
 
 ## Examples
