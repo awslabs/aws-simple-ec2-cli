@@ -5,7 +5,8 @@ CLI_BINARY_NAME = simple-ec2
 VERSION ?= $(shell git describe --tags --always --dirty)
 IMG ?= amazon/aws-simple-ec2-cli
 BIN ?= simple-ec2
-REPO_FULL_NAME ?= awslabs/aws-simple-ec2-cli
+REPO_SHORT_NAME ?= aws-simple-ec2-cli
+REPO_FULL_NAME ?= awslabs/${REPO_SHORT_NAME}
 GOOS ?= $(uname | tr '[:upper:]' '[:lower:]')
 GOARCH ?= amd64
 GOPROXY ?= "https://proxy.golang.org,direct"
@@ -114,10 +115,10 @@ fmt:
 	goimports -w ./ && gofmt -s -w ./
 
 homebrew-sync-dry-run:
-	${MAKEFILE_PATH}/scripts/sync-to-aws-homebrew-tap -d -b ${BIN} -r ${REPO_FULL_NAME} -p ${SUPPORTED_PLATFORMS} -v ${LATEST_RELEASE_TAG}
+	${MAKEFILE_PATH}/scripts/sync-to-aws-homebrew-tap -d -b ${BIN} -f ${REPO_SHORT_NAME} -r ${REPO_FULL_NAME} -p ${SUPPORTED_PLATFORMS} -v ${LATEST_RELEASE_TAG}
 
 homebrew-sync:
-	${MAKEFILE_PATH}/scripts/sync-to-aws-homebrew-tap -b ${BIN} -r ${REPO_FULL_NAME} -p ${SUPPORTED_PLATFORMS}
+	${MAKEFILE_PATH}/scripts/sync-to-aws-homebrew-tap -b ${BIN} -f ${REPO_SHORT_NAME} -r ${REPO_FULL_NAME} -p ${SUPPORTED_PLATFORMS}
 
 ## requires a github token
 upload-resources-to-github:
