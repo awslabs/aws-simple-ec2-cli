@@ -28,6 +28,7 @@ import (
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
 	"simple-ec2/pkg/iamhelper"
+	"simple-ec2/pkg/questionModel"
 	"simple-ec2/pkg/table"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/ec2pricing"
@@ -144,8 +145,7 @@ func GetQuestion(input *AskQuestionInput) {
 // Ask for the region to use
 func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	regionDescription := getRegionDescriptions()
-	const regionPerRow = 1
-	const elementPerRegion = 3
+	const elementPerRegion = 2
 
 	// Get all enabled regions and make sure no error
 	regions, err := h.GetEnabledRegions()
@@ -157,23 +157,19 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	indexedOptions := []string{}
 
 	// Fill the data used for drawing a table and the options map
-	var row []string
-	for index, region := range regions {
+	// var row []string
+	for _, region := range regions {
+		row := []string{}
 		indexedOptions = append(indexedOptions, *region.RegionName)
 
-		if index%regionPerRow == 0 {
-			row = []string{}
-		}
-
-		row = append(row, fmt.Sprintf("%d.", index+1))
 		row = append(row, fmt.Sprintf("%s", *region.RegionName))
 		desc, found := (*regionDescription)[*region.RegionName]
 		if found {
 			row = append(row, desc)
 		}
 
-		// Append the row to the data when the row is filled with 4 elements
-		if len(row) == regionPerRow*elementPerRegion {
+		// Append the row to the data when the row is filled with 2 elements
+		if len(row) == elementPerRegion {
 			data = append(data, row)
 		}
 	}
@@ -183,16 +179,23 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 		defaultOption = &defaultRegion
 	}
 
-	optionsText := table.BuildTable(data, []string{"Option", "Region", "Description"})
-	question := "Region"
+	headers := []string{"Region", "Description"}
+	question := "Which Region?"
 
-	answer := AskQuestion(&AskQuestionInput{
+	regionQuestion := &questionModel.SingleSelectList{}
+	err = questionModel.AskQuestion(regionQuestion, &questionModel.BubbleTeaData{
+		OptionData:     data,
 		QuestionString: question,
-		DefaultOption:  defaultOption,
-		OptionsString:  &optionsText,
+		DefaultOption:  *defaultOption,
 		IndexedOptions: indexedOptions,
+		HeaderStrings:  headers,
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
+	answer := regionQuestion.GetChoice()
 	return &answer, nil
 }
 
