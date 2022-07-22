@@ -15,6 +15,7 @@ BREW_CONFIG_DIR="${BUILD_DIR}/brew-config"
 
 REPO=$(make -s -f "${SCRIPTPATH}/../Makefile" repo-full-name)
 BINARY_BASE=""
+FORMULA_NAME=""
 PLATFORMS=("darwin/amd64" "linux/amd64")
 DRY_RUN=0
 
@@ -41,18 +42,22 @@ USAGE=$(cat << EOM
             -r          Github repo to sync to in the form of "org/name"  (i.e. -r "awslabs/aws-simple-ec2-cli") [DEFAULT: output of \`make repo-full-name\`]
             -v          VERSION: The application version of the docker image [DEFAULT: output of \`make version\`]
             -p          Platform pair list (os/architecture) [DEFAULT: linux/amd64]
+            -f          Formula name [DEFAULT: same as binary basename]
             -d          Dry-Run will do all steps except pushing to git and opening the sync PR
 EOM
 )
 
 # Process our input arguments
-while getopts "p:b:r:v:d" opt; do
+while getopts "p:b:f:r:v:d" opt; do
   case ${opt} in
     r ) # Github repo
         REPO="$OPTARG"
       ;;
     b ) # binary basename
         BINARY_BASE="$OPTARG"
+      ;;
+    f ) # Formula name
+        FORMULA_NAME="$OPTARG"
       ;;
     p ) # Supported Platforms
         IFS=',' read -ra PLATFORMS <<< "$OPTARG"
@@ -82,6 +87,10 @@ fi
 
 if [[ -z "${REPO}" ]]; then 
   echo "Repo (-r) must be specified if no \"make repo-full-name\" target exists"
+fi
+
+if [[ -z "${FORMULA_NAME}" ]]; then
+  FORMULA_NAME=${BINARY_BASE}
 fi
 
 if [[ -z $(command -v gh) ]] || [[ ! $(gh --version) =~ $GH_CLI_VERSION ]]; then
@@ -170,7 +179,7 @@ for os_arch in "${PLATFORMS[@]}"; do
 
 done
 
-cat << EOM > "${BREW_CONFIG_DIR}/${BINARY_BASE}.json"
+cat << EOM > "${BREW_CONFIG_DIR}/${FORMULA_NAME}.json"
 {
     "name": "${BINARY_BASE}",
     "version": "${VERSION_NUM}",
@@ -178,6 +187,7 @@ cat << EOM > "${BREW_CONFIG_DIR}/${BINARY_BASE}.json"
     "bottle": {
         "root_url": "${BASE_ASSET_URL}",
         "sha256": {
+            "arm64_big_sur": "",
             "sierra": "${MAC_HASH}",
             "linux": "${LINUX_HASH}",
             "linux_arm": "${LINUX_ARM64_HASH}"

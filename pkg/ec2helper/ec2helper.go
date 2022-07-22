@@ -757,10 +757,11 @@ func (h *EC2Helper) GetSecurityGroupsByVpc(vpcId string) ([]*ec2.SecurityGroup, 
 func (h *EC2Helper) CreateSecurityGroupForSsh(vpcId string) (*string, error) {
 	fmt.Println("Creating new security group...")
 
+	groupNameUuid := uuid.New()
 	// Create a new security group
 	creationInput := &ec2.CreateSecurityGroupInput{
 		Description: aws.String("Created by simple-ec2 for SSH connection to instances"),
-		GroupName:   aws.String("simple-ec2 SSH"),
+		GroupName:   aws.String(fmt.Sprintf("simple-ec2 SSH-%s", groupNameUuid)),
 		VpcId:       aws.String(vpcId),
 	}
 
