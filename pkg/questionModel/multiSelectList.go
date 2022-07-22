@@ -21,8 +21,8 @@ import (
 )
 
 /*
-	Represents a question with a list of options from which multiple options may be chosen as the answer.
-	Options may be presented in a table based on initialized data.
+MultiSelectList represents a question with a list of options from which multiple options may be chosen as the answer.
+Options may be presented in a table based on initialized input.
 */
 type MultiSelectList struct {
 	list     list.Model      // The list of options
@@ -33,22 +33,22 @@ type MultiSelectList struct {
 	err      error           // An error caught during the question
 }
 
-// Initializes the model based on the passed in question data
-func (m *MultiSelectList) InitializeModel(data *BubbleTeaData) {
-	header, items, itemMap := createItems(data)
-	items = append(items, item("\n[ Submit ]"))
+// InitializeModel initializes the model based on the passed in question input
+func (m *MultiSelectList) InitializeModel(input *QuestionInput) {
+	header, items, itemMap := createItems(input)
+	items = append(items, item("SUBMIT"))
 
 	// Define how list items are rendered in their focused and unfocused states
 	itemDelegate := itemDelegate{
 		renderUnfocused: func(s string, index int) string {
 			if index == len(items)-1 {
-				return xLargeLeftPadding.Copy().Inherit(blurred).Render(s)
+				return fmt.Sprintf(xLargeLeftPadding.Render("\n[ %s ]"), blurred.Render(s))
 			}
 			return mediumLeftPadding.Render(fmt.Sprintf("%s %s", m.getCheckBox(index), s))
 		},
 		renderFocused: func(s string, index int) string {
 			if index == len(items)-1 {
-				return xLargeLeftPadding.Copy().Inherit(focused).Render(s)
+				return fmt.Sprintf(xLargeLeftPadding.Render("\n[ %s ]"), focused.Render(s))
 			}
 			return focusTableItem(fmt.Sprintf("> %s %s", m.getCheckBox(index), s))
 		},
@@ -57,20 +57,25 @@ func (m *MultiSelectList) InitializeModel(data *BubbleTeaData) {
 	m.list = createModelList(items, itemDelegate, 0)
 	m.header = header
 	m.itemMap = itemMap
-	m.question = data.QuestionString
+	m.question = input.QuestionString
 
 	// Create selected map and select defaults
 	m.selected = make(map[int]item)
-	defaultIndexes := getDefaultOptionIndexes(data)
+	defaultIndexes := getDefaultOptionIndexes(input)
 	for _, defaultIndex := range defaultIndexes {
 		m.selected[defaultIndex] = items[defaultIndex].(item)
 	}
 }
 
+// Init defines an optional command that can be run when the question is asked.
 func (m *MultiSelectList) Init() tea.Cmd {
 	return nil
 }
 
+/*
+Update is called when a message is received. Handles user input to traverse through list,
+select answers, and submit selected answers.
+*/
 func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -84,7 +89,7 @@ func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter, tea.KeySpace:
-			if m.list.Cursor() == len(m.list.Items())-1 {
+			if m.isButtonFocused() {
 				return m, tea.Quit
 			}
 			m.selectItem()
@@ -100,6 +105,7 @@ func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// View renders the view for the question. The view is rendered after every update
 func (m *MultiSelectList) View() string {
 	b := strings.Builder{}
 	if m.question != "" {
@@ -113,6 +119,7 @@ func (m *MultiSelectList) View() string {
 	return b.String()
 }
 
+// GetSelectedValues gets a list of all of the selected values
 func (m *MultiSelectList) GetSelectedValues() []string {
 	values := make([]string, 0, len(m.selected))
 	for _, value := range m.selected {
@@ -121,6 +128,7 @@ func (m *MultiSelectList) GetSelectedValues() []string {
 	return values
 }
 
+// getCheckBox gets a checked or unchecked checkbox based on the selection state at the given item index.
 func (m *MultiSelectList) getCheckBox(checkBoxIndex int) string {
 	checked := "[ ]"
 	if _, ok := m.selected[checkBoxIndex]; ok {
@@ -129,6 +137,7 @@ func (m *MultiSelectList) getCheckBox(checkBoxIndex int) string {
 	return checked
 }
 
+// selectItem selects the focused item, or unselects the focused item if already selected
 func (m *MultiSelectList) selectItem() {
 	_, ok := m.selected[m.list.Cursor()]
 	if ok {
@@ -141,4 +150,8 @@ func (m *MultiSelectList) selectItem() {
 	}
 }
 
+// getError gets the error from the question if one arose
 func (m *MultiSelectList) getError() error { return m.err }
+
+// isButtonFocused returns if the submit button is focused or not
+func (m *MultiSelectList) isButtonFocused() bool { return m.list.Cursor() == len(m.list.Items())-1 }

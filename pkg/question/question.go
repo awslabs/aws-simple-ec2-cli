@@ -179,7 +179,7 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	question := "Which Region?"
 
 	regionQuestion := &questionModel.SingleSelectList{}
-	err = questionModel.AskQuestion(regionQuestion, &questionModel.BubbleTeaData{
+	err = questionModel.AskQuestion(regionQuestion, &questionModel.QuestionInput{
 		OptionData:     data,
 		QuestionString: question,
 		DefaultOption:  *defaultOption,

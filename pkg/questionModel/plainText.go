@@ -21,31 +21,39 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// PlainText represents a question with a text input
 type PlainText struct {
-	textInput         textinput.Model
-	question          string
-	validFunctions    []CheckInput
-	EC2Helper         *ec2helper.EC2Helper
-	invalidMsg        string
-	displayInvalidMsg bool
-	err               error
+	textInput         textinput.Model      // The text input
+	question          string               // The question being asked
+	validFunctions    []CheckInput         // List of functions to validate the input
+	EC2Helper         *ec2helper.EC2Helper // EC2Helper to provide validation methods for text inputs
+	invalidMsg        string               // Message to display if input is invalid
+	displayInvalidMsg bool                 // If the invalid message should be displayed or not
+	err               error                // An error caught during the question
+
 }
 
-func (pt *PlainText) InitializeModel(data *BubbleTeaData) {
+// InitializeModel initializes the model based on the passed in question input
+func (pt *PlainText) InitializeModel(input *QuestionInput) {
 	ti := textinput.New()
-	ti.Placeholder = data.DefaultOption
+	ti.Placeholder = input.DefaultOption
 	ti.Focus()
 
 	pt.textInput = ti
-	pt.question = data.QuestionString
-	pt.validFunctions = data.Fns
-	pt.EC2Helper = data.EC2Helper
+	pt.question = input.QuestionString
+	pt.validFunctions = input.Fns
+	pt.EC2Helper = input.EC2Helper
 }
 
+// Init defines an optional command that can be run when the question is asked.
 func (pt *PlainText) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+/*
+Update is called when a message is received. Handles user input to enter text input and
+inform user if the input is invalid
+*/
 func (pt *PlainText) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -60,6 +68,7 @@ func (pt *PlainText) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if pt.textInput.Value() == "" {
 				pt.textInput.SetValue(pt.textInput.Placeholder)
 			}
+			// If input is valid quit. If invalid display error msg and reset input text
 			if pt.isValidInput(pt.textInput.Value()) {
 				pt.displayInvalidMsg = false
 				return pt, tea.Quit
@@ -80,6 +89,7 @@ func (pt *PlainText) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return pt, cmd
 }
 
+// View renders the view for the question. The view is rendered after every update
 func (pt *PlainText) View() string {
 	b := strings.Builder{}
 	if pt.question != "" {
@@ -92,8 +102,10 @@ func (pt *PlainText) View() string {
 	return b.String()
 }
 
+// getError gets the error from the question if one arose
 func (pt *PlainText) getError() error { return pt.err }
 
+// isValidInput determines whether the answer is valid based on PlainText's validFunctions attribute
 func (pt *PlainText) isValidInput(answer string) bool {
 	if pt.EC2Helper != nil && pt.validFunctions != nil {
 		for _, fn := range pt.validFunctions {
@@ -106,4 +118,5 @@ func (pt *PlainText) isValidInput(answer string) bool {
 	return true
 }
 
+// GetTextAnswer gets the answer from the text entry
 func (pt *PlainText) GetTextAnswer() string { return pt.textInput.Value() }

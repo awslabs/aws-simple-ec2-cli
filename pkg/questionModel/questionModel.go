@@ -50,11 +50,11 @@ var (
 	exitError  = errors.New("Exiting the questionnaire")
 )
 
-// Used to validate a given string using validation methods from ec2helper
+// CheckInput is used to validate a given string using validation methods from ec2helper
 type CheckInput func(*ec2helper.EC2Helper, string) bool
 
-// Data that can be used to initialize each question
-type BubbleTeaData struct {
+// QuestionInput represents input that can be used to initialize each question
+type QuestionInput struct {
 	DefaultOption     string               // Defaulted set/selected answer
 	DefaultOptionList []string             // List of default selected answers
 	OptionData        [][]string           // Data used to fill in question tables
@@ -66,23 +66,25 @@ type BubbleTeaData struct {
 }
 
 /*
-	Represents a bubbleTea question. Builds on BubbleTea's tea.Model interface to allow
-	for the initialization of the question model and to retrieve any errors that may occur
+questionModel represents a question. Builds on BubbleTea's tea.Model interface to allow
+for the initialization of a question model and to retrieve any errors that may occur
 */
-type bubbleModel interface {
-	InitializeModel(data *BubbleTeaData)
+type questionModel interface {
+	InitializeModel(input *QuestionInput)
 	Init() tea.Cmd
 	Update(msg tea.Msg) (tea.Model, tea.Cmd)
 	View() string
 	getError() error
 }
 
-// Represents an item, or row, in a list
+// item represents an item, or row, in a list
 type item string
 
+// FilterValue is the value used when filtering against the item in a list.
+// Used to implement the list.Item iterface
 func (i item) FilterValue() string { return "" }
 
-// Defines how an item is rendered is rednered in a list
+// itemDelegate defines how an item is rendered is rednered in a list
 type itemDelegate struct {
 	renderUnfocused func(str string, index int) string
 	renderFocused   func(str string, index int) string
@@ -93,7 +95,7 @@ func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
 func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
 
-// Renders an item, or row,  in a list. Also needed to implement the itemDelegate interface
+// Render renders an item, or row,  in a list. Also needed to implement the itemDelegate interface
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	i, ok := listItem.(item)
 	if !ok {
@@ -109,13 +111,13 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 }
 
 /*
-	Initialized the given question model with question data and asks the question. Finishes
-	when answer is given, or user exits out of the question. Returns the error from the question
-	model.
+AskQuestion initializes the given question model with question input and asks the question. Finishes
+when answer is given, or user exits out of the question. Returns the error from the question
+model.
 */
-func AskQuestion(model bubbleModel, questionData *BubbleTeaData) error {
+func AskQuestion(model questionModel, questionInput *QuestionInput) error {
 	fmt.Println()
-	model.InitializeModel(questionData)
+	model.InitializeModel(questionInput)
 	p := tea.NewProgram(model)
 	if err := p.Start(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
@@ -125,11 +127,11 @@ func AskQuestion(model bubbleModel, questionData *BubbleTeaData) error {
 }
 
 /*
-	Creates the items for a list in a question. The items are made from a question table along with
-	the table's header, and a map to retrieve indexed answers.
+createItems creates the items for a list in a question. The items are made from a question table along with
+the table's header, and a map to retrieve indexed answers.
 */
-func createItems(data *BubbleTeaData) (header string, itemList []list.Item, itemMap map[item]string) {
-	tableString := createQuestionTable(data.OptionData, data.HeaderStrings)
+func createItems(input *QuestionInput) (header string, itemList []list.Item, itemMap map[item]string) {
+	tableString := createQuestionTable(input.OptionData, input.HeaderStrings)
 	optionStrings := strings.Split(strings.TrimSuffix(tableString, "\n"), "\n")
 
 	// Remove Empty Lines
@@ -143,17 +145,17 @@ func createItems(data *BubbleTeaData) (header string, itemList []list.Item, item
 
 	// Seperate the header from the table rows
 	header = ""
-	if len(data.HeaderStrings) != 0 {
+	if len(input.HeaderStrings) != 0 {
 		header = strings.Join(optionStrings[0:2], "\n")
 		optionStrings = optionStrings[2:]
 	}
 
 	// Creates list of items and item map
 	itemList = []list.Item{}
-	itemMap = make(map[item]string, len(data.OptionData))
+	itemMap = make(map[item]string, len(input.OptionData))
 	for index, itemString := range optionStrings {
-		if len(data.IndexedOptions) == len(data.OptionData) {
-			itemMap[item(itemString)] = data.IndexedOptions[index]
+		if len(input.IndexedOptions) == len(input.OptionData) {
+			itemMap[item(itemString)] = input.IndexedOptions[index]
 		}
 		if strings.TrimSpace(itemString) != "" {
 			itemList = append(itemList, item(itemString))
@@ -164,12 +166,11 @@ func createItems(data *BubbleTeaData) (header string, itemList []list.Item, item
 }
 
 /*
-	Creates a model list to be used in a list type question. Sets the initial selected option as the
-	given default option.
+createModelList creates a model list to be used in a list type question. Sets the initial selected option as
+the given default option.
 */
 func createModelList(items []list.Item, itemDelegate itemDelegate, defaultOptionIndex int) list.Model {
 	modelList := list.New(items, itemDelegate, defaultWidth, len(items)+1)
-
 	modelList.SetShowStatusBar(false)
 	modelList.SetFilteringEnabled(false)
 	modelList.SetShowTitle(false)
@@ -182,8 +183,8 @@ func createModelList(items []list.Item, itemDelegate itemDelegate, defaultOption
 }
 
 /*
-	Creates a table to have a formatted display for options in questions. If headers are
-	provided for a question then the table will be formatted with glamour.
+createQuestionTable creates a table to have a formatted display for options in questions. If headers are
+provided for a question then the table will be formatted with glamour.
 */
 func createQuestionTable(tableData [][]string, headers []string) string {
 	// Adds head seperators to create proper format for a glamour table, if headers exist
@@ -224,7 +225,7 @@ func createQuestionTable(tableData [][]string, headers []string) string {
 	return tableString
 }
 
-// Focuses a given item from a table. Focuses everything besides the column seperator
+// focusTableItem focuses a given item from a table. Focuses everything besides the column seperator
 func focusTableItem(tableItem string) string {
 	splitString := strings.Split(tableItem, columnSeperator)
 	for i := 0; i < len(splitString); i++ {
@@ -237,11 +238,11 @@ func focusTableItem(tableItem string) string {
 	return strings.Join(splitString, columnSeperator)
 }
 
-// Gets the index of the default option. If not found then -1 is returned
-func getDefaultOptionIndex(data *BubbleTeaData) int {
+// getDefaultOptionIndex gets the index of the default option. If not found then -1 is returned
+func getDefaultOptionIndex(input *QuestionInput) int {
 	defaultOptionIndex := -1
-	for index, option := range data.IndexedOptions {
-		if option == data.DefaultOption {
+	for index, option := range input.IndexedOptions {
+		if option == input.DefaultOption {
 			defaultOptionIndex = index
 			break
 		}
@@ -249,12 +250,12 @@ func getDefaultOptionIndex(data *BubbleTeaData) int {
 	return defaultOptionIndex
 }
 
-// Gets a list of indexes of default options
-func getDefaultOptionIndexes(data *BubbleTeaData) []int {
+// getDefaultOptionIndexes gets a list of indexes of default options
+func getDefaultOptionIndexes(input *QuestionInput) []int {
 	defaultOptionIndexes := []int{}
-	for _, option := range data.DefaultOptionList {
-		data.DefaultOption = option
-		if defaultOptionIndex := getDefaultOptionIndex(data); defaultOptionIndex != -1 {
+	for _, option := range input.DefaultOptionList {
+		input.DefaultOption = option
+		if defaultOptionIndex := getDefaultOptionIndex(input); defaultOptionIndex != -1 {
 			defaultOptionIndexes = append(defaultOptionIndexes, defaultOptionIndex)
 		}
 	}

@@ -20,8 +20,8 @@ import (
 )
 
 /*
-	Represents a question with a list of options from which a single option is chosen as the answer.
-	Options may be presented in a table based on initialized data.
+SingleSelectList represents a question with a list of options from which a single option is chosen as the answer.
+Options may be presented in a table based on initialized input.
 */
 type SingleSelectList struct {
 	list     list.Model      // The list of options
@@ -32,9 +32,9 @@ type SingleSelectList struct {
 	err      error           // An error caught during the question
 }
 
-// Initializes the model based on the passed in question data
-func (s *SingleSelectList) InitializeModel(data *BubbleTeaData) {
-	header, items, itemMap := createItems(data)
+// InitializeModel initializes the model based on the passed in question input
+func (s *SingleSelectList) InitializeModel(input *QuestionInput) {
+	header, items, itemMap := createItems(input)
 
 	// Define how list items are rendered in their focused and unfocused states
 	itemDelegate := itemDelegate{
@@ -46,7 +46,7 @@ func (s *SingleSelectList) InitializeModel(data *BubbleTeaData) {
 		},
 	}
 
-	defaultOptionIndex := getDefaultOptionIndex(data)
+	defaultOptionIndex := getDefaultOptionIndex(input)
 	if defaultOptionIndex == -1 {
 		defaultOptionIndex = 0
 	}
@@ -54,26 +54,20 @@ func (s *SingleSelectList) InitializeModel(data *BubbleTeaData) {
 	s.list = createModelList(items, itemDelegate, defaultOptionIndex)
 	s.header = header
 	s.itemMap = itemMap
-	s.question = data.QuestionString
+	s.question = input.QuestionString
 }
 
-/*
-	Defines an optional command that can be run when the question is asked. Return
-	nil to not perform an initial command.
-*/
+// Init defines an optional command that can be run when the question is asked.
 func (s *SingleSelectList) Init() tea.Cmd {
 	return nil
 }
 
 /*
-	Called when a message is received. Handles user input to traverse through list and
-	select an answer.
+Update is called when a message is received. Handles user input to traverse through list and
+select an answer.
 */
 func (s *SingleSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		s.list.SetWidth(msg.Width)
-		return s, tea.Quit
 
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -96,7 +90,7 @@ func (s *SingleSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s, cmd
 }
 
-// Renders the view for the question. The view is rendered after every update
+// View renders the view for the question. The view is rendered after every update
 func (s *SingleSelectList) View() string {
 	b := strings.Builder{}
 	if s.question != "" {
@@ -110,13 +104,13 @@ func (s *SingleSelectList) View() string {
 	return b.String()
 }
 
-// Gets the selected choice
+// GetChoice gets the selected choice
 func (s *SingleSelectList) GetChoice() string { return s.choice }
 
-// Gets the error from the question if one arose
+// getError gets the error from the question if one arose
 func (s *SingleSelectList) getError() error { return s.err }
 
-// Selects the focused item in the list
+// selectItem selects the focused item in the list
 func (s *SingleSelectList) selectItem() {
 	i, ok := s.list.SelectedItem().(item)
 	if ok {
