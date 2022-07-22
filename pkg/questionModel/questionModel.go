@@ -1,6 +1,19 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"). You may
+// not use this file except in compliance with the License. A copy of the
+// License is located at
+//
+//     http://aws.amazon.com/apache2.0/
+//
+// or in the "license" file accompanying this file. This file is distributed
+// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language governing
+// permissions and limitations under the License.
 package questionModel
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,36 +27,48 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-const defaultWidth = 20
+const (
+	defaultWidth = 20
+	// Column seperator in glamour tables
+	columnSeperator = "│"
+)
 
 var (
+	// Styling to add left padding to strings
 	noStyle           = lipgloss.NewStyle()
 	xSmallLeftPadding = lipgloss.NewStyle().PaddingLeft(1)
 	smallLeftPadding  = lipgloss.NewStyle().PaddingLeft(3)
 	mediumLeftPadding = lipgloss.NewStyle().PaddingLeft(5)
 	largeLeftPadding  = lipgloss.NewStyle().PaddingLeft(7)
 	xLargeLeftPadding = lipgloss.NewStyle().PaddingLeft(9)
-	focused           = lipgloss.NewStyle().Foreground(lipgloss.Color("170"))
-	blurred           = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-	errorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+
+	focused = lipgloss.NewStyle().Foreground(lipgloss.Color("170")) // Pink
+	blurred = lipgloss.NewStyle().Foreground(lipgloss.Color("240")) // Gray
+
+	helpStyle  = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	exitError  = errors.New("Exiting the questionnaire")
 )
 
+// Used to validate a given string using validation methods from ec2helper
 type CheckInput func(*ec2helper.EC2Helper, string) bool
 
+// Data that can be used to initialize each question
 type BubbleTeaData struct {
-	DefaultOption     string
-	DefaultOptionList []string
-	OptionData        [][]string
-	HeaderStrings     []string
-	IndexedOptions    []string
-	QuestionString    string
-	EC2Helper         *ec2helper.EC2Helper
-	Fns               []CheckInput
+	DefaultOption     string               // Defaulted set/selected answer
+	DefaultOptionList []string             // List of default selected answers
+	OptionData        [][]string           // Data used to fill in question tables
+	HeaderStrings     []string             // List of headers for question tables
+	IndexedOptions    []string             // List of values to be returned when selected index in a list is chosen
+	QuestionString    string               // The Question being asked
+	EC2Helper         *ec2helper.EC2Helper // EC2Helper to provide validation methods for text inputs
+	Fns               []CheckInput         // List of input check functions to validate text inputs
 }
 
+/*
+	Represents a bubbleTea question. Builds on BubbleTea's tea.Model interface to allow
+	for the initialization of the question model and to retrieve any errors that may occur
+*/
 type bubbleModel interface {
 	InitializeModel(data *BubbleTeaData)
 	Init() tea.Cmd
@@ -52,32 +77,42 @@ type bubbleModel interface {
 	getError() error
 }
 
+// Represents an item, or row, in a list
 type item string
 
 func (i item) FilterValue() string { return "" }
 
+// Defines how an item is rendered is rednered in a list
 type itemDelegate struct {
-	renderUnselected func(str string, index int) string
-	renderSelected   func(str string, index int) string
+	renderUnfocused func(str string, index int) string
+	renderFocused   func(str string, index int) string
 }
 
+// Methods needed implement the itemDelegate interface
 func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
 func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
+
+// Renders an item, or row,  in a list. Also needed to implement the itemDelegate interface
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	i, ok := listItem.(item)
 	if !ok {
 		return
 	}
 
-	str := d.renderUnselected(string(i), index)
+	str := d.renderUnfocused(string(i), index)
 	if index == m.Index() {
-		str = d.renderSelected(string(i), index)
+		str = d.renderFocused(string(i), index)
 	}
 
 	fmt.Fprintf(w, str)
 }
 
+/*
+	Initialized the given question model with question data and asks the question. Finishes
+	when answer is given, or user exits out of the question. Returns the error from the question
+	model.
+*/
 func AskQuestion(model bubbleModel, questionData *BubbleTeaData) error {
 	fmt.Println()
 	model.InitializeModel(questionData)
@@ -89,6 +124,10 @@ func AskQuestion(model bubbleModel, questionData *BubbleTeaData) error {
 	return model.getError()
 }
 
+/*
+	Creates the items for a list in a question. The items are made from a question table along with
+	the table's header, and a map to retrieve indexed answers.
+*/
 func createItems(data *BubbleTeaData) (header string, itemList []list.Item, itemMap map[item]string) {
 	tableString := createQuestionTable(data.OptionData, data.HeaderStrings)
 	optionStrings := strings.Split(strings.TrimSuffix(tableString, "\n"), "\n")
@@ -102,12 +141,14 @@ func createItems(data *BubbleTeaData) (header string, itemList []list.Item, item
 		}
 	}
 
+	// Seperate the header from the table rows
 	header = ""
 	if len(data.HeaderStrings) != 0 {
 		header = strings.Join(optionStrings[0:2], "\n")
 		optionStrings = optionStrings[2:]
 	}
 
+	// Creates list of items and item map
 	itemList = []list.Item{}
 	itemMap = make(map[item]string, len(data.OptionData))
 	for index, itemString := range optionStrings {
@@ -117,14 +158,18 @@ func createItems(data *BubbleTeaData) (header string, itemList []list.Item, item
 		if strings.TrimSpace(itemString) != "" {
 			itemList = append(itemList, item(itemString))
 		}
-
 	}
 
 	return header, itemList, itemMap
 }
 
+/*
+	Creates a model list to be used in a list type question. Sets the initial selected option as the
+	given default option.
+*/
 func createModelList(items []list.Item, itemDelegate itemDelegate, defaultOptionIndex int) list.Model {
 	modelList := list.New(items, itemDelegate, defaultWidth, len(items)+1)
+
 	modelList.SetShowStatusBar(false)
 	modelList.SetFilteringEnabled(false)
 	modelList.SetShowTitle(false)
@@ -136,7 +181,12 @@ func createModelList(items []list.Item, itemDelegate itemDelegate, defaultOption
 	return modelList
 }
 
+/*
+	Creates a table to have a formatted display for options in questions. If headers are
+	provided for a question then the table will be formatted with glamour.
+*/
 func createQuestionTable(tableData [][]string, headers []string) string {
+	// Adds head seperators to create proper format for a glamour table, if headers exist
 	if len(headers) != 0 {
 		headerSeperators := []string{}
 		for index := 0; index < len(headers); index++ {
@@ -157,12 +207,13 @@ func createQuestionTable(tableData [][]string, headers []string) string {
 	table.SetRowSeparator("")
 	table.SetHeaderLine(false)
 	table.SetBorder(false)
-	table.SetTablePadding("")   // pad with tabs
-	table.AppendBulk(tableData) // Add Bulk Data
+	table.SetTablePadding("")
+	table.AppendBulk(tableData)
 	table.Render()
 
 	tableString := tableBuilder.String()
 
+	// If headers exist, format the table into a glamour table
 	if len(headers) != 0 {
 		renderer, err := glamour.NewTermRenderer(glamour.WithStylePath("notty"))
 		if err == nil {
@@ -173,8 +224,9 @@ func createQuestionTable(tableData [][]string, headers []string) string {
 	return tableString
 }
 
+// Focuses a given item from a table. Focuses everything besides the column seperator
 func focusTableItem(tableItem string) string {
-	splitString := strings.Split(tableItem, "│")
+	splitString := strings.Split(tableItem, columnSeperator)
 	for i := 0; i < len(splitString); i++ {
 		if i == 0 {
 			splitString[i] = smallLeftPadding.Copy().Inherit(focused).Render(splitString[i])
@@ -182,9 +234,10 @@ func focusTableItem(tableItem string) string {
 			splitString[i] = focused.Render(splitString[i])
 		}
 	}
-	return strings.Join(splitString, "│")
+	return strings.Join(splitString, columnSeperator)
 }
 
+// Gets the index of the default option. If not found then -1 is returned
 func getDefaultOptionIndex(data *BubbleTeaData) int {
 	defaultOptionIndex := -1
 	for index, option := range data.IndexedOptions {
@@ -196,6 +249,7 @@ func getDefaultOptionIndex(data *BubbleTeaData) int {
 	return defaultOptionIndex
 }
 
+// Gets a list of indexes of default options
 func getDefaultOptionIndexes(data *BubbleTeaData) []int {
 	defaultOptionIndexes := []int{}
 	for _, option := range data.DefaultOptionList {

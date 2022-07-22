@@ -1,7 +1,18 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"). You may
+// not use this file except in compliance with the License. A copy of the
+// License is located at
+//
+//     http://aws.amazon.com/apache2.0/
+//
+// or in the "license" file accompanying this file. This file is distributed
+// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language governing
+// permissions and limitations under the License.
 package questionModel
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -9,10 +20,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-var addButtonText = "ADD TAG"
-var submitButtonText = "SUBMIT TAGS"
+const (
+	addButtonText    = "ADD TAG"
+	submitButtonText = "SUBMIT TAGS"
+)
 
-type keyValue struct {
+var tagHeaders = []string{"KEY", "VALUE"}
+
+type KeyValue struct {
 	focusIndex          int
 	submitButtonFocused bool
 	inputs              []textinput.Model
@@ -22,7 +37,7 @@ type keyValue struct {
 	err                 error
 }
 
-func (kv *keyValue) InitializeModel(data *BubbleTeaData) {
+func (kv *KeyValue) InitializeModel(data *BubbleTeaData) {
 	kv.inputs = make([]textinput.Model, 2)
 
 	var t textinput.Model
@@ -54,7 +69,7 @@ func (kv *keyValue) InitializeModel(data *BubbleTeaData) {
 	tagList := &SingleSelectList{}
 	tagList.InitializeModel(&BubbleTeaData{
 		OptionData:    kv.tags,
-		HeaderStrings: []string{"KEY", "VALUE"},
+		HeaderStrings: tagHeaders,
 	})
 	tagList.list.Select(-1)
 
@@ -62,36 +77,39 @@ func (kv *keyValue) InitializeModel(data *BubbleTeaData) {
 	kv.question = data.QuestionString
 }
 
-func (kv *keyValue) Init() tea.Cmd {
+func (kv *KeyValue) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (kv *keyValue) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (kv *KeyValue) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			kv.err = errors.New("User has quit before finishing question!")
+			kv.err = exitError
 			return kv, tea.Quit
 
 		case tea.KeyUp, tea.KeyDown, tea.KeyEnter, tea.KeyShiftTab, tea.KeyTab:
 			msgType := msg.Type
 
-			if msgType == tea.KeyEnter && kv.focusIndex == len(kv.inputs) {
-				if !kv.submitButtonFocused {
-					kv.addTag()
-				} else {
+			// If a button is pressed, identify which one is pressed and act accordingly
+			if msgType == tea.KeyEnter && kv.areButtonsFocused() {
+				if kv.submitButtonFocused {
 					return kv, tea.Quit
+				} else {
+					kv.addTag()
 				}
 			}
 
 			kv.cycleFocusIndex(msgType)
 
-			if kv.focusIndex != len(kv.inputs) {
+			// Reset focus to the "Add Tag" button when navigating away from the buttons
+			if !kv.areButtonsFocused() {
 				kv.submitButtonFocused = false
 			}
 
+			// Focus or unfocus text inputs
 			cmds := make([]tea.Cmd, len(kv.inputs))
 			for i := 0; i <= len(kv.inputs)-1; i++ {
 				if i == kv.focusIndex {
@@ -106,12 +124,13 @@ func (kv *keyValue) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return kv, tea.Batch(cmds...)
 
 		case tea.KeyRight, tea.KeyLeft:
-			if kv.focusIndex == len(kv.inputs) {
+			if kv.areButtonsFocused() {
 				kv.submitButtonFocused = !kv.submitButtonFocused
 			}
 
 		case tea.KeyBackspace:
 			kv.deleteTag()
+			// If there are no more tags then set the focus back to the first text input
 			if len(kv.tagList.list.Items()) == 0 {
 				kv.focusIndex = 0
 				return kv, kv.focusInput(kv.focusIndex)
@@ -128,7 +147,7 @@ func (kv *keyValue) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return kv, cmd
 }
 
-func (kv *keyValue) View() string {
+func (kv *KeyValue) View() string {
 	var b strings.Builder
 	if kv.question != "" {
 		b.WriteString(kv.question + "\n")
@@ -154,7 +173,7 @@ func (kv *keyValue) View() string {
 	return b.String()
 }
 
-func (kv *keyValue) addTag() {
+func (kv *KeyValue) addTag() {
 	if kv.inputs[0].Value() == "" {
 		kv.inputs[0].Placeholder = "Please Enter A Key!"
 	}
@@ -167,7 +186,7 @@ func (kv *keyValue) addTag() {
 		kv.tags = append(kv.tags, []string{strings.TrimSpace(kv.inputs[0].Value()), strings.TrimSpace(kv.inputs[1].Value())})
 		kv.tagList.InitializeModel(&BubbleTeaData{
 			OptionData:    kv.tags,
-			HeaderStrings: []string{"KEY", "VALUE"},
+			HeaderStrings: tagHeaders,
 		})
 		kv.inputs[0].Placeholder = "Key"
 		kv.inputs[1].Placeholder = "Value"
@@ -176,15 +195,17 @@ func (kv *keyValue) addTag() {
 	}
 }
 
-func (kv *keyValue) createButton(buttonText string, isFocused bool) string {
+func (kv *KeyValue) areButtonsFocused() bool { return kv.focusIndex == len(kv.inputs) }
+
+func (kv *KeyValue) createButton(buttonText string, isFocused bool) string {
 	button := blurred.Copy().Render(fmt.Sprintf("[ %s ]", buttonText))
-	if kv.focusIndex == len(kv.inputs) && isFocused {
+	if kv.areButtonsFocused() && isFocused {
 		button = fmt.Sprintf("[ %s ]", focused.Render(buttonText))
 	}
 	return button
 }
 
-func (kv *keyValue) cycleFocusIndex(msgType tea.KeyType) {
+func (kv *KeyValue) cycleFocusIndex(msgType tea.KeyType) {
 	if msgType == tea.KeyUp || msgType == tea.KeyShiftTab {
 		kv.focusIndex--
 	} else {
@@ -207,7 +228,7 @@ func (kv *keyValue) cycleFocusIndex(msgType tea.KeyType) {
 	}
 }
 
-func (kv *keyValue) deleteTag() {
+func (kv *KeyValue) deleteTag() {
 	cursor := kv.tagList.list.Cursor()
 	if cursor >= 0 && len(kv.tagList.list.Items()) > 0 {
 		kv.tags = append(kv.tags[:cursor], kv.tags[cursor+1:]...)
@@ -217,15 +238,15 @@ func (kv *keyValue) deleteTag() {
 	}
 }
 
-func (kv *keyValue) focusInput(focusIndex int) tea.Cmd {
+func (kv *KeyValue) focusInput(focusIndex int) tea.Cmd {
 	kv.inputs[focusIndex].PromptStyle = smallLeftPadding.Copy().Inherit(focused)
 	kv.inputs[focusIndex].TextStyle = focused
 	return kv.inputs[focusIndex].Focus()
 }
 
-func (kv *keyValue) getError() error { return kv.err }
+func (kv *KeyValue) getError() error { return kv.err }
 
-func (kv *keyValue) TagMapToString() string {
+func (kv *KeyValue) TagMapToString() string {
 	builder := strings.Builder{}
 	for index, tag := range kv.tags {
 		builder.WriteString(fmt.Sprintf("%s|%s", tag[0], tag[1]))
@@ -236,7 +257,7 @@ func (kv *keyValue) TagMapToString() string {
 	return builder.String()
 }
 
-func (kv *keyValue) updateInputs(msg tea.Msg) tea.Cmd {
+func (kv *KeyValue) updateInputs(msg tea.Msg) tea.Cmd {
 	var cmds = make([]tea.Cmd, len(kv.inputs))
 
 	for i := range kv.inputs {

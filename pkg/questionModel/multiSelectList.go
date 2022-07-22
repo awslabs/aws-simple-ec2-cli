@@ -1,7 +1,18 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"). You may
+// not use this file except in compliance with the License. A copy of the
+// License is located at
+//
+//     http://aws.amazon.com/apache2.0/
+//
+// or in the "license" file accompanying this file. This file is distributed
+// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language governing
+// permissions and limitations under the License.
 package questionModel
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -9,27 +20,33 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+/*
+	Represents a question with a list of options from which multiple options may be chosen as the answer.
+	Options may be presented in a table based on initialized data.
+*/
 type MultiSelectList struct {
-	list     list.Model
-	selected map[int]item // which to-do items are selected
-	itemMap  map[item]string
-	header   string
-	question string
-	err      error
+	list     list.Model      // The list of options
+	selected map[int]item    // Map of selected items in the list
+	itemMap  map[item]string // Maps the item chosen to the answer value
+	header   string          // The header for the item list table
+	question string          // The question being asked
+	err      error           // An error caught during the question
 }
 
+// Initializes the model based on the passed in question data
 func (m *MultiSelectList) InitializeModel(data *BubbleTeaData) {
 	header, items, itemMap := createItems(data)
 	items = append(items, item("\n[ Submit ]"))
 
+	// Define how list items are rendered in their focused and unfocused states
 	itemDelegate := itemDelegate{
-		renderUnselected: func(s string, index int) string {
+		renderUnfocused: func(s string, index int) string {
 			if index == len(items)-1 {
 				return xLargeLeftPadding.Copy().Inherit(blurred).Render(s)
 			}
 			return mediumLeftPadding.Render(fmt.Sprintf("%s %s", m.getCheckBox(index), s))
 		},
-		renderSelected: func(s string, index int) string {
+		renderFocused: func(s string, index int) string {
 			if index == len(items)-1 {
 				return xLargeLeftPadding.Copy().Inherit(focused).Render(s)
 			}
@@ -42,6 +59,7 @@ func (m *MultiSelectList) InitializeModel(data *BubbleTeaData) {
 	m.itemMap = itemMap
 	m.question = data.QuestionString
 
+	// Create selected map and select defaults
 	m.selected = make(map[int]item)
 	defaultIndexes := getDefaultOptionIndexes(data)
 	for _, defaultIndex := range defaultIndexes {
@@ -62,7 +80,7 @@ func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			m.err = errors.New("User has quit before finishing question!")
+			m.err = exitError
 			return m, tea.Quit
 
 		case tea.KeyEnter, tea.KeySpace:

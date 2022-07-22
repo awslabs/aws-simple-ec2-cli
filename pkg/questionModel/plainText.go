@@ -1,7 +1,18 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"). You may
+// not use this file except in compliance with the License. A copy of the
+// License is located at
+//
+//     http://aws.amazon.com/apache2.0/
+//
+// or in the "license" file accompanying this file. This file is distributed
+// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language governing
+// permissions and limitations under the License.
 package questionModel
 
 import (
-	"errors"
 	"fmt"
 	"simple-ec2/pkg/ec2helper"
 	"strings"
@@ -24,8 +35,6 @@ func (pt *PlainText) InitializeModel(data *BubbleTeaData) {
 	ti := textinput.New()
 	ti.Placeholder = data.DefaultOption
 	ti.Focus()
-	ti.CharLimit = 156
-	ti.Width = 40
 
 	pt.textInput = ti
 	pt.question = data.QuestionString
@@ -44,7 +53,7 @@ func (pt *PlainText) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			pt.err = errors.New("User has quit before finishing question!")
+			pt.err = exitError
 			return pt, tea.Quit
 
 		case tea.KeyEnter:
@@ -85,7 +94,6 @@ func (pt *PlainText) View() string {
 
 func (pt *PlainText) getError() error { return pt.err }
 
-// TODO: Add validation to plainText
 func (pt *PlainText) isValidInput(answer string) bool {
 	if pt.EC2Helper != nil && pt.validFunctions != nil {
 		for _, fn := range pt.validFunctions {

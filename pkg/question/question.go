@@ -166,10 +166,6 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 		desc, found := (*regionDescription)[*region.RegionName]
 		if found {
 			row = append(row, desc)
-		}
-
-		// Append the row to the data when the row is filled with 2 elements
-		if len(row) == elementPerRegion {
 			data = append(data, row)
 		}
 	}

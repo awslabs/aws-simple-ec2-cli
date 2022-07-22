@@ -1,30 +1,47 @@
+// Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License"). You may
+// not use this file except in compliance with the License. A copy of the
+// License is located at
+//
+//     http://aws.amazon.com/apache2.0/
+//
+// or in the "license" file accompanying this file. This file is distributed
+// on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language governing
+// permissions and limitations under the License.
 package questionModel
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+/*
+	Represents a question with a list of options from which a single option is chosen as the answer.
+	Options may be presented in a table based on initialized data.
+*/
 type SingleSelectList struct {
-	list     list.Model
-	choice   string
-	itemMap  map[item]string
-	header   string
-	question string
-	err      error
+	list     list.Model      // The list of options
+	choice   string          // The chosen option
+	itemMap  map[item]string // Maps the item chosen to the answer value
+	header   string          // The header for the item list table
+	question string          // The question being asked
+	err      error           // An error caught during the question
 }
 
+// Initializes the model based on the passed in question data
 func (s *SingleSelectList) InitializeModel(data *BubbleTeaData) {
 	header, items, itemMap := createItems(data)
 
+	// Define how list items are rendered in their focused and unfocused states
 	itemDelegate := itemDelegate{
-		renderUnselected: func(s string, index int) string {
+		renderUnfocused: func(s string, index int) string {
 			return mediumLeftPadding.Render(s)
 		},
-		renderSelected: func(s string, index int) string {
+		renderFocused: func(s string, index int) string {
 			return focusTableItem("> " + s)
 		},
 	}
@@ -40,20 +57,28 @@ func (s *SingleSelectList) InitializeModel(data *BubbleTeaData) {
 	s.question = data.QuestionString
 }
 
+/*
+	Defines an optional command that can be run when the question is asked. Return
+	nil to not perform an initial command.
+*/
 func (s *SingleSelectList) Init() tea.Cmd {
 	return nil
 }
 
+/*
+	Called when a message is received. Handles user input to traverse through list and
+	select an answer.
+*/
 func (s *SingleSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		s.list.SetWidth(msg.Width)
-		return s, nil
+		return s, tea.Quit
 
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			s.err = errors.New("User has quit before finishing question!")
+			s.err = exitError
 			return s, tea.Quit
 
 		case tea.KeyEnter:
@@ -71,6 +96,7 @@ func (s *SingleSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return s, cmd
 }
 
+// Renders the view for the question. The view is rendered after every update
 func (s *SingleSelectList) View() string {
 	b := strings.Builder{}
 	if s.question != "" {
@@ -84,10 +110,13 @@ func (s *SingleSelectList) View() string {
 	return b.String()
 }
 
+// Gets the selected choice
 func (s *SingleSelectList) GetChoice() string { return s.choice }
 
+// Gets the error from the question if one arose
 func (s *SingleSelectList) getError() error { return s.err }
 
+// Selects the focused item in the list
 func (s *SingleSelectList) selectItem() {
 	i, ok := s.list.SelectedItem().(item)
 	if ok {
