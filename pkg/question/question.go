@@ -145,7 +145,6 @@ func GetQuestion(input *AskQuestionInput) {
 // Ask for the region to use
 func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	regionDescription := getRegionDescriptions()
-	const elementPerRegion = 2
 
 	// Get all enabled regions and make sure no error
 	regions, err := h.GetEnabledRegions()
@@ -178,8 +177,8 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 	headers := []string{"Region", "Description"}
 	question := "Which Region?"
 
-	regionQuestion := &questionModel.SingleSelectList{}
-	err = questionModel.AskQuestion(regionQuestion, &questionModel.QuestionInput{
+	model := &questionModel.SingleSelectList{}
+	err = questionModel.AskQuestion(model, &questionModel.QuestionInput{
 		OptionData:     data,
 		QuestionString: question,
 		DefaultOption:  *defaultOption,
@@ -191,7 +190,7 @@ func AskRegion(h *ec2helper.EC2Helper, defaultRegion string) (*string, error) {
 		return nil, err
 	}
 
-	answer := regionQuestion.GetChoice()
+	answer := model.GetChoice()
 	return &answer, nil
 }
 
@@ -226,35 +225,40 @@ func AskLaunchTemplate(h *ec2helper.EC2Helper, defaultLaunchTemplateId string) *
 	indexedOptions := []string{}
 
 	noUseOptionRepr, noUseOptionValue := "Do not use launch template", cli.ResponseNo
-	defaultOptionRepr, defaultOptionValue := noUseOptionRepr, noUseOptionValue
+	defaultOption := noUseOptionValue
 	// Fill the data used for drawing a table and the options map
-	for index, launchTemplate := range launchTemplates {
+	for _, launchTemplate := range launchTemplates {
 		if *launchTemplate.LaunchTemplateId == defaultLaunchTemplateId {
-			defaultOptionRepr, defaultOptionValue = defaultLaunchTemplateId, defaultLaunchTemplateId
+			defaultOption = defaultLaunchTemplateId
 		}
 		indexedOptions = append(indexedOptions, *launchTemplate.LaunchTemplateId)
 
 		launchTemplateName := fmt.Sprintf("%s(%s)", *launchTemplate.LaunchTemplateName,
 			*launchTemplate.LaunchTemplateId)
-		data = append(data, []string{fmt.Sprintf("%d.", index+1), launchTemplateName,
+		data = append(data, []string{launchTemplateName,
 			strconv.FormatInt(*launchTemplate.LatestVersionNumber, 10)})
 	}
 
 	// Add the do not use launch template option at the end
 	indexedOptions = append(indexedOptions, noUseOptionValue)
-	data = append(data, []string{fmt.Sprintf("%d.", len(data)+1), noUseOptionRepr})
+	data = append(data, []string{noUseOptionRepr})
+	question := "Which Launch Template should be used?"
+	headers := []string{"Launch Template", "Latest Version"}
 
-	optionsText := table.BuildTable(data, []string{"Option", "Launch Template", "Latest Version"})
-	question := "Launch Template"
-
-	answer := AskQuestion(&AskQuestionInput{
-		QuestionString:    question,
-		DefaultOptionRepr: &defaultOptionRepr,
-		DefaultOption:     &defaultOptionValue,
-		OptionsString:     &optionsText,
-		IndexedOptions:    indexedOptions,
+	model := &questionModel.SingleSelectList{}
+	err = questionModel.AskQuestion(model, &questionModel.QuestionInput{
+		DefaultOption:  defaultOption,
+		HeaderStrings:  headers,
+		IndexedOptions: indexedOptions,
+		OptionData:     data,
+		QuestionString: question,
 	})
 
+	if err != nil {
+		return nil // Add Return Error
+	}
+
+	answer := model.GetChoice()
 	return &answer
 }
 
@@ -290,16 +294,19 @@ func AskLaunchTemplateVersion(h *ec2helper.EC2Helper, launchTemplateId string, d
 		}
 	}
 
-	optionsText := table.BuildTable(data, []string{"Option(Version Number)", "Description"})
 	question := "Launch Template Version"
+	headers := []string{"Version Number", "Description"}
 
-	answer := AskQuestion(&AskQuestionInput{
-		QuestionString: question,
-		DefaultOption:  &defaultOption,
-		OptionsString:  &optionsText,
+	model := &questionModel.SingleSelectList{}
+	err = questionModel.AskQuestion(model, &questionModel.QuestionInput{
+		DefaultOption:  defaultOption,
+		HeaderStrings:  headers,
 		IndexedOptions: indexedOptions,
+		OptionData:     data,
+		QuestionString: question,
 	})
 
+	answer := model.GetChoice()
 	return &answer, nil
 }
 

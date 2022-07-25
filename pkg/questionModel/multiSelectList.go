@@ -50,7 +50,7 @@ func (m *MultiSelectList) InitializeModel(input *QuestionInput) {
 			if index == len(items)-1 {
 				return fmt.Sprintf(xLargeLeftPadding.Render("\n[ %s ]"), focused.Render(s))
 			}
-			return focusTableItem(fmt.Sprintf("> %s %s", m.getCheckBox(index), s))
+			return styleTableItem(fmt.Sprintf("> %s %s", m.getCheckBox(index), s), focused, smallLeftPadding.Copy().Inherit(focused))
 		},
 	}
 
@@ -78,9 +78,6 @@ select answers, and submit selected answers.
 */
 func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.list.SetWidth(msg.Width)
-		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.Type {

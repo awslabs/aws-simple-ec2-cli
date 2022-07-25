@@ -22,15 +22,16 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/olekukonko/tablewriter"
 )
 
 const (
-	defaultWidth = 20
-	// Column seperator in glamour tables
-	columnSeperator = "│"
+	defaultWidth       = 20
+	columnSeperator    = "│"
+	headerSeperator    = "─"
+	rowColIntersect    = "┼"
+	tableLineMaxLength = 300
 )
 
 var (
@@ -42,12 +43,13 @@ var (
 	largeLeftPadding  = lipgloss.NewStyle().PaddingLeft(7)
 	xLargeLeftPadding = lipgloss.NewStyle().PaddingLeft(9)
 
-	focused = lipgloss.NewStyle().Foreground(lipgloss.Color("170")) // Pink
-	blurred = lipgloss.NewStyle().Foreground(lipgloss.Color("240")) // Gray
+	focused    = lipgloss.NewStyle().Foreground(lipgloss.Color("170")) // Pink
+	blurred    = lipgloss.NewStyle().Foreground(lipgloss.Color("240")) // Gray
+	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))   // Red
 
-	helpStyle  = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	errorStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
-	exitError  = errors.New("Exiting the questionnaire")
+	boldStyle = lipgloss.NewStyle().Bold(true)
+	helpStyle = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	exitError = errors.New("Exiting the questionnaire")
 )
 
 // CheckInput is used to validate a given string using validation methods from ec2helper
@@ -84,7 +86,7 @@ type item string
 // Used to implement the list.Item iterface
 func (i item) FilterValue() string { return "" }
 
-// itemDelegate defines how an item is rendered is rednered in a list
+// itemDelegate defines how an item is rendered in a list
 type itemDelegate struct {
 	renderUnfocused func(str string, index int) string
 	renderFocused   func(str string, index int) string
@@ -146,15 +148,15 @@ func createItems(input *QuestionInput) (header string, itemList []list.Item, ite
 	// Seperate the header from the table rows
 	header = ""
 	if len(input.HeaderStrings) != 0 {
-		header = strings.Join(optionStrings[0:2], "\n")
-		optionStrings = optionStrings[2:]
+		header = createHeader(optionStrings)
+		optionStrings = optionStrings[1:]
 	}
 
 	// Creates list of items and item map
 	itemList = []list.Item{}
 	itemMap = make(map[item]string, len(input.OptionData))
 	for index, itemString := range optionStrings {
-		if len(input.IndexedOptions) == len(input.OptionData) {
+		if len(input.IndexedOptions) == len(input.OptionData) && len(input.IndexedOptions) == len(optionStrings) {
 			itemMap[item(itemString)] = input.IndexedOptions[index]
 		}
 		if strings.TrimSpace(itemString) != "" {
@@ -163,6 +165,21 @@ func createItems(input *QuestionInput) (header string, itemList []list.Item, ite
 	}
 
 	return header, itemList, itemMap
+}
+
+// createHeader creates a formatted table header
+func createHeader(optionStrings []string) string {
+	headers := optionStrings[0]
+	rowEntries := strings.Split(optionStrings[1], columnSeperator)
+	b := &strings.Builder{}
+	b.WriteString(styleTableItem(headers, boldStyle, boldStyle) + "\n")
+	for index, entry := range rowEntries {
+		b.WriteString(strings.Repeat(headerSeperator, len(entry)))
+		if index != len(rowEntries)-1 {
+			b.WriteString(rowColIntersect)
+		}
+	}
+	return b.String()
 }
 
 /*
@@ -182,57 +199,50 @@ func createModelList(items []list.Item, itemDelegate itemDelegate, defaultOption
 	return modelList
 }
 
+// stringToInterface converts a list of strings to a list of interfaces
+func stringToInterface(s []string) []interface{} {
+	result := make([]interface{}, len(s))
+	for i, str := range s {
+		result[i] = str
+	}
+	return result
+}
+
 /*
-createQuestionTable creates a table to have a formatted display for options in questions. If headers are
-provided for a question then the table will be formatted with glamour.
+createQuestionTable creates a table to have a formatted display for options in questions.
 */
 func createQuestionTable(tableData [][]string, headers []string) string {
-	// Adds head seperators to create proper format for a glamour table, if headers exist
-	if len(headers) != 0 {
-		headerSeperators := []string{}
-		for index := 0; index < len(headers); index++ {
-			headerSeperators = append(headerSeperators, "---")
-		}
-		tableData = append([][]string{headerSeperators}, tableData...)
-	}
-
 	tableBuilder := &strings.Builder{}
-	table := tablewriter.NewWriter(tableBuilder)
-	table.SetHeader(headers)
-	table.SetAutoWrapText(false)
-	table.SetAutoFormatHeaders(true)
-	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-	table.SetAlignment(tablewriter.ALIGN_LEFT)
-	table.SetCenterSeparator("")
-	table.SetColumnSeparator("|")
-	table.SetRowSeparator("")
-	table.SetHeaderLine(false)
-	table.SetBorder(false)
-	table.SetTablePadding("")
-	table.AppendBulk(tableData)
-	table.Render()
+	tableWriter := tablewriter.NewWriter(tableBuilder)
+	tableWriter.SetHeader(headers)
+	tableWriter.SetAutoWrapText(false)
+	tableWriter.SetAutoFormatHeaders(true)
+	tableWriter.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
+	tableWriter.SetAlignment(tablewriter.ALIGN_LEFT)
+	tableWriter.SetColumnSeparator(columnSeperator)
+	tableWriter.SetRowSeparator("")
+	tableWriter.SetHeaderLine(false)
+	tableWriter.SetBorder(false)
+	tableWriter.SetTablePadding("")
+	tableWriter.AppendBulk(tableData)
+	tableWriter.Render()
 
 	tableString := tableBuilder.String()
-
-	// If headers exist, format the table into a glamour table
-	if len(headers) != 0 {
-		renderer, err := glamour.NewTermRenderer(glamour.WithStylePath("notty"))
-		if err == nil {
-			tableString, err = renderer.Render(tableString)
-		}
-	}
-
 	return tableString
 }
 
-// focusTableItem focuses a given item from a table. Focuses everything besides the column seperator
-func focusTableItem(tableItem string) string {
+/*
+styleTableItem applies a lipgloss style to each string in a table item, negelecting the column seperator.
+The style for the first column in the table is specified seperately. If the first column is to be the same as
+the rest, then set the same value for the style and firstColumnStyle parameters.
+*/
+func styleTableItem(tableItem string, style lipgloss.Style, firstColumnStyle lipgloss.Style) string {
 	splitString := strings.Split(tableItem, columnSeperator)
 	for i := 0; i < len(splitString); i++ {
 		if i == 0 {
-			splitString[i] = smallLeftPadding.Copy().Inherit(focused).Render(splitString[i])
+			splitString[i] = firstColumnStyle.Copy().Inherit(firstColumnStyle).Render(splitString[i])
 		} else {
-			splitString[i] = focused.Render(splitString[i])
+			splitString[i] = style.Render(splitString[i])
 		}
 	}
 	return strings.Join(splitString, columnSeperator)
