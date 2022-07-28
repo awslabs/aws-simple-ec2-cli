@@ -68,7 +68,9 @@ func (kv *KeyValue) InitializeModel(input *QuestionInput) {
 	tags := strings.Split(input.DefaultOption, ",") //[tag1|val1, tag2|val2]
 	for _, tag := range tags {
 		pair := strings.Split(tag, "|") //[tag1, val1]
-		kv.tags = append(kv.tags, []string{strings.TrimSpace(pair[0]), strings.TrimSpace(pair[1])})
+		if len(pair) == 2 {
+			kv.tags = append(kv.tags, []string{strings.TrimSpace(pair[0]), strings.TrimSpace(pair[1])})
+		}
 	}
 
 	// Initializes the created tag list

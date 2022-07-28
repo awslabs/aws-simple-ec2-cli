@@ -71,6 +71,7 @@ func (pt *PlainText) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// If input is valid quit. If invalid display error msg and reset input text
 			if pt.isValidInput(pt.textInput.Value()) {
 				pt.displayInvalidMsg = false
+				pt.textInput.SetCursorMode(textinput.CursorHide)
 				return pt, tea.Quit
 			} else {
 				pt.invalidMsg = pt.textInput.Value()

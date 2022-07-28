@@ -117,3 +117,8 @@ func (s *SingleSelectList) selectItem() {
 		s.choice = s.itemMap[i]
 	}
 }
+
+func (s *SingleSelectList) PrintTable() string {
+	s.list.Select(-1)
+	return s.View()
+}

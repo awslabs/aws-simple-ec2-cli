@@ -24,6 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/google/uuid"
 )
 
 const DefaultStackName = "simple-ec2"
@@ -51,7 +52,8 @@ func (c Cfn) CreateStackAndGetResources(availabilityZones []*ec2.AvailabilityZon
 	stackName *string, template string) (vpcId *string, subnetIds []string, instanceId *string,
 	stackResources []*cloudformation.StackResource, err error) {
 	if stackName == nil {
-		stackName = aws.String(DefaultStackName)
+		stackIdentifier := uuid.New()
+		stackName = aws.String(fmt.Sprintf("%s%s", DefaultStackName, stackIdentifier))
 	}
 
 	zonesToUse := []*ec2.AvailabilityZone{}

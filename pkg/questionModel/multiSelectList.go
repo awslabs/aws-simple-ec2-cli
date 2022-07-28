@@ -25,12 +25,14 @@ MultiSelectList represents a question with a list of options from which multiple
 Options may be presented in a table based on initialized input.
 */
 type MultiSelectList struct {
-	list     list.Model      // The list of options
-	selected map[int]item    // Map of selected items in the list
-	itemMap  map[item]string // Maps the item chosen to the answer value
-	header   string          // The header for the item list table
-	question string          // The question being asked
-	err      error           // An error caught during the question
+	list            list.Model      // The list of options
+	selected        map[int]item    // Map of selected items in the list
+	itemMap         map[item]string // Maps the item chosen to the answer value
+	header          string          // The header for the item list table
+	question        string          // The question being asked
+	err             error           // An error caught during the question
+	displayErrorMsg bool            // If the error message should be displayed
+	errorMsg        string          // Error msg allerting the user they have to choose an option
 }
 
 // InitializeModel initializes the model based on the passed in question input
@@ -58,6 +60,7 @@ func (m *MultiSelectList) InitializeModel(input *QuestionInput) {
 	m.header = header
 	m.itemMap = itemMap
 	m.question = input.QuestionString
+	m.errorMsg = "Atleast one option must be chosen!"
 
 	// Create selected map and select defaults
 	m.selected = make(map[int]item)
@@ -86,7 +89,12 @@ func (m *MultiSelectList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter, tea.KeySpace:
+			m.displayErrorMsg = false
 			if m.isButtonFocused() {
+				if len(m.selected) == 0 {
+					m.displayErrorMsg = true
+					return m, nil
+				}
 				return m, tea.Quit
 			}
 			m.selectItem()
@@ -107,6 +115,10 @@ func (m *MultiSelectList) View() string {
 	b := strings.Builder{}
 	if m.question != "" {
 		b.WriteString(m.question + "\n\n")
+	}
+
+	if m.displayErrorMsg {
+		b.WriteString(mediumLeftPadding.Copy().Inherit(errorStyle).Render(m.errorMsg) + "\n")
 	}
 
 	if m.header != "" {

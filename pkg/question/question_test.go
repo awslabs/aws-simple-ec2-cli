@@ -215,9 +215,10 @@ func TestAskLaunchTemplate_Success(t *testing.T) {
 		},
 	}
 
-	answer := question.AskLaunchTemplate(testEC2, "")
+	answer, err := question.AskLaunchTemplate(testEC2, "")
 	th.Equals(t, expectedTemplateId, *answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -228,9 +229,10 @@ func TestAskLaunchTemplate_DescribeLaunchTemplatesPagesError(t *testing.T) {
 
 	initQuestionTest(t, "\n")
 
-	answer := question.AskLaunchTemplate(testEC2, "")
+	answer, err := question.AskLaunchTemplate(testEC2, "")
 	th.Equals(t, cli.ResponseNo, *answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -347,9 +349,10 @@ func TestAskInstanceTypeVCpu(t *testing.T) {
 	const expectedVcpus = "2"
 	initQuestionTest(t, expectedVcpus+"\n")
 
-	answer := question.AskInstanceTypeVCpu()
+	answer, err := question.AskInstanceTypeVCpu(testEC2)
 	th.Equals(t, expectedVcpus, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -357,9 +360,10 @@ func TestAskInstanceTypeMemory(t *testing.T) {
 	const expectedMemory = "2"
 	initQuestionTest(t, expectedMemory+"\n")
 
-	answer := question.AskInstanceTypeMemory()
+	answer, err := question.AskInstanceTypeMemory(testEC2)
 	th.Equals(t, expectedMemory, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -450,9 +454,10 @@ func TestAskKeepEbsVolume(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
 	initQuestionTest(t, expectedAnswer+"\n")
 
-	answer := question.AskKeepEbsVolume(true)
+	answer, err := question.AskKeepEbsVolume(true)
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -460,9 +465,10 @@ func TestAskAutoTerminationTimerMinutes(t *testing.T) {
 	const expectedAnswer = "30"
 	initQuestionTest(t, expectedAnswer+"\n")
 
-	answer := question.AskAutoTerminationTimerMinutes(0)
+	answer, err := question.AskAutoTerminationTimerMinutes(testEC2, 0)
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -600,6 +606,7 @@ func TestAskSubnetPlaceholder_DescribeAvailabilityZonesError(t *testing.T) {
 
 func TestAskSecurityGroups_Success(t *testing.T) {
 	const expectedGroup = "sg-12345"
+	defaultGroups := []*ec2.SecurityGroup{}
 
 	testSecurityGroups := []*ec2.SecurityGroup{
 		{
@@ -636,34 +643,36 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 			Description: aws.String("some description"),
 		},
 	}
-	addedGroups := []string{*testSecurityGroups[1].GroupId}
 
 	initQuestionTest(t, "1\n")
 
-	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
+	answer, err := question.AskSecurityGroups(testSecurityGroups, defaultGroups)
 	th.Equals(t, expectedGroup, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
 func TestAskSecurityGroups_NoGroup(t *testing.T) {
 	testSecurityGroups := []*ec2.SecurityGroup{}
-	addedGroups := []string{}
+	defaultGroups := []*ec2.SecurityGroup{}
 
 	initQuestionTest(t, "1\n")
 
-	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
+	answer, err := question.AskSecurityGroups(testSecurityGroups, defaultGroups)
 	th.Equals(t, cli.ResponseNo, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
 func TestAskSecurityGroupPlaceholder(t *testing.T) {
 	initQuestionTest(t, "1\n")
 
-	answer := question.AskSecurityGroupPlaceholder()
+	answer, err := question.AskSecurityGroupPlaceholder()
 	th.Equals(t, cli.ResponseAll, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -848,9 +857,10 @@ func TestAskConfirmationWithInput_Success_NoNewInfrastructure(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
 	initQuestionTest(t, expectedAnswer+"\n")
 
-	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
+	answer, err := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -866,9 +876,10 @@ func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
 
 	initQuestionTest(t, expectedAnswer+"\n")
 
-	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
+	answer, err := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -876,9 +887,10 @@ func TestAskSaveConfig(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
 	initQuestionTest(t, expectedAnswer+"\n")
 
-	answer := question.AskSaveConfig()
+	answer, err := question.AskSaveConfig()
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 
@@ -1119,11 +1131,13 @@ func TestAskIamProfile_Error(t *testing.T) {
 
 func TestAskCapacityType(t *testing.T) {
 	expectedAnswer := question.DefaultCapacityTypeText.Spot
+	testRegion := "us-east-1"
 	initQuestionTest(t, "2\n")
 
-	answer := question.AskCapacityType(testInstanceType, "")
+	answer, err := question.AskCapacityType(testInstanceType, testRegion, "")
 	th.Equals(t, expectedAnswer, answer)
 
+	th.Ok(t, err)
 	cleanupQuestionTest()
 }
 

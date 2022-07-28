@@ -147,7 +147,7 @@ func createItems(input *QuestionInput) (header string, itemList []list.Item, ite
 
 	// Seperate the header from the table rows
 	header = ""
-	if len(input.HeaderStrings) != 0 {
+	if len(input.HeaderStrings) != 0 && len(optionStrings) > 0 {
 		header = createHeader(optionStrings)
 		optionStrings = optionStrings[1:]
 	}
@@ -170,6 +170,10 @@ func createItems(input *QuestionInput) (header string, itemList []list.Item, ite
 // createHeader creates a formatted table header
 func createHeader(optionStrings []string) string {
 	headers := optionStrings[0]
+	if len(optionStrings) == 1 {
+		return headers
+	}
+
 	rowEntries := strings.Split(optionStrings[1], columnSeperator)
 	b := &strings.Builder{}
 	b.WriteString(styleTableItem(headers, boldStyle, boldStyle) + "\n")
@@ -212,6 +216,19 @@ func stringToInterface(s []string) []interface{} {
 createQuestionTable creates a table to have a formatted display for options in questions.
 */
 func createQuestionTable(tableData [][]string, headers []string) string {
+	// Fill in missing table data
+	numColumns := 0
+	for _, str := range tableData {
+		if len(str) > numColumns {
+			numColumns = len(str)
+		}
+	}
+	for index := range tableData {
+		for i := 0; len(tableData[index]) < numColumns; i++ {
+			tableData[index] = append(tableData[index], "")
+		}
+	}
+
 	tableBuilder := &strings.Builder{}
 	tableWriter := tablewriter.NewWriter(tableBuilder)
 	tableWriter.SetHeader(headers)
