@@ -616,7 +616,7 @@ func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, def
 		return err
 	}
 
-	if bootScriptAnswer == "" {
+	if bootScriptAnswer == "" || strings.ToLower(bootScriptAnswer) == strings.ToLower("None") {
 		return nil
 	}
 

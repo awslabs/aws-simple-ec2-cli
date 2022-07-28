@@ -1249,14 +1249,18 @@ func AskBootScriptConfirmation(h *ec2helper.EC2Helper, defaultBootScript string)
 
 // AskBootScript prompts the user for a filepath to an optional boot script
 func AskBootScript(h *ec2helper.EC2Helper, defaultBootScript string) (string, error) {
-	question := "Filepath to instance boot script \nformat: absolute file path"
+	question := "Enter a filepath to instance boot script. Enter \"None\" for no bootscript"
+
+	noEntryValidation := func(h *ec2helper.EC2Helper, filepath string) bool {
+		return strings.ToLower(filepath) == strings.ToLower("None")
+	}
 
 	model := &questionModel.PlainText{}
 	err := questionModel.AskQuestion(model, &questionModel.QuestionInput{
 		QuestionString: question,
 		DefaultOption:  defaultBootScript,
 		EC2Helper:      h,
-		Fns:            []questionModel.CheckInput{ec2helper.ValidateFilepath},
+		Fns:            []questionModel.CheckInput{ec2helper.ValidateFilepath, noEntryValidation},
 	})
 
 	if err != nil {
@@ -1316,7 +1320,6 @@ func AskCapacityType(instanceType string, region string, defaultCapacityType str
 	onDemandPrice, err := ec2Pricing.GetOnDemandInstanceTypeCost(instanceType)
 	formattedOnDemandPrice := "N/A"
 	if err == nil {
-		fmt.Printf("onDemandPrice: %v\n", onDemandPrice)
 		onDemandPrice = math.Round(onDemandPrice*10000) / 10000
 		formattedOnDemandPrice = fmt.Sprintf("$%s/hr", strconv.FormatFloat(onDemandPrice, 'f', -1, 64))
 	}
