@@ -1479,6 +1479,12 @@ func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, err
 			fmt.Println(err.Error())
 		}
 		return nil, err
+	} else {
+		if len(result.Errors) != 0 {
+			err = errors.New(*result.Errors[0].ErrorMessage)
+			cli.ShowError(err, "Creating spot instance failed")
+			return nil, err
+		}
 	}
 
 	fmt.Println("Launch Spot Instance Success!")
