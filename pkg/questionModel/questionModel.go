@@ -16,7 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"simple-ec2/pkg/ec2helper"
 	"strings"
 
@@ -121,11 +120,11 @@ func AskQuestion(model questionModel, questionInput *QuestionInput) error {
 	fmt.Println()
 	model.InitializeModel(questionInput)
 	p := tea.NewProgram(model)
-	if err := p.Start(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+	err := p.Start()
+	if model.getError() != nil {
+		err = model.getError()
 	}
-	return model.getError()
+	return err
 }
 
 /*

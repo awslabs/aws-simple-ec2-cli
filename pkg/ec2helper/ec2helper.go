@@ -1296,21 +1296,6 @@ func ValidateTags(h *EC2Helper, userTags string) bool {
 	return true
 }
 
-func ValidateInstanceType(h *EC2Helper, instanceType string) bool {
-	validInstances, err := h.GetInstanceTypesInRegion()
-
-	if err != nil {
-		return false
-	}
-
-	for _, instance := range validInstances {
-		if *instance.InstanceType == instanceType {
-			return true
-		}
-	}
-	return false
-}
-
 func ValidateInteger(h *EC2Helper, intString string) bool {
 	_, err := strconv.Atoi(intString)
 	if err != nil {

@@ -345,7 +345,7 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) 
 	}
 
 	data := [][]string{{"Enter the instance type"}, {"Provide vCPUs and memory information for advice"},
-		{fmt.Sprintf("Use the saved default instance, [%s]", *defaultOption)}}
+		{fmt.Sprintf("Use the default instance type, [%s]", *defaultOption)}}
 	indexedOptions := []string{cli.ResponseYes, cli.ResponseNo, *defaultOption}
 	question := "Instance Select Method"
 
@@ -691,7 +691,7 @@ func AskIamProfile(i *iamhelper.IAMHelper, defaultIamProfile string) (string, er
 
 // Ask if the users want to set an auto-termination timer for the instance
 func AskAutoTerminationTimerMinutes(h *ec2helper.EC2Helper, defaultTimer int) (string, error) {
-	question := "After how many minutes should the instance termintate? (0 for no auto-termination)"
+	question := "After how many minutes should the instance terminate? (0 for no auto-termination)"
 	defaultOption := strconv.FormatInt(int64(0), 10)
 	if defaultTimer != 0 {
 		defaultOption = strconv.FormatInt(int64(defaultTimer), 10)
@@ -1250,15 +1250,6 @@ func AskBootScriptConfirmation(h *ec2helper.EC2Helper, defaultBootScript string)
 // AskBootScript prompts the user for a filepath to an optional boot script
 func AskBootScript(h *ec2helper.EC2Helper, defaultBootScript string) (string, error) {
 	question := "Filepath to instance boot script \nformat: absolute file path"
-
-	// noEntryValidation := func(h *ec2helper.EC2Helper, instanceType string) bool {
-	// 	for _, instance := range instanceTypes {
-	// 		if *instance.InstanceType == instanceType {
-	// 			return true
-	// 		}
-	// 	}
-	// 	return false
-	// }
 
 	model := &questionModel.PlainText{}
 	err := questionModel.AskQuestion(model, &questionModel.QuestionInput{

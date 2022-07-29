@@ -60,7 +60,7 @@ func (m *MultiSelectList) InitializeModel(input *QuestionInput) {
 	m.header = header
 	m.itemMap = itemMap
 	m.question = input.QuestionString
-	m.errorMsg = "Atleast one option must be chosen!"
+	m.errorMsg = "Please choose at least one option"
 
 	// Create selected map and select defaults
 	m.selected = make(map[int]item)

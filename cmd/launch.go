@@ -410,11 +410,11 @@ func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaul
 	simpleConfig.ImageId = *image.ImageId
 
 	if !simpleConfig.KeepEbsVolumeAfterTermination && ec2helper.HasEbsVolume(image) {
-		ebsVolumAnswer, err := question.AskKeepEbsVolume(defaultsConfig.KeepEbsVolumeAfterTermination)
-		if cli.ShowError(err, "Asking EBS volume persistance failed") {
+		ebsVolumeAnswer, err := question.AskKeepEbsVolume(defaultsConfig.KeepEbsVolumeAfterTermination)
+		if cli.ShowError(err, "Asking EBS volume persistence failed") {
 			return false
 		}
-		ReadKeepEbsVolume(simpleConfig, ebsVolumAnswer)
+		ReadKeepEbsVolume(simpleConfig, ebsVolumeAnswer)
 	}
 
 	// Auto-termination only supports Linux for now
@@ -612,8 +612,12 @@ func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, def
 	}
 
 	bootScriptAnswer, err := question.AskBootScript(h, defaultBootScript)
-	if cli.ShowError(err, "Asking boot script failed") || bootScriptAnswer == "" {
+	if cli.ShowError(err, "Asking boot script failed") {
 		return err
+	}
+
+	if bootScriptAnswer == "" {
+		return nil
 	}
 
 	simpleConfig.BootScriptFilePath = bootScriptAnswer
@@ -635,8 +639,12 @@ func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defau
 	}
 
 	userTagsAnswer, err := question.AskUserTags(h, defaultTags)
-	if cli.ShowError(err, "Asking user tags failed") || userTagsAnswer == "" {
+	if cli.ShowError(err, "Asking user tags failed") {
 		return err
+	}
+
+	if userTagsAnswer == "" {
+		return nil
 	}
 
 	//convert user input tag1|val1,tag2|val2 to map
