@@ -1221,7 +1221,7 @@ func AskCapacityType(instanceType string) string {
 		"but they may get interrupted by EC2 with a 2-minute warning")
 
 	defaultInstanceTypeText := DefaultCapacityTypeText.OnDemand
-	optionsText := fmt.Sprintf("1. On-Demand%s\n2. Spot%s\n", formattedOnDemandPrice,
+	optionsText := fmt.Sprintf("1. On-Demand %s\n2. Spot %s\n", formattedOnDemandPrice,
 		formattedSpotPrice)
 	indexedOptions := []string{DefaultCapacityTypeText.OnDemand, DefaultCapacityTypeText.Spot}
 
