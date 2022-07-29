@@ -47,6 +47,7 @@ type SimpleInfo struct {
 	IamInstanceProfile            string
 	BootScriptFilePath            string
 	UserTags                      map[string]string
+	CapacityType                  string
 }
 
 /*
@@ -60,6 +61,19 @@ type DetailedInfo struct {
 	InstanceTypeInfo *ec2.InstanceTypeInfo
 	SecurityGroups   []*ec2.SecurityGroup
 	TagSpecs         []*ec2.TagSpecification
+}
+
+type RequestInstanceInfo struct {
+	ImageId                           *string
+	InstanceType                      *string
+	SubnetId                          *string
+	SecurityGroupIds                  []*string
+	IamInstanceProfile                *ec2.IamInstanceProfileSpecification
+	LaunchTemplate                    *ec2.LaunchTemplateSpecification
+	BlockDeviceMappings               []*ec2.BlockDeviceMapping
+	LaunchTemplateBlockMappings       []*ec2.LaunchTemplateBlockDeviceMappingRequest
+	InstanceInitiatedShutdownBehavior *string
+	UserData                          *string
 }
 
 func NewSimpleInfo() *SimpleInfo {

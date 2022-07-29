@@ -861,6 +861,7 @@ func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
 	testSimpleConfig.SecurityGroupIds = []string{cli.ResponseNew}
 	testSimpleConfig.AutoTerminationTimerMinutes = 0
 	testSimpleConfig.SubnetId = "us-east-2"
+	testSimpleConfig.CapacityType = "Spot"
 	testDetailedConfig.SecurityGroups = nil
 
 	initQuestionTest(t, expectedAnswer+"\n")
@@ -1112,6 +1113,16 @@ func TestAskIamProfile_Error(t *testing.T) {
 
 	_, err := question.AskIamProfile(iam)
 	th.Nok(t, err)
+
+	cleanupQuestionTest()
+}
+
+func TestAskCapacityType(t *testing.T) {
+	expectedAnswer := question.DefaultCapacityTypeText.Spot
+	initQuestionTest(t, "2\n")
+
+	answer := question.AskCapacityType(testInstanceType)
+	th.Equals(t, expectedAnswer, answer)
 
 	cleanupQuestionTest()
 }

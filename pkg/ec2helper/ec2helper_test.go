@@ -15,6 +15,7 @@ package ec2helper_test
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -154,6 +155,8 @@ func TestGetAvailableAvailabilityZones_NoResult(t *testing.T) {
 Launch Template Tests
 */
 
+var testLaunchId = "lt-12345"
+
 func TestGetLaunchTemplatesInRegion_Success(t *testing.T) {
 	expectedTemplates := []*ec2.LaunchTemplate{
 		{
@@ -225,6 +228,69 @@ func TestGetLaunchTemplateById_DescribeLaunchTemplatesPagesError(t *testing.T) {
 
 	_, err := testEC2.GetLaunchTemplateById(testLaunchTemplateId)
 	th.Nok(t, err)
+}
+
+func TestCreateLaunchTemplate(t *testing.T) {
+	simpleConfig := &config.SimpleInfo{
+		ImageId:      "ami-12345",
+		InstanceType: "t2.micro",
+		SubnetId:     "subnet-12345",
+	}
+	detailedConfig := &config.DetailedInfo{
+		Image: &ec2.Image{
+			ImageId:         aws.String("ami-12345"),
+			PlatformDetails: aws.String("test deatils"),
+		},
+	}
+	fmt.Println(*detailedConfig)
+	fmt.Println(*detailedConfig.Image)
+	testEC2.Svc = &th.MockedEC2Svc{}
+	testEC2.CreateLaunchTemplate(simpleConfig, detailedConfig)
+
+	templates := []*ec2.LaunchTemplate{}
+
+	err := testEC2.Svc.DescribeLaunchTemplatesPages(&ec2.DescribeLaunchTemplatesInput{}, func(page *ec2.DescribeLaunchTemplatesOutput, lastPage bool) bool {
+		templates = append(templates, page.LaunchTemplates...)
+		return !lastPage
+	})
+	th.Equals(t, nil, err)
+
+	isCreated := false
+
+	for _, template := range templates {
+		if *template.LaunchTemplateId == testLaunchId {
+			isCreated = true
+			break
+		}
+	}
+	th.Equals(t, true, isCreated)
+}
+
+func TestDeleteLaunchTemplate(t *testing.T) {
+	testEC2.Svc = &th.MockedEC2Svc{
+		LaunchTemplates: []*ec2.LaunchTemplate{
+			{LaunchTemplateId: &testLaunchId},
+		},
+	}
+	testEC2.DeleteLaunchTemplate(&testLaunchId)
+
+	templates := []*ec2.LaunchTemplate{}
+
+	err := testEC2.Svc.DescribeLaunchTemplatesPages(&ec2.DescribeLaunchTemplatesInput{}, func(page *ec2.DescribeLaunchTemplatesOutput, lastPage bool) bool {
+		templates = append(templates, page.LaunchTemplates...)
+		return !lastPage
+	})
+	th.Equals(t, nil, err)
+
+	isDeleted := true
+
+	for _, template := range templates {
+		if *template.LaunchTemplateId == testLaunchId {
+			isDeleted = false
+			break
+		}
+	}
+	th.Equals(t, true, isDeleted)
 }
 
 /*
@@ -1203,6 +1269,15 @@ func TestLaunchInstance_DescribeImagesError(t *testing.T) {
 
 	_, err := testEC2.LaunchInstance(&testSimpleConfig, &testDetailedConfig, true)
 	th.Nok(t, err)
+}
+
+func TestLaunchFleet(t *testing.T) {
+	const testInstanceId = ("i-12345")
+	testEC2.Svc = &th.MockedEC2Svc{}
+	fleetOutput, _ := testEC2.LaunchFleet(&testLaunchId)
+
+	th.Equals(t, 1, len(fleetOutput.Instances))
+	th.Equals(t, testInstanceId, *fleetOutput.Instances[0].InstanceIds[0])
 }
 
 /*

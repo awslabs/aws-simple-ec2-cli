@@ -159,6 +159,9 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 			return
 		}
 
+		// Ask for and set the capacity type
+		simpleConfig.CapacityType = question.AskCapacityType(simpleConfig.InstanceType)
+
 		// Ask for confirmation or modification
 		confirmation = question.AskConfirmationWithInput(simpleConfig, detailedConfig, true)
 
@@ -209,8 +212,9 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 	}
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	// Launch On-Demand or Spot instance based on capacity type
+	err = LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
@@ -260,12 +264,24 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	confirmation := question.AskConfirmationWithInput(simpleConfig, detailedConfig, false)
 
-	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	LaunchCapacityInstance(h, simpleConfig, detailedConfig, confirmation)
+
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
 	ReadSaveConfig(simpleConfig)
+}
+
+// Launch On-Demand or Spot instance based on capacity type
+func LaunchCapacityInstance(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, detailedConfig *config.DetailedInfo,
+	confirmation string) error {
+	var err error
+	if simpleConfig.CapacityType == question.DefaultCapacityTypeText.OnDemand {
+		_, err = h.LaunchInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	} else {
+		err = h.LaunchSpotInstance(simpleConfig, detailedConfig, confirmation == cli.ResponseYes)
+	}
+	return err
 }
 
 // Validate flags using some simple rules. Return true if the flags are validated, false otherwise
@@ -321,13 +337,17 @@ func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.Si
 
 // Launch an instance with a launch template
 func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
+	versions, err := h.GetLaunchTemplateVersions(simpleConfig.LaunchTemplateId,
+		&simpleConfig.LaunchTemplateVersion)
+	templateData := versions[0].LaunchTemplateData
+	simpleConfig.CapacityType = question.AskCapacityType(*templateData.InstanceType)
 	confirmation, err := question.AskConfirmationWithTemplate(h, simpleConfig)
 	if cli.ShowError(err, "Asking confirmation with launch template failed") {
 		return
 	}
 
 	// Launch the instance.
-	_, err = h.LaunchInstance(simpleConfig, nil, *confirmation == cli.ResponseYes)
+	err = LaunchCapacityInstance(h, simpleConfig, nil, *confirmation)
 	if cli.ShowError(err, "Launching instance failed") {
 		return
 	}
