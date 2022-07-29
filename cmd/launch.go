@@ -517,8 +517,8 @@ func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId s
 Ask user input for subnet placeholder. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAzId string) bool {
-	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAzId)
+func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAz string) bool {
+	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAz)
 	if cli.ShowError(err, "Asking availability zone failed") {
 		return false
 	}
