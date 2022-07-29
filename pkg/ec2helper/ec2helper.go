@@ -1297,6 +1297,7 @@ func ValidateTags(h *EC2Helper, userTags string) bool {
 	return true
 }
 
+// ValidateInteger checks if a given string is an integer
 func ValidateInteger(h *EC2Helper, intString string) bool {
 	_, err := strconv.Atoi(intString)
 	if err != nil {

@@ -118,6 +118,7 @@ func (s *SingleSelectList) selectItem() {
 	}
 }
 
+// PrintTable prints the selection table
 func (s *SingleSelectList) PrintTable() string {
 	s.list.Select(-1)
 	return s.View()
