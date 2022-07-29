@@ -103,7 +103,12 @@ func terminateInteractive(h *ec2helper.EC2Helper) {
 		}
 	}
 
-	if question.AskTerminationConfirmation(instanceIds) == cli.ResponseYes {
+	confirmationAnswer, err := question.AskTerminationConfirmation(instanceIds)
+	if cli.ShowError(err, "Asking termination confirmation failed") {
+		return
+	}
+
+	if confirmationAnswer == cli.ResponseYes {
 		cli.ShowError(h.TerminateInstances(instanceIds), "Terminating instances failed")
 	}
 }

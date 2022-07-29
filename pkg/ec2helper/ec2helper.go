@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"simple-ec2/pkg/cfn"
@@ -1116,6 +1117,14 @@ func (h *EC2Helper) LaunchSpotInstance(simpleConfig *config.SimpleInfo, detailed
 		if simpleConfig.LaunchTemplateId != "" {
 			_, err = h.LaunchFleet(aws.String(simpleConfig.LaunchTemplateId))
 		} else {
+			// Create new stack, if specified.
+			if simpleConfig.NewVPC {
+				err := h.createNetworkConfiguration(simpleConfig, nil)
+				if err != nil {
+					return err
+				}
+			}
+
 			template, err := h.CreateLaunchTemplate(simpleConfig, detailedConfig)
 			if err != nil {
 				if aerr, ok := err.(awserr.Error); ok {
@@ -1170,7 +1179,9 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 		return errors.New("No subnet with the selected availability zone found")
 	}
 
-	input.SubnetId = selectedSubnetId
+	if input != nil {
+		input.SubnetId = selectedSubnetId
+	}
 
 	/*
 		Get the security group.
@@ -1207,7 +1218,9 @@ func (h *EC2Helper) createNetworkConfiguration(simpleConfig *config.SimpleInfo,
 		return errors.New("No security group available for stack")
 	}
 
-	input.SecurityGroupIds = aws.StringSlice(selectedSecurityGroupIds)
+	if input != nil {
+		input.SecurityGroupIds = aws.StringSlice(selectedSecurityGroupIds)
+	}
 
 	// Update simpleConfig for config saving
 	simpleConfig.NewVPC = false
@@ -1279,6 +1292,14 @@ func ValidateTags(h *EC2Helper, userTags string) bool {
 		if len(strings.Split(rawTag, "|")) != 2 { //[tag1,val1]
 			return false
 		}
+	}
+	return true
+}
+
+func ValidateInteger(h *EC2Helper, intString string) bool {
+	_, err := strconv.Atoi(intString)
+	if err != nil {
+		return false
 	}
 	return true
 }
@@ -1478,6 +1499,12 @@ func (h *EC2Helper) LaunchFleet(templateId *string) (*ec2.CreateFleetOutput, err
 			fmt.Println(err.Error())
 		}
 		return nil, err
+	} else {
+		if len(result.Errors) != 0 {
+			err = errors.New(*result.Errors[0].ErrorMessage)
+			cli.ShowError(err, "Creating spot instance failed")
+			return nil, err
+		}
 	}
 
 	fmt.Println("Launch Spot Instance Success!")
