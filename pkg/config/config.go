@@ -74,6 +74,7 @@ type RequestInstanceInfo struct {
 	LaunchTemplateBlockMappings       []*ec2.LaunchTemplateBlockDeviceMappingRequest
 	InstanceInitiatedShutdownBehavior *string
 	UserData                          *string
+	LaunchTemplateTagSpecs            []*ec2.LaunchTemplateTagSpecificationRequest
 }
 
 func NewSimpleInfo() *SimpleInfo {
