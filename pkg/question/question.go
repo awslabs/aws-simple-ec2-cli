@@ -311,25 +311,14 @@ func AskIfEnterInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) 
 		return nil, err
 	}
 
-	// Use user default instance type if applicable. If not, find the default free instance type.
-	// If no default instance type available, simply don't give default option
-	var defaultOption *string
 	instanceTypeNames := []string{}
-
 	for _, instanceTypeInfo := range instanceTypes {
 		instanceTypeNames = append(instanceTypeNames, *instanceTypeInfo.InstanceType)
 	}
 
-	if slices.Contains(instanceTypeNames, defaultInstanceType) {
-		defaultOption = &defaultInstanceType
-	} else {
-		defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
-		if err != nil {
-			return nil, err
-		}
-		if defaultInstanceType != nil {
-			defaultOption = defaultInstanceType.InstanceType
-		}
+	defaultOption, err := selectDefaultInstanceType(h, instanceTypeNames, defaultInstanceType)
+	if err != nil {
+		return nil, err
 	}
 
 	indexedOptions := []string{cli.ResponseYes, cli.ResponseNo}
@@ -361,19 +350,9 @@ func AskInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) (*strin
 		stringOptions = append(stringOptions, *instanceTypeInfo.InstanceType)
 	}
 
-	// Use user default instance type if applicable. If not, find the default free instance type.
-	// If no default instance type available, simply don't give default option
-	var defaultOption *string
-	if slices.Contains(stringOptions, defaultInstanceType) {
-		defaultOption = &defaultInstanceType // Set to User default instance type
-	} else {
-		defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
-		if err != nil {
-			return nil, err
-		}
-		if defaultInstanceType != nil {
-			defaultOption = defaultInstanceType.InstanceType
-		}
+	defaultOption, err := selectDefaultInstanceType(h, stringOptions, defaultInstanceType)
+	if err != nil {
+		return nil, err
 	}
 
 	question := "Instance Type (eg. m5.xlarge, c5.xlarge)"
@@ -385,6 +364,25 @@ func AskInstanceType(h *ec2helper.EC2Helper, defaultInstanceType string) (*strin
 	})
 
 	return &answer, nil
+}
+
+// selectDefaultInstanceType returns the user default instance type if it's in the list of supported instances.
+// Otherwise, returns the default free tier instance type.
+// Otherwise, returns nothing (i.e., no default)
+func selectDefaultInstanceType(h *ec2helper.EC2Helper, availableInstanceTypes []string, userDefaultInstanceType string) (*string, error) {
+	var defaultOption *string
+	if slices.Contains(availableInstanceTypes, userDefaultInstanceType) {
+		defaultOption = &userDefaultInstanceType // Set to User default instance type
+	} else {
+		defaultInstanceType, err := h.GetDefaultFreeTierInstanceType()
+		if err != nil {
+			return nil, err
+		}
+		if defaultInstanceType != nil {
+			defaultOption = defaultInstanceType.InstanceType
+		}
+	}
+	return defaultOption, nil
 }
 
 // Ask the users to enter instance type vCPUs

@@ -487,7 +487,7 @@ Return true if the function is executed successfully, false otherwise
 */
 func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAz string) bool {
 	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAz)
-	if cli.ShowError(err, "Asking availability zone failed") {
+	if cli.ShowError(err, "Asking subnet availability zone failed") {
 		return false
 	}
 
