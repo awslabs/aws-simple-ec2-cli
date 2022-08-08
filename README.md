@@ -115,7 +115,7 @@ $ simple-ec2 launch
 +--------------------------------------+--------------------------+
 | Region                               | us-east-1                |
 | VPC                                  | vpc-example              |
-| Subnet                               | subnet-example 	        |
+| Subnet                               | subnet-example           |
 | Instance Type                        | t1.micro                 |
 | Capacity Type                        | On-Demand                |
 | Image                                | ami-047a51fa27710816e    |
@@ -191,7 +191,7 @@ Region [us-east-1]:  14
 +--------+----------------------------------------+----------------+
 | 1.     | Dev-dsk_Template(lt-05f448f1797b94c28) | 1              |
 | 2.     | ExampleTemplate1(lt-0f000ff5a94cf8088) | 3              |
-| 3.     | Do not use launch template             |		   |
+| 3.     | Do not use launch template             |                |
 +--------+----------------------------------------+----------------+
 Launch Template [Do not use launch template]:  3
 
@@ -236,17 +236,17 @@ VPC [vpc-123example]: 1
 +--------+------------------------------------------+-------------------+----------------+
 | OPTION |                  SUBNET                  | AVAILABILITY ZONE |   CIDR BLOCK   |
 +--------+------------------------------------------+-------------------+----------------+
-| 1.     | subnet-123example	                    | us-east-1c        | 172.31.48.0/20 |
-| 2.     | subnet-456example                 	    | us-east-1b        | 172.31.16.0/20 |
-| 3.     | subnet-789example	                    | us-east-1d        | 172.31.64.0/20 |
+| 1.     | subnet-123example                        | us-east-1c        | 172.31.48.0/20 |
+| 2.     | subnet-456example                        | us-east-1b        | 172.31.16.0/20 |
+| 3.     | subnet-789example                        | us-east-1d        | 172.31.64.0/20 |
 +--------+------------------------------------------+-------------------+----------------+
 Subnet [subnet-123example]: 1
 
 +--------+-----------------------------------------------------+-------------------------------------------------------+
 | OPTION |                   SECURITY GROUP                    |                      DESCRIPTION                      |
 +--------+-----------------------------------------------------+-------------------------------------------------------+
-| 1.     | sg-123example	                               | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
-| 2.     | simple-ec2 SSH Security Group(sg-456example)	       | Created by simple-ec2 for SSH connection to instances |
+| 1.     | sg-123example                                       | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
+| 2.     | simple-ec2 SSH Security Group(sg-456example)        | Created by simple-ec2 for SSH connection to instances |
 | 3.     | sg-789example                                       | default VPC security group                            |
 | 4.     | Add all available security groups                   |
 | 5.     | Create a new security group that enables SSH        |
@@ -256,11 +256,11 @@ Security Group(s) [sg-789example]: 3
 +--------+-----------------------------------------------------+-------------------------------------------------------+
 | OPTION |                   SECURITY GROUP                    |                      DESCRIPTION                      |
 +--------+-----------------------------------------------------+-------------------------------------------------------+
-| 1.     | sg-123example	                               | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
-| 2.     | simple-ec2 SSH Security Group(sg-456example)	       | Created by simple-ec2 for SSH connection to instances |
+| 1.     | sg-123example                                       | launch-wizard-1 created 2020-03-02T14:36:06.327-06:00 |
+| 2.     | simple-ec2 SSH Security Group(sg-456example)        | Created by simple-ec2 for SSH connection to instances |
 | 3.     | Add all available security groups                   | 
 | 4.     | Create a new security group that enables SSH        |
-| 5.     | Don't add any more security groups        	       |
+| 5.     | Don't add any more security groups                  |
 +--------+-----------------------------------------------------+-------------------------------------------------------+
 If you wish to add additional security group(s), add from the following:
 Security Group(s) already selected: [sg-789example]: 5
@@ -378,7 +378,7 @@ Region [us-east-1]: 14
 +--------+---------------------+-------------+-----------------------+
 | OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE       |
 +--------+---------------------+-------------+-----------------------+
-| 1.     | i-123example	       | CreatedTime | 2021-2-8 13:7:59 CST  |
+| 1.     | i-123example        | CreatedTime | 2021-2-8 13:7:59 CST  |
 |        |                     | CreatedBy   | simple-ec2            |
 | 2.     | i-456example        | CreatedBy   | simple-ec2            |
 |        |                     | CreatedTime | 2021-2-8 13:27:55 CST |
@@ -463,7 +463,7 @@ Region [us-east-1]:  14
 +--------+---------------------+-------------+-----------------------+
 | OPTION |      INSTANCE       |   TAG-KEY   |       TAG-VALUE       |
 +--------+---------------------+-------------+-----------------------+
-| 1.     | i-123example	       | CreatedTime | 2021-2-8 13:7:59 CST  |
+| 1.     | i-123example        | CreatedTime | 2021-2-8 13:7:59 CST  |
 |        |                     | CreatedBy   | simple-ec2            |
 +--------+---------------------+-------------+-----------------------+
 Select the instance you want to terminate: 1
