@@ -68,7 +68,7 @@ func init() {
 	launchCmd.Flags().StringToStringVar(&flagConfig.UserTags, "tags", nil,
 		"The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2)")
 	launchCmd.Flags().StringVar(&flagConfig.CapacityType, "capacity-type", "",
-		fmt.Sprintf("Launch instance as \"%s\" or \"%s\"", question.DefaultCapacityTypeText.OnDemand, question.DefaultCapacityTypeText.Spot))
+		fmt.Sprintf("Launch instance as \"%s\" (the default) or \"%s\"", question.DefaultCapacityTypeText.OnDemand, question.DefaultCapacityTypeText.Spot))
 }
 
 // The main function

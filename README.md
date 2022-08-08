@@ -92,7 +92,7 @@ Usage:
 Flags:
   -a, --auto-termination-timer int       The auto-termination timer for the instance in minutes
   -b, --boot-script string               The absolute filepath to a bash script passed to the instance and executed after the instance starts (user data)
-      --capacity-type string             Launch instance as "On-Demand" or "Spot"
+      --capacity-type string             Launch instance as "On-Demand" (the default) or "Spot"
   -h, --help                             help for launch
   -p, --iam-instance-profile string      The profile containing an IAM role to attach to the instance
   -m, --image-id string                  The image id of the AMI used to launch the instance
