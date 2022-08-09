@@ -72,7 +72,7 @@ func connectInteractive(h *ec2helper.EC2Helper) {
 	if regionFlag == "" {
 		defaultsConfig := config.NewSimpleInfo()
 		err = config.ReadConfig(defaultsConfig, nil)
-		if err != nil {
+		if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 			defaultsConfig = config.NewSimpleInfo()
 		}
 		region, err = question.AskRegion(h, defaultsConfig.Region)

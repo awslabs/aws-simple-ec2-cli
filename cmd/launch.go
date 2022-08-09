@@ -89,15 +89,14 @@ func launch(cmd *cobra.Command, args []string) {
 
 // Launch the instance interactively
 func launchInteractive(h *ec2helper.EC2Helper) {
-	var err error
 	simpleConfig := config.NewSimpleInfo()
 
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
 	simpleDefaultsConfig := config.NewSimpleInfo()
-	err = config.ReadConfig(simpleDefaultsConfig, nil)
-	if err != nil {
+	err := config.ReadConfig(simpleDefaultsConfig, nil)
+	if cli.ShowError("Default config file not loaded; using system defaults instead") {
 		simpleDefaultsConfig = config.NewSimpleInfo()
 	}
 
@@ -199,9 +198,8 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	// Try to get config from the config file
 	err := config.ReadConfig(simpleConfig, nil)
-	if cli.ShowError(err, "Loading config failed") {
+	if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 		// If getting config file fails, go for default values
-		fmt.Println("Generating default config...")
 		simpleConfig, err = h.GetDefaultSimpleConfig()
 		if cli.ShowError(err, "Generating config failed") {
 			return
