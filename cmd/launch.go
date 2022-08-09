@@ -96,7 +96,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 	simpleDefaultsConfig := config.NewSimpleInfo()
 	err := config.ReadConfig(simpleDefaultsConfig, nil)
-	if cli.ShowError("Default config file not loaded; using system defaults instead") {
+	if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 		simpleDefaultsConfig = config.NewSimpleInfo()
 	}
 
