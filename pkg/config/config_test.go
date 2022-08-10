@@ -51,6 +51,8 @@ const testSubnetId = "s-12345"
 const testLaunchTemplateId = "lt-12345"
 const testLaunchTemplateVersion = "1"
 const testNewVPC = true
+const testAutoTerminationTimerMinutes = 37
+const testKeepEBSVolume = true
 const testIamProfile = "iam-profile"
 const testBootScriptFilePath = "some/path/to/bootscript"
 const testCapacityType = "On-Spot-Demand"
@@ -58,22 +60,29 @@ const testCapacityType = "On-Spot-Demand"
 var testTags = map[string]string{"testedBy": "BRYAN", "brokenBy": "CBASKIN"}
 var testSecurityGroup = []string{"sg-12345", "sg-67890"}
 
-const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"iam-profile","BootScriptFilePath":"some/path/to/bootscript","UserTags":{"brokenBy":"CBASKIN","testedBy":"BRYAN"},"CapacityType":"On-Spot-Demand"}`
+// This JSON must match the above values used for testing
+const expectedJson = `{"Region":"us-somewhere","ImageId":"ami-12345","InstanceType":"t2.micro","SubnetId":"s-12345","LaunchTemplateId":"lt-12345","LaunchTemplateVersion":"1","SecurityGroupIds":["sg-12345","sg-67890"],"NewVPC":true,"AutoTerminationTimerMinutes":37,"KeepEbsVolumeAfterTermination":true,"IamInstanceProfile":"iam-profile","BootScriptFilePath":"some/path/to/bootscript","UserTags":{"brokenBy":"CBASKIN","testedBy":"BRYAN"},"CapacityType":"On-Spot-Demand"}`
 
+// This JSON must NOT match the above values, to verify overriding with flags
+const overridableJson = `{"Region":"us-nowhere","ImageId":"ami-67890","InstanceType":"t2.nano","SubnetId":"s-67890","LaunchTemplateId":"lt-67890","LaunchTemplateVersion":"2","SecurityGroupIds":["sg-98765","sg-43210"],"NewVPC":false,"AutoTerminationTimerMinutes":0,"KeepEbsVolumeAfterTermination":false,"IamInstanceProfile":"you-are-profile","BootScriptFilePath":"some/other/path/to/bootscript","UserTags":{"brokenBy":"JFINLAY","testedBy":"BRYAN"},"CapacityType":"On-Demand"}`
+
+// TestSaveConfig writes a config to a temporary file and verifies that the resulting JSON is correct
 func TestSaveConfig(t *testing.T) {
 	testConfig := &config.SimpleInfo{
-		Region:                testRegion,
-		ImageId:               testImageId,
-		InstanceType:          testInstanceType,
-		SubnetId:              testSubnetId,
-		LaunchTemplateId:      testLaunchTemplateId,
-		LaunchTemplateVersion: testLaunchTemplateVersion,
-		SecurityGroupIds:      testSecurityGroup,
-		NewVPC:                testNewVPC,
-		IamInstanceProfile:    testIamProfile,
-		BootScriptFilePath:    testBootScriptFilePath,
-		UserTags:              testTags,
-		CapacityType:          testCapacityType,
+		Region:                        testRegion,
+		ImageId:                       testImageId,
+		InstanceType:                  testInstanceType,
+		SubnetId:                      testSubnetId,
+		LaunchTemplateId:              testLaunchTemplateId,
+		LaunchTemplateVersion:         testLaunchTemplateVersion,
+		SecurityGroupIds:              testSecurityGroup,
+		NewVPC:                        testNewVPC,
+		AutoTerminationTimerMinutes:   testAutoTerminationTimerMinutes,
+		KeepEbsVolumeAfterTermination: testKeepEBSVolume,
+		IamInstanceProfile:            testIamProfile,
+		BootScriptFilePath:            testBootScriptFilePath,
+		UserTags:                      testTags,
+		CapacityType:                  testCapacityType,
 	}
 
 	err := config.SaveConfig(testConfig, aws.String(testConfigFileName))
@@ -86,49 +95,68 @@ func TestSaveConfig(t *testing.T) {
 	th.Equals(t, expectedJson, string(readData))
 }
 
+// TestOverrideConfigWithFlags reads a config from JSON (via a temporary file), overrides it with different values,
+// and verifies that the overrides take precedence over the original JSON
 func TestOverrideConfigWithFlags(t *testing.T) {
-	actualConfig := config.NewSimpleInfo()
+	actualConfig, err := readConfigFromFile(overridableJson)
+	th.Ok(t, err)
 	expectedConfig := &config.SimpleInfo{
-		Region:                testRegion,
-		ImageId:               testImageId,
-		InstanceType:          testInstanceType,
-		SubnetId:              testSubnetId,
-		LaunchTemplateId:      testLaunchTemplateId,
-		LaunchTemplateVersion: testLaunchTemplateVersion,
-		SecurityGroupIds:      testSecurityGroup,
-		NewVPC:                testNewVPC,
-		IamInstanceProfile:    testIamProfile,
-		BootScriptFilePath:    testBootScriptFilePath,
-		UserTags:              testTags,
+		Region:                        testRegion,
+		ImageId:                       testImageId,
+		InstanceType:                  testInstanceType,
+		SubnetId:                      testSubnetId,
+		LaunchTemplateId:              testLaunchTemplateId,
+		LaunchTemplateVersion:         testLaunchTemplateVersion,
+		SecurityGroupIds:              testSecurityGroup,
+		NewVPC:                        testNewVPC,
+		AutoTerminationTimerMinutes:   testAutoTerminationTimerMinutes,
+		KeepEbsVolumeAfterTermination: testKeepEBSVolume,
+		IamInstanceProfile:            testIamProfile,
+		BootScriptFilePath:            testBootScriptFilePath,
+		UserTags:                      testTags,
+		CapacityType:                  testCapacityType,
 	}
 	config.OverrideConfigWithFlags(actualConfig, expectedConfig)
 	th.Equals(t, expectedConfig, actualConfig)
 }
 
-func TestReadConfig(t *testing.T) {
-	err := ioutil.WriteFile(testConfigFilePath, []byte(expectedJson), 0644)
+// readConfigFromFile writes the given JSON string to a temporary file and unmarshals it into a SimpleInfo object
+func readConfigFromFile(configJson string) (*config.SimpleInfo, error) {
+	err := ioutil.WriteFile(testConfigFilePath, []byte(configJson), 0644)
 	defer os.Remove(testConfigFilePath)
+	if err != nil {
+		return nil, err
+	}
 
-	th.Ok(t, err)
+	configFromFile := config.NewSimpleInfo()
+	err = config.ReadConfig(configFromFile, aws.String(testConfigFileName))
+	if err != nil {
+		return nil, err
+	}
+	return configFromFile, nil
+}
 
-	actualConfig := config.NewSimpleInfo()
-	err = config.ReadConfig(actualConfig, aws.String(testConfigFileName))
+// TestReadConfig reads a config from JSON (via a temporary file) and verifies that the resulting SimpleInfo object has the correct values
+func TestReadConfig(t *testing.T) {
+	actualConfig, err := readConfigFromFile(expectedJson)
 	th.Ok(t, err)
 
 	// Check if the config is read correctly
 	expectedConfig := &config.SimpleInfo{
-		Region:                testRegion,
-		ImageId:               testImageId,
-		InstanceType:          testInstanceType,
-		SubnetId:              testSubnetId,
-		LaunchTemplateId:      testLaunchTemplateId,
-		LaunchTemplateVersion: testLaunchTemplateVersion,
-		SecurityGroupIds:      testSecurityGroup,
-		NewVPC:                testNewVPC,
-		IamInstanceProfile:    testIamProfile,
-		BootScriptFilePath:    testBootScriptFilePath,
-		UserTags:              testTags,
-		CapacityType:          testCapacityType,
+		Region:                        testRegion,
+		ImageId:                       testImageId,
+		InstanceType:                  testInstanceType,
+		SubnetId:                      testSubnetId,
+		LaunchTemplateId:              testLaunchTemplateId,
+		LaunchTemplateVersion:         testLaunchTemplateVersion,
+		SecurityGroupIds:              testSecurityGroup,
+		NewVPC:                        testNewVPC,
+		AutoTerminationTimerMinutes:   testAutoTerminationTimerMinutes,
+		KeepEbsVolumeAfterTermination: testKeepEBSVolume,
+		IamInstanceProfile:            testIamProfile,
+		BootScriptFilePath:            testBootScriptFilePath,
+		UserTags:                      testTags,
+		CapacityType:                  testCapacityType,
 	}
 	th.Equals(t, expectedConfig, actualConfig)
 }

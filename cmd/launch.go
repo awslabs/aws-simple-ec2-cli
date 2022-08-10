@@ -67,6 +67,8 @@ func init() {
 		"The absolute filepath to a bash script passed to the instance and executed after the instance starts (user data)")
 	launchCmd.Flags().StringToStringVar(&flagConfig.UserTags, "tags", nil,
 		"The tags applied to instances and volumes at launch (Example: tag1=val1,tag2=val2)")
+	launchCmd.Flags().StringVar(&flagConfig.CapacityType, "capacity-type", "",
+		fmt.Sprintf("Launch instance as \"%s\" (the default) or \"%s\"", question.DefaultCapacityTypeText.OnDemand, question.DefaultCapacityTypeText.Spot))
 }
 
 // The main function
@@ -297,6 +299,18 @@ func ValidateLaunchFlags(flags *config.SimpleInfo) bool {
 			return false
 		}
 	}
+
+	if flags.CapacityType != "" {
+		if strings.ToLower(flags.CapacityType) == strings.ToLower(question.DefaultCapacityTypeText.OnDemand) {
+			flags.CapacityType = question.DefaultCapacityTypeText.OnDemand
+		} else if strings.ToLower(flags.CapacityType) == strings.ToLower(question.DefaultCapacityTypeText.Spot) {
+			flags.CapacityType = question.DefaultCapacityTypeText.Spot
+		} else {
+			fmt.Printf("Error: Capacity type must be \"%s\" or \"%s\"\n", question.DefaultCapacityTypeText.OnDemand, question.DefaultCapacityTypeText.Spot)
+			return false
+		}
+	}
+
 	return true
 }
 

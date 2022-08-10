@@ -155,6 +155,9 @@ func OverrideConfigWithFlags(simpleConfig *SimpleInfo, flagConfig *SimpleInfo) {
 	if flagConfig.UserTags != nil {
 		simpleConfig.UserTags = flagConfig.UserTags
 	}
+	if flagConfig.CapacityType != "" {
+		simpleConfig.CapacityType = flagConfig.CapacityType
+	}
 }
 
 // Save the config as a JSON config file
