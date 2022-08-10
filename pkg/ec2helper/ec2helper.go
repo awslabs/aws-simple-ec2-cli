@@ -1329,6 +1329,7 @@ func (h *EC2Helper) CreateLaunchTemplate(simpleConfig *config.SimpleInfo, detail
 			BlockDeviceMappings:               dataConfig.LaunchTemplateBlockMappings,
 			InstanceInitiatedShutdownBehavior: dataConfig.InstanceInitiatedShutdownBehavior,
 			UserData:                          dataConfig.UserData,
+			TagSpecifications:                 dataConfig.LaunchTemplateTagSpecs,
 		},
 		LaunchTemplateName: aws.String(fmt.Sprintf("SimpleEC2LaunchTemplate-%s", launchIdentifier)),
 		VersionDescription: aws.String(fmt.Sprintf("Launch Template %s", launchIdentifier)),
@@ -1363,6 +1364,16 @@ func createRequestInstanceConfig(simpleConfig *config.SimpleInfo, detailedConfig
 	if simpleConfig.IamInstanceProfile != "" {
 		requestInstanceConfig.IamInstanceProfile = &ec2.IamInstanceProfileSpecification{
 			Name: aws.String(simpleConfig.IamInstanceProfile),
+		}
+	}
+	if detailedConfig.TagSpecs != nil {
+		requestInstanceConfig.LaunchTemplateTagSpecs = []*ec2.LaunchTemplateTagSpecificationRequest{}
+		for _, tagSpec := range detailedConfig.TagSpecs {
+			ltTagSpec := ec2.LaunchTemplateTagSpecificationRequest{
+				ResourceType: aws.String("instance"),
+				Tags:         tagSpec.Tags,
+			}
+			requestInstanceConfig.LaunchTemplateTagSpecs = append(requestInstanceConfig.LaunchTemplateTagSpecs, &ltTagSpec)
 		}
 	}
 
