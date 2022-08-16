@@ -6,16 +6,17 @@ require (
 	github.com/aws/amazon-ec2-instance-selector/v2 v2.3.0
 	github.com/aws/aws-sdk-go v1.44.3
 	github.com/briandowns/spinner v1.18.1
+	github.com/google/uuid v1.3.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.4.0
 	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
+	golang.org/x/exp v0.0.0-20220613132600-b0d781184e0d
 )
 
 require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect

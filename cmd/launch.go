@@ -91,14 +91,20 @@ func launch(cmd *cobra.Command, args []string) {
 
 // Launch the instance interactively
 func launchInteractive(h *ec2helper.EC2Helper) {
-	var err error
 	simpleConfig := config.NewSimpleInfo()
+
 	// Override config with flags if applicable
 	config.OverrideConfigWithFlags(simpleConfig, flagConfig)
 
+	simpleDefaultsConfig := config.NewSimpleInfo()
+	err := config.ReadConfig(simpleDefaultsConfig, nil)
+	if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
+		simpleDefaultsConfig = config.NewSimpleInfo()
+	}
+
 	if simpleConfig.Region == "" {
 		// Ask Region
-		region, err := question.AskRegion(h)
+		region, err := question.AskRegion(h, simpleDefaultsConfig.Region)
 		if cli.ShowError(err, "Asking region failed") {
 			return
 		}
@@ -107,48 +113,50 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 
 	h.ChangeRegion(simpleConfig.Region)
 
+	detailedDefaultsConfig, err := h.ParseConfig(simpleDefaultsConfig)
+
 	// Ask Launch Template
 	launchTemplateId := &simpleConfig.LaunchTemplateId
 	if simpleConfig.LaunchTemplateId == "" {
-		launchTemplateId = question.AskLaunchTemplate(h)
+		launchTemplateId = question.AskLaunchTemplate(h, simpleDefaultsConfig.LaunchTemplateId)
 	}
 
 	if *launchTemplateId != cli.ResponseNo {
 		// Use a launch template in this case.
 		simpleConfig.LaunchTemplateId = *launchTemplateId
-		UseLaunchTemplate(h, simpleConfig)
+		UseLaunchTemplate(h, simpleConfig, simpleDefaultsConfig)
 		return
 	}
 
 	// Not using a launch template if the program is not terminated at the point
-	if simpleConfig.InstanceType == "" && !ReadInstanceType(h, simpleConfig) {
+	if simpleConfig.InstanceType == "" && !ReadInstanceType(h, simpleConfig, simpleDefaultsConfig.InstanceType) {
 		return
 	}
 
 	// Ask for image ID, auto-termination timer, and keeping EBS volumes after instance termination
-	if simpleConfig.ImageId == "" && !ReadImageId(h, simpleConfig) {
+	if simpleConfig.ImageId == "" && !ReadImageId(h, simpleConfig, simpleDefaultsConfig) {
 		return
 	}
 
 	// Ask for network configuration
 	if (simpleConfig.SubnetId == "" || simpleConfig.SecurityGroupIds == nil) &&
-		!ReadNetworkConfiguration(h, simpleConfig) {
+		!ReadNetworkConfiguration(h, simpleConfig, detailedDefaultsConfig) {
 		return
 	}
 
 	// Ask for IAM profile
-	if simpleConfig.IamInstanceProfile == "" && !ReadIamProfile(h, simpleConfig) {
+	if simpleConfig.IamInstanceProfile == "" && !ReadIamProfile(h, simpleConfig, simpleDefaultsConfig.IamInstanceProfile) {
 		return
 	}
 
 	// Ask for user boot data
-	if simpleConfig.BootScriptFilePath == "" && !ReadBootScript(h, simpleConfig) {
-		return
+	if simpleConfig.BootScriptFilePath == "" {
+		ReadBootScript(h, simpleConfig, simpleDefaultsConfig.BootScriptFilePath)
 	}
 
 	// Ask for tags
-	if len(simpleConfig.UserTags) == 0 && !ReadUserTags(h, simpleConfig) {
-		return
+	if len(simpleConfig.UserTags) == 0 {
+		ReadUserTags(h, simpleConfig, simpleDefaultsConfig.UserTags)
 	}
 
 	// Ask for confirmation or modification. Keep asking until the config is confirmed or denied
@@ -162,7 +170,7 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		}
 
 		// Ask for and set the capacity type
-		simpleConfig.CapacityType = question.AskCapacityType(simpleConfig.InstanceType)
+		simpleConfig.CapacityType = question.AskCapacityType(simpleConfig.InstanceType, simpleDefaultsConfig.CapacityType)
 
 		// Ask for confirmation or modification
 		confirmation = question.AskConfirmationWithInput(simpleConfig, detailedConfig, true)
@@ -170,47 +178,6 @@ func launchInteractive(h *ec2helper.EC2Helper) {
 		// The users have confirmed or denied the config
 		if confirmation == cli.ResponseYes || confirmation == cli.ResponseNo {
 			break
-		}
-
-		switch confirmation {
-		// Ask questions to modify the config
-		case cli.ResourceVpc:
-			if !ReadNetworkConfiguration(h, simpleConfig) {
-				return
-			}
-		case cli.ResourceSubnet:
-			if !ReadSubnet(h, simpleConfig, *detailedConfig.Subnet.VpcId) {
-				return
-			}
-		case cli.ResourceSubnetPlaceholder:
-			if !ReadSubnetPlaceholder(h, simpleConfig) {
-				return
-			}
-		case cli.ResourceSecurityGroup:
-			if !ReadSecurityGroups(h, simpleConfig, *detailedConfig.Subnet.VpcId) {
-				return
-			}
-		case cli.ResourceSecurityGroupPlaceholder:
-			if !ReadSecurityGroupPlaceholder(h, simpleConfig) {
-				return
-			}
-		case cli.ResourceInstanceType:
-			if !ReadInstanceType(h, simpleConfig) {
-				return
-			}
-			if !ReadImageId(h, simpleConfig) {
-				return
-			}
-		case cli.ResourceImage:
-			if !ReadImageId(h, simpleConfig) {
-				return
-			}
-		case cli.ResourceKeepEbsVolume:
-			ReadKeepEbsVolume(simpleConfig)
-		case cli.ResourceAutoTerminationTimer:
-			if !ReadAutoTerminationTimer(simpleConfig) {
-				return
-			}
 		}
 	}
 
@@ -233,9 +200,8 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 
 	// Try to get config from the config file
 	err := config.ReadConfig(simpleConfig, nil)
-	if cli.ShowError(err, "Loading config failed") {
+	if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 		// If getting config file fails, go for default values
-		fmt.Println("Generating default config...")
 		simpleConfig, err = h.GetDefaultSimpleConfig()
 		if cli.ShowError(err, "Generating config failed") {
 			return
@@ -248,13 +214,13 @@ func launchNonInteractive(h *ec2helper.EC2Helper) {
 	// When the flags specify a launch template
 	if flagConfig.LaunchTemplateId != "" {
 		// If using a launch template, ignore the config file. Only read from the flags
-		UseLaunchTemplateWithConfig(h, flagConfig)
+		UseLaunchTemplateWithConfig(h, flagConfig, simpleConfig.CapacityType)
 		return
 	}
 
 	// When the config file specifies a launch template
 	if simpleConfig.LaunchTemplateId != "" {
-		UseLaunchTemplateWithConfig(h, simpleConfig)
+		UseLaunchTemplateWithConfig(h, simpleConfig, simpleConfig.CapacityType)
 		return
 	}
 
@@ -315,21 +281,21 @@ func ValidateLaunchFlags(flags *config.SimpleInfo) bool {
 }
 
 // Ask for version and launch with the launch template.
-func UseLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
+func UseLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultsConfig *config.SimpleInfo) {
 	// Ask Launch Template version, if not specified already
 	if simpleConfig.LaunchTemplateVersion == "" {
-		launchTemplateVersion, err := question.AskLaunchTemplateVersion(h, simpleConfig.LaunchTemplateId)
+		launchTemplateVersion, err := question.AskLaunchTemplateVersion(h, simpleConfig.LaunchTemplateId, defaultsConfig.LaunchTemplateVersion)
 		if cli.ShowError(err, "Asking launch template version failed") {
 			return
 		}
 		simpleConfig.LaunchTemplateVersion = *launchTemplateVersion
 	}
 
-	LaunchWithLaunchTemplate(h, simpleConfig)
+	LaunchWithLaunchTemplate(h, simpleConfig, defaultsConfig.CapacityType)
 }
 
 // Use a launch template with config
-func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
+func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultCapacityType string) {
 	/*
 		Deciding the version of the launch template. If no version is specified,
 		use the default version.
@@ -346,15 +312,15 @@ func UseLaunchTemplateWithConfig(h *ec2helper.EC2Helper, simpleConfig *config.Si
 	}
 	simpleConfig.LaunchTemplateVersion = launchTemplateVersion
 
-	LaunchWithLaunchTemplate(h, simpleConfig)
+	LaunchWithLaunchTemplate(h, simpleConfig, defaultCapacityType)
 }
 
 // Launch an instance with a launch template
-func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
+func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultCapacityType string) {
 	versions, err := h.GetLaunchTemplateVersions(simpleConfig.LaunchTemplateId,
 		&simpleConfig.LaunchTemplateVersion)
 	templateData := versions[0].LaunchTemplateData
-	simpleConfig.CapacityType = question.AskCapacityType(*templateData.InstanceType)
+	simpleConfig.CapacityType = question.AskCapacityType(*templateData.InstanceType, defaultCapacityType)
 	confirmation, err := question.AskConfirmationWithTemplate(h, simpleConfig)
 	if cli.ShowError(err, "Asking confirmation with launch template failed") {
 		return
@@ -372,9 +338,9 @@ func LaunchWithLaunchTemplate(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 Ask user input for an instance type, resource definition (using instance selector) or fall back to using default.
 Return true if the function is executed successfully, false otherwise.
 */
-func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultInstanceType string) bool {
 	// Ask if the users want to enter an instance type
-	instanceTypeResponse, err := question.AskIfEnterInstanceType(h)
+	instanceTypeResponse, err := question.AskIfEnterInstanceType(h, defaultInstanceType)
 	if cli.ShowError(err, "Asking instance type failed") {
 		return false
 	}
@@ -386,7 +352,7 @@ func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) b
 	*/
 	var instanceType *string
 	if *instanceTypeResponse == cli.ResponseYes {
-		instanceType, err = question.AskInstanceType(h)
+		instanceType, err = question.AskInstanceType(h, defaultInstanceType)
 		if cli.ShowError(err, "Asking instance type failed") {
 			return false
 		}
@@ -418,9 +384,9 @@ func ReadInstanceType(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) b
 Ask user input for an image id. The user can select from provided options orenter a valid image id.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultsConfig *config.SimpleInfo) bool {
 	// Get the image ID
-	image, err := question.AskImage(h, simpleConfig.InstanceType)
+	image, err := question.AskImage(h, simpleConfig.InstanceType, defaultsConfig.ImageId)
 	if cli.ShowError(err, "Asking image failed") {
 		return false
 	}
@@ -428,13 +394,13 @@ func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
 	simpleConfig.ImageId = *image.ImageId
 
 	if !simpleConfig.KeepEbsVolumeAfterTermination && ec2helper.HasEbsVolume(image) {
-		ReadKeepEbsVolume(simpleConfig)
+		ReadKeepEbsVolume(simpleConfig, question.AskKeepEbsVolume(defaultsConfig.KeepEbsVolumeAfterTermination))
 	}
 
 	// Auto-termination only supports Linux for now
 	if simpleConfig.AutoTerminationTimerMinutes == 0 && image.PlatformDetails != nil &&
 		ec2helper.IsLinux(*image.PlatformDetails) {
-		return ReadAutoTerminationTimer(simpleConfig)
+		return ReadAutoTerminationTimer(simpleConfig, defaultsConfig.AutoTerminationTimerMinutes)
 	}
 
 	return true
@@ -444,9 +410,9 @@ func ReadImageId(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
 Ask user input for the auto-termination timer.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo) bool {
+func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo, defaultTimer int) bool {
 	// Ask for auto-termination timer
-	timerResponse := question.AskAutoTerminationTimerMinutes()
+	timerResponse := question.AskAutoTerminationTimerMinutes(defaultTimer)
 	if timerResponse != cli.ResponseNo {
 		timer, err := strconv.Atoi(timerResponse)
 		if cli.ShowError(err, "Asking auto-termination timer failed") {
@@ -464,13 +430,8 @@ func ReadAutoTerminationTimer(simpleConfig *config.SimpleInfo) bool {
 Ask user input for keeping EBS volumes after instance termination.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadKeepEbsVolume(simpleConfig *config.SimpleInfo) {
-	isKeepVolume := question.AskKeepEbsVolume()
-	if isKeepVolume == cli.ResponseYes {
-		simpleConfig.KeepEbsVolumeAfterTermination = true
-	} else {
-		simpleConfig.KeepEbsVolumeAfterTermination = false
-	}
+func ReadKeepEbsVolume(simpleConfig *config.SimpleInfo, isKeepVolume string) {
+	simpleConfig.KeepEbsVolumeAfterTermination = isKeepVolume == cli.ResponseYes
 }
 
 /*
@@ -478,8 +439,19 @@ Ask user input for a network interface, including VPC, subnet and security group
 The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
-	vpcId, err := question.AskVpc(h)
+func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultsConfig *config.DetailedInfo) bool {
+	var defaultAz, defaultSubnetId, defaultVpcId string
+	if defaultsConfig != nil {
+		if defaultsConfig.Subnet != nil {
+			defaultAz = *defaultsConfig.Subnet.AvailabilityZoneId
+			defaultSubnetId = *defaultsConfig.Subnet.SubnetId
+		}
+		if defaultsConfig.Vpc != nil {
+			defaultVpcId = *defaultsConfig.Vpc.VpcId
+		}
+	}
+
+	vpcId, err := question.AskVpc(h, defaultVpcId)
 	if cli.ShowError(err, "Asking VPC failed") {
 		return false
 	}
@@ -490,11 +462,12 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 	*/
 	if *vpcId == cli.ResponseNew {
 		simpleConfig.NewVPC = true
-
-		return ReadSubnetPlaceholder(h, simpleConfig) && ReadSecurityGroupPlaceholder(h, simpleConfig)
+		result := ReadSubnetPlaceholder(h, simpleConfig, defaultAz)
+		ReadSecurityGroupPlaceholder(h, simpleConfig)
+		return result
 	} else {
 		// If the resources are not specified in the config, ask for them
-		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId)) ||
+		if (flagConfig.SubnetId == "" && !ReadSubnet(h, simpleConfig, *vpcId, defaultSubnetId)) ||
 			(flagConfig.SecurityGroupIds == nil && !ReadSecurityGroups(h, simpleConfig, *vpcId)) {
 			return false
 		}
@@ -507,9 +480,9 @@ func ReadNetworkConfiguration(h *ec2helper.EC2Helper, simpleConfig *config.Simpl
 Ask user input for subnet. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string) bool {
+func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId string, defaultSubnetId string) bool {
 	// Ask for subnet
-	subnetIdAnswer, err := question.AskSubnet(h, vpcId)
+	subnetIdAnswer, err := question.AskSubnet(h, vpcId, defaultSubnetId)
 	if cli.ShowError(err, "Asking subnet failed") {
 		return false
 	}
@@ -524,9 +497,9 @@ func ReadSubnet(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, vpcId s
 Ask user input for subnet placeholder. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
-	subnetPlaceholder, err := question.AskSubnetPlaceholder(h)
-	if cli.ShowError(err, "Asking subnet placeholder failed") {
+func ReadSubnetPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultAz string) bool {
+	subnetPlaceholder, err := question.AskSubnetPlaceholder(h, defaultAz)
+	if cli.ShowError(err, "Asking subnet availability zone failed") {
 		return false
 	}
 
@@ -596,24 +569,22 @@ Ask user input for security group placeholder.
 The user can select from provided options or create new resources.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+func ReadSecurityGroupPlaceholder(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) {
 	securityGroupPlaceholder := question.AskSecurityGroupPlaceholder()
 
 	simpleConfig.SecurityGroupIds = []string{
 		securityGroupPlaceholder,
 	}
-
-	return true
 }
 
 /*
 Ask user input for IAM profile. The user can select from provided options.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
+func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultIamProfile string) bool {
 	// Ask for iam profile
 	iam := iamhelper.New(h.Sess)
-	iamAnswer, err := question.AskIamProfile(iam)
+	iamAnswer, err := question.AskIamProfile(iam, defaultIamProfile)
 	if cli.ShowError(err, "Asking IAM failed") {
 		return false
 	}
@@ -627,29 +598,39 @@ func ReadIamProfile(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) boo
 Ask user input for filepath containing boot script.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
-	bootScriptAnswer := question.AskBootScript(h)
-	if bootScriptAnswer != cli.ResponseNo {
-		simpleConfig.BootScriptFilePath = bootScriptAnswer
+func ReadBootScript(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultBootScript string) {
+	if question.AskBootScriptConfirmation(h, defaultBootScript) == cli.ResponseNo {
+		return
 	}
-	return true
+
+	bootScriptAnswer := question.AskBootScript(h, defaultBootScript)
+	if bootScriptAnswer == "" {
+		return
+	}
+
+	simpleConfig.BootScriptFilePath = bootScriptAnswer
 }
 
 /*
 Ask user input for tags applied to launched instances and volumes.
 Return true if the function is executed successfully, false otherwise
 */
-func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo) bool {
-	userTagsAnswer := question.AskUserTags(h)
-	if userTagsAnswer != cli.ResponseNo {
-		//convert user input tag1|val1,tag2|val2 to map
-		tags := strings.Split(userTagsAnswer, ",") //[tag1|val1, tag2|val2]
-		for _, tag := range tags {
-			kv := strings.Split(tag, "|") //[tag1, val1]
-			simpleConfig.UserTags[kv[0]] = kv[1]
-		}
+func ReadUserTags(h *ec2helper.EC2Helper, simpleConfig *config.SimpleInfo, defaultTags map[string]string) {
+	if question.AskUserTagsConfirmation(h, defaultTags) == cli.ResponseNo {
+		return
 	}
-	return true
+
+	userTagsAnswer := question.AskUserTags(h, defaultTags)
+	if userTagsAnswer == cli.ResponseNo {
+		return
+	}
+
+	//convert user input tag1|val1,tag2|val2 to map
+	tags := strings.Split(userTagsAnswer, ",") //[tag1|val1, tag2|val2]
+	for _, tag := range tags {
+		kv := strings.Split(tag, "|") //[tag1, val1]
+		simpleConfig.UserTags[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+	}
 }
 
 /*
