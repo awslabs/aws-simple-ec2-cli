@@ -217,9 +217,9 @@ if [[ "${DRY_RUN}" -eq 0 ]]; then
   FORK_RELEASE_BRANCH="${BINARY_BASE}-${VERSION}-${BUILD_ID}"
   git checkout -b "${FORK_RELEASE_BRANCH}" upstream/${DEFAULT_BRANCH}
 
-  cp "${BREW_CONFIG_DIR}/${BINARY_BASE}.json" "${FORK_DIR}/bottle-configs/${BINARY_BASE}.json"
+  cp "${BREW_CONFIG_DIR}/${FORMULA_NAME}.json" "${FORK_DIR}/bottle-configs/${FORMULA_NAME}.json"
   
-  git add "bottle-configs/${BINARY_BASE}.json"
+  git add "bottle-configs/${FORMULA_NAME}.json"
   git commit -m "${BINARY_BASE} update to version ${VERSION_NUM}"
 
   RELEASE_ID=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
