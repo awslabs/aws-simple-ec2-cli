@@ -1390,6 +1390,26 @@ func TestValidateTags_False(t *testing.T) {
 	th.Equals(t, false, result)
 }
 
+func TestValidateInteger_True(t *testing.T) {
+	testUserInput := "123"
+	result := ec2helper.ValidateInteger(testEC2, testUserInput)
+	th.Equals(t, true, result)
+}
+
+func TestValidateInteger_False(t *testing.T) {
+	floatInput := "123.456"
+	floatResult := ec2helper.ValidateInteger(testEC2, floatInput)
+	th.Equals(t, false, floatResult)
+
+	stringInput := "abcdefg"
+	stringResult := ec2helper.ValidateInteger(testEC2, stringInput)
+	th.Equals(t, false, stringResult)
+
+	alphanumericInput := "123abc"
+	alphanumericResult := ec2helper.ValidateInteger(testEC2, alphanumericInput)
+	th.Equals(t, false, alphanumericResult)
+}
+
 func TestIsLinux_True(t *testing.T) {
 	actualIsLinux := ec2helper.IsLinux(ec2.CapacityReservationInstancePlatformLinuxUnix)
 	th.Equals(t, true, actualIsLinux)
