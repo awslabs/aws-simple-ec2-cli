@@ -1113,7 +1113,7 @@ func AskInstanceId(h *ec2helper.EC2Helper, qh *questionModel.QuestionModelHelper
 	})
 
 	answer := model.GetChoice()
-	return &answer, nil
+	return &answer, err
 }
 
 // Ask the instance IDs to be terminated
