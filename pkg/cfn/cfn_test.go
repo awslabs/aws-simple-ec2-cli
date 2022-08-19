@@ -92,7 +92,7 @@ func TestCreateStackAndGetResources_Success(t *testing.T) {
 		StackEvents:    mockedEvents,
 	}
 
-	vpcId, subnetIds, instanceId, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
+	vpcId, subnetIds, instanceId, _, err := testCfn.CreateStackAndGetResources(testAzs, aws.String(cfn.DefaultStackName), "")
 	th.Ok(t, err)
 	th.Equals(t, testVpcId, *vpcId)
 	th.Equals(t, testSubnetIds, subnetIds)
@@ -106,7 +106,7 @@ func TestCreateStackAndGetResources_DescribeStackEventsPagesError(t *testing.T) 
 		DescribeStackEventsPagesError: errors.New("Test error"),
 	}
 
-	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
+	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, aws.String(cfn.DefaultStackName), "")
 	th.Nok(t, err)
 }
 
@@ -118,7 +118,7 @@ func TestCreateStackAndGetResources_DescribeStackResourcesError(t *testing.T) {
 		DescribeStackResourcesError: errors.New("Test error"),
 	}
 
-	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
+	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, aws.String(cfn.DefaultStackName), "")
 	th.Nok(t, err)
 }
 
@@ -133,7 +133,7 @@ func TestCreateStackAndGetResources_NoSubnet(t *testing.T) {
 		StackEvents: mockedEvents,
 	}
 
-	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
+	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, aws.String(cfn.DefaultStackName), "")
 	th.Nok(t, err)
 }
 
@@ -152,7 +152,7 @@ func TestCreateStackAndGetResources_NoVpc(t *testing.T) {
 		StackEvents: mockedEvents,
 	}
 
-	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, nil, "")
+	_, _, _, _, err := testCfn.CreateStackAndGetResources(testAzs, aws.String(cfn.DefaultStackName), "")
 	th.Nok(t, err)
 }
 
