@@ -123,7 +123,7 @@ func TestAppendEbs(t *testing.T) {
 		},
 	}
 
-	data = table.AppendEbs(data, mappings)
+	data, _ = table.AppendEbs(data, mappings)
 	th.Equals(t, expectedData, data)
 }
 
@@ -150,7 +150,7 @@ func TestAppendSecurityGroups(t *testing.T) {
 		},
 	}
 
-	data = table.AppendSecurityGroups(data, securityGroups)
+	data, _ = table.AppendSecurityGroups(data, securityGroups)
 	th.Equals(t, expectedData, data)
 }
 
@@ -214,10 +214,10 @@ func TestAppendTemplateNetworkInterfaces_ApiError(t *testing.T) {
 
 func TestAppendInstances(t *testing.T) {
 	expectedData := [][]string{
-		{"1.", "Instance 2(i-67890)", "", ""},
-		{"2.", "Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
-		{"", "", "CreatedTime", "just now"},
-		{"3.", "i-09876", "", ""},
+		{"Instance 2(i-67890)", "", ""},
+		{"Instance 3(i-54321)", "CreatedBy", "simple-ec2"},
+		{"", "CreatedTime", "just now"},
+		{"i-09876", "", ""},
 	}
 	expectedOptions := []string{
 		"i-67890",
@@ -271,7 +271,7 @@ func TestAppendInstances(t *testing.T) {
 	}
 
 	addedInstanceIds = append(addedInstanceIds, *instances[0].InstanceId)
-	data, indexedOptions, _ = table.AppendInstances(data, indexedOptions, instances, addedInstanceIds)
+	data, indexedOptions, _, _ = table.AppendInstances(data, indexedOptions, instances, addedInstanceIds)
 	th.Equals(t, expectedData, data)
 	th.Equals(t, expectedOptions, indexedOptions)
 }

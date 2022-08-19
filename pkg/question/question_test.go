@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"simple-ec2/pkg/ec2helper"
 	"simple-ec2/pkg/iamhelper"
 	"simple-ec2/pkg/question"
+	"simple-ec2/pkg/questionModel"
 	th "simple-ec2/test/testhelper"
 
 	"github.com/aws/amazon-ec2-instance-selector/v2/pkg/instancetypes"
@@ -35,6 +37,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 var testEC2 = &ec2helper.EC2Helper{
@@ -44,114 +47,8 @@ var testEC2 = &ec2helper.EC2Helper{
 		},
 	},
 }
+var testQMHelper = &questionModel.QuestionModelHelper{}
 var defaultArchitecture = aws.StringSlice([]string{"x86_64"})
-
-/*
-AskQuestion Tests
-*/
-
-const expectedOutput = `
-These are the optionsThis is a question [default option]:  `
-const invalidInputQuestionPrompt = `
-These are the optionsThis is a question [default option]:  Input invalid. Please try again.
-This is a question [default option]:  `
-
-var input = &question.AskQuestionInput{
-	QuestionString:    "This is a question",
-	OptionsString:     aws.String("These are the options"),
-	DefaultOptionRepr: aws.String("default option"),
-	DefaultOption:     aws.String(cli.ResponseYes),
-	IndexedOptions:    []string{"Option 1", "Option 2"},
-	StringOptions:     []string{cli.ResponseYes, cli.ResponseNo},
-	AcceptAnyInteger:  true,
-	AcceptAnyString:   true,
-}
-
-func TestAskQuestion_StringOptionAnswer(t *testing.T) {
-	const testResponse = cli.ResponseNo
-	initQuestionTest(t, testResponse+"\n")
-
-	answer := question.AskQuestion(input)
-	output := cleanupQuestionTest()
-	th.Equals(t, expectedOutput, output)
-	th.Equals(t, testResponse, answer)
-}
-
-func TestAskQuestion_InvalidInput(t *testing.T) {
-	const expectedInvalidInput = "heap"
-	initQuestionTest(t, expectedInvalidInput+"\n")
-	input.AcceptAnyString = false
-
-	question.AskQuestion(input)
-
-	output := cleanupQuestionTest()
-	th.Equals(t, invalidInputQuestionPrompt, output)
-}
-
-func TestAskQuestion_IndexedOptionAnswer(t *testing.T) {
-	input.DefaultOptionRepr = nil
-	const index = "1"
-	initQuestionTest(t, index+"\n")
-	defer cleanupQuestionTest()
-
-	answer := question.AskQuestion(input)
-	th.Equals(t, input.IndexedOptions[0], answer)
-}
-
-func TestAskQuestion_DefaultAnswer(t *testing.T) {
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
-
-	answer := question.AskQuestion(input)
-	th.Equals(t, *input.DefaultOption, answer)
-}
-
-func TestAskQuestion_IntegerAnswer(t *testing.T) {
-	const expectedInteger = "5"
-	initQuestionTest(t, expectedInteger+"\n")
-	defer cleanupQuestionTest()
-
-	answer := question.AskQuestion(input)
-	th.Equals(t, expectedInteger, answer)
-}
-
-func TestAskQuestion_AnyStringAnswer(t *testing.T) {
-	// This test needs its own copy of the AskQuestionInput object to prevent some kind of race condition with the other
-	// tests when running the whole test suite. We don't exactly know why, but it works.
-	var anyStringQuestion = &question.AskQuestionInput{
-		QuestionString:  "This is a question?",
-		AcceptAnyString: true,
-	}
-	const expectedString = "any string"
-	initQuestionTest(t, expectedString+"\n")
-	defer cleanupQuestionTest()
-
-	answer := question.AskQuestion(anyStringQuestion)
-	th.Equals(t, expectedString, answer)
-}
-
-func TestAskQuestion_FunctionCheckedInput(t *testing.T) {
-	const expectedImageId = "ami-12345"
-	testEC2 := &ec2helper.EC2Helper{
-		Svc: &th.MockedEC2Svc{
-			Images: []*ec2.Image{
-				{
-					ImageId: aws.String(expectedImageId),
-				},
-			},
-		},
-	}
-	input.EC2Helper = testEC2
-	input.Fns = []question.CheckInput{
-		ec2helper.ValidateImageId,
-	}
-
-	initQuestionTest(t, expectedImageId+"\n")
-	defer cleanupQuestionTest()
-
-	answer := question.AskQuestion(input)
-	th.Equals(t, expectedImageId, answer)
-}
 
 /*
 Other Question Asking Tests
@@ -159,8 +56,6 @@ Other Question Asking Tests
 
 func TestAskRegion_Success(t *testing.T) {
 	const expectedRegion = "us-east-2"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Regions: []*ec2.Region{
@@ -176,7 +71,15 @@ func TestAskRegion_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskRegion(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskRegion(testEC2, testQMHelper, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedRegion, *answer)
 }
@@ -186,17 +89,20 @@ func TestAskRegion_DescribeRegionsError(t *testing.T) {
 		DescribeRegionsError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskRegion(testEC2, "")
+	_, err := question.AskRegion(testEC2, testQMHelper, "")
 	th.Nok(t, err)
 }
 
 func TestAskLaunchTemplate_Success(t *testing.T) {
 	const expectedTemplateId = "lt-12345"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplates: []*ec2.LaunchTemplate{
@@ -213,8 +119,24 @@ func TestAskLaunchTemplate_Success(t *testing.T) {
 		},
 	}
 
-	answer := question.AskLaunchTemplate(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskLaunchTemplate(testEC2, testQMHelper, "")
 	th.Equals(t, expectedTemplateId, *answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskLaunchTemplate_DescribeLaunchTemplatesPagesError(t *testing.T) {
@@ -222,18 +144,23 @@ func TestAskLaunchTemplate_DescribeLaunchTemplatesPagesError(t *testing.T) {
 		DescribeLaunchTemplatesPagesError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskLaunchTemplate(testEC2, "")
+	answer, err := question.AskLaunchTemplate(testEC2, testQMHelper, "")
 	th.Equals(t, cli.ResponseNo, *answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskLaunchTemplateVersion_Success(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const testVersion = 1
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
@@ -251,9 +178,18 @@ func TestAskLaunchTemplateVersion_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskLaunchTemplateVersion(testEC2, testQMHelper, testTemplateId, "")
 	th.Ok(t, err)
 	th.Equals(t, strconv.Itoa(testVersion), *answer)
+
 }
 
 func TestAskLaunchTemplateVersion_DescribeLaunchTemplateVersionsPagesError(t *testing.T) {
@@ -263,17 +199,20 @@ func TestAskLaunchTemplateVersion_DescribeLaunchTemplateVersionsPagesError(t *te
 		DescribeLaunchTemplateVersionsPagesError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId, "")
+	_, err := question.AskLaunchTemplateVersion(testEC2, testQMHelper, testTemplateId, "")
 	th.Nok(t, err)
 }
 
 func TestAskIfEnterInstanceType_Success(t *testing.T) {
 	const expectedInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -284,7 +223,15 @@ func TestAskIfEnterInstanceType_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskIfEnterInstanceType(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskIfEnterInstanceType(testEC2, testQMHelper, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedInstanceType, *answer)
 }
@@ -294,17 +241,20 @@ func TestAskIfEnterInstanceType_(t *testing.T) {
 		DescribeInstanceTypesPagesError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskIfEnterInstanceType(testEC2, "")
+	_, err := question.AskIfEnterInstanceType(testEC2, testQMHelper, "")
 	th.Nok(t, err)
 }
 
 func TestAskInstanceType_Success(t *testing.T) {
 	const expectedInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, expectedInstanceType+"\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -315,7 +265,19 @@ func TestAskInstanceType_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskInstanceType(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedInstanceType),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskInstanceType(testEC2, testQMHelper, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedInstanceType, *answer)
 }
@@ -325,36 +287,63 @@ func TestAskInstanceType_DescribeInstanceTypesPagesError(t *testing.T) {
 		DescribeInstanceTypesPagesError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceType(testEC2, "")
+	_, err := question.AskInstanceType(testEC2, testQMHelper, "")
 	th.Nok(t, err)
 }
 
 func TestAskInstanceTypeVCpu(t *testing.T) {
-	const expectedVcpus = "2"
-	initQuestionTest(t, expectedVcpus+"\n")
-	defer cleanupQuestionTest()
+	const expectedVcpus = "4"
 
-	answer := question.AskInstanceTypeVCpu()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedVcpus),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskInstanceTypeVCpu(testEC2, testQMHelper)
 	th.Equals(t, expectedVcpus, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskInstanceTypeMemory(t *testing.T) {
-	const expectedMemory = "2"
-	initQuestionTest(t, expectedMemory+"\n")
-	defer cleanupQuestionTest()
+	const expectedMemory = "3"
 
-	answer := question.AskInstanceTypeMemory()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedMemory),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskInstanceTypeMemory(testEC2, testQMHelper)
 	th.Equals(t, expectedMemory, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskImage_Success(t *testing.T) {
 	const expectedImage = "ami-12345"
 	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -372,15 +361,21 @@ func TestAskImage_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskImage(testEC2, testInstanceType, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskImage(testEC2, testQMHelper, testInstanceType, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedImage, *answer.ImageId)
 }
 
 func TestAskImage_NoImage(t *testing.T) {
 	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -392,27 +387,39 @@ func TestAskImage_NoImage(t *testing.T) {
 		},
 	}
 
-	_, err := question.AskImage(testEC2, testInstanceType, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskImage(testEC2, testQMHelper, testInstanceType, "")
 	th.Nok(t, err)
 }
 
 func TestAskImage_DescribeInstanceTypesPagesError(t *testing.T) {
 	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeInstanceTypesPagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskImage(testEC2, testInstanceType, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskImage(testEC2, testQMHelper, testInstanceType, "")
 	th.Nok(t, err)
 }
 
 func TestAskImage_DescribeImagesError(t *testing.T) {
 	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -425,32 +432,62 @@ func TestAskImage_DescribeImagesError(t *testing.T) {
 		DescribeImagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskImage(testEC2, testInstanceType, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskImage(testEC2, testQMHelper, testInstanceType, "")
 	th.Nok(t, err)
 }
 
 func TestAskKeepEbsVolume(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskKeepEbsVolume(true)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedAnswer),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskKeepEbsVolume(testQMHelper, true)
 	th.Equals(t, expectedAnswer, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskAutoTerminationTimerMinutes(t *testing.T) {
 	const expectedAnswer = "30"
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskAutoTerminationTimerMinutes(0)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedAnswer),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskAutoTerminationTimerMinutes(testEC2, testQMHelper, 0)
 	th.Equals(t, expectedAnswer, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskVpc_Success(t *testing.T) {
 	const expectedVpc = "vpc-12345"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Vpcs: []*ec2.Vpc{
@@ -473,28 +510,39 @@ func TestAskVpc_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskVpc(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskVpc(testEC2, testQMHelper, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedVpc, *answer)
 }
 
 func TestAskVpc_DescribeVpcsPagesError(t *testing.T) {
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
-
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeVpcsPagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskVpc(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskVpc(testEC2, testQMHelper, "")
 	th.Nok(t, err)
 }
 
 func TestAskSubnet_Success(t *testing.T) {
 	const testVpc = "vpc-12345"
 	const expectedSubnet = "subnet-12345"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
@@ -519,28 +567,40 @@ func TestAskSubnet_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnet(testEC2, testVpc, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskSubnet(testEC2, testQMHelper, testVpc, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedSubnet, *answer)
 }
 
 func TestAskSubnet_DescribeSubnetsPagesError(t *testing.T) {
 	const testVpc = "vpc-12345"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeSubnetsPagesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskSubnet(testEC2, testVpc, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskSubnet(testEC2, testQMHelper, testVpc, "")
 	th.Nok(t, err)
 }
 
 func TestAskSubnetPlaceholder_Success(t *testing.T) {
 	const expectedAz = "us-east-1"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		AvailabilityZones: []*ec2.AvailabilityZone{
@@ -555,31 +615,47 @@ func TestAskSubnetPlaceholder_Success(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnetPlaceholder(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskSubnetPlaceholder(testEC2, testQMHelper, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedAz, *answer)
 }
 
 func TestAskSubnetPlaceholder_DescribeAvailabilityZonesError(t *testing.T) {
 	const testAz = "us-east-1"
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		DescribeAvailabilityZonesError: errors.New("Test error"),
 	}
 
-	_, err := question.AskSubnetPlaceholder(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskSubnetPlaceholder(testEC2, testQMHelper, "")
 	th.Nok(t, err)
+
 }
 
 func TestAskSecurityGroups_Success(t *testing.T) {
-	const expectedGroup = "sg-12345"
+	var expectedGroups = []string{"sg-67890", "sg-12345"}
+	defaultGroups := []*ec2.SecurityGroup{}
 
 	testSecurityGroups := []*ec2.SecurityGroup{
 		{
 			GroupName: aws.String("Group1"),
-			GroupId:   aws.String(expectedGroup),
+			GroupId:   aws.String(expectedGroups[0]),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -601,7 +677,7 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 		},
 		{
 			GroupName: aws.String("Group3"),
-			GroupId:   aws.String("sg-67890"),
+			GroupId:   aws.String(expectedGroups[1]),
 			Tags: []*ec2.Tag{
 				{
 					Key:   aws.String("Name"),
@@ -611,32 +687,61 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 			Description: aws.String("some description"),
 		},
 	}
-	addedGroups := []string{*testSecurityGroups[1].GroupId}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
-	th.Equals(t, expectedGroup, answer)
+	answer, err := question.AskSecurityGroups(testQMHelper, testSecurityGroups, defaultGroups)
+	th.Equals(t, expectedGroups, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskSecurityGroups_NoGroup(t *testing.T) {
 	testSecurityGroups := []*ec2.SecurityGroup{}
-	addedGroups := []string{}
+	defaultGroups := []*ec2.SecurityGroup{}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskSecurityGroups(testSecurityGroups, addedGroups)
-	th.Equals(t, cli.ResponseNo, answer)
+	answer, err := question.AskSecurityGroups(testQMHelper, testSecurityGroups, defaultGroups)
+	th.Equals(t, cli.ResponseNew, answer[0])
+
+	th.Ok(t, err)
 }
 
 func TestAskSecurityGroupPlaceholder(t *testing.T) {
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskSecurityGroupPlaceholder()
+	answer, err := question.AskSecurityGroupPlaceholder(testQMHelper)
 	th.Equals(t, cli.ResponseAll, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
@@ -662,10 +767,18 @@ func TestAskConfirmationWithTemplate_Success_NoOverriding(t *testing.T) {
 		LaunchTemplateVersion: strconv.Itoa(testVersion),
 	}
 
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
+	answer, err := question.AskConfirmationWithTemplate(testEC2, testQMHelper, testSimpleConfig)
 	th.Ok(t, err)
 	th.Equals(t, expectedAnswer, *answer)
 }
@@ -696,10 +809,18 @@ func TestAskConfirmationWithTemplate_Success_Overriding(t *testing.T) {
 		ImageId:               "ami-12345",
 	}
 
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
+	answer, err := question.AskConfirmationWithTemplate(testEC2, testQMHelper, testSimpleConfig)
 	th.Ok(t, err)
 	th.Equals(t, expectedAnswer, *answer)
 }
@@ -732,10 +853,15 @@ func TestAskConfirmationWithTemplate_DescribeSubnetsPagesError(t *testing.T) {
 		LaunchTemplateVersion: strconv.Itoa(testVersion),
 	}
 
-	initQuestionTest(t, cli.ResponseYes+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
+	_, err := question.AskConfirmationWithTemplate(testEC2, testQMHelper, testSimpleConfig)
 	th.Nok(t, err)
 }
 
@@ -746,10 +872,15 @@ func TestAskConfirmationWithTemplate_DescribeLaunchTemplateVersionsPagesError(t 
 
 	testSimpleConfig := config.NewSimpleInfo()
 
-	initQuestionTest(t, cli.ResponseYes+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskConfirmationWithTemplate(testEC2, testSimpleConfig)
+	_, err := question.AskConfirmationWithTemplate(testEC2, testQMHelper, testSimpleConfig)
 	th.Nok(t, err)
 }
 
@@ -814,11 +945,22 @@ var testDetailedConfig = &config.DetailedInfo{
 
 func TestAskConfirmationWithInput_Success_NoNewInfrastructure(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskConfirmationWithInput(testQMHelper, testSimpleConfig, testDetailedConfig, true)
 	th.Equals(t, expectedAnswer, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
@@ -831,20 +973,41 @@ func TestAskConfirmationWithInput_Success_NewInfrastructure(t *testing.T) {
 	testSimpleConfig.CapacityType = "Spot"
 	testDetailedConfig.SecurityGroups = nil
 
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskConfirmationWithInput(testSimpleConfig, testDetailedConfig, true)
+	answer, err := question.AskConfirmationWithInput(testQMHelper, testSimpleConfig, testDetailedConfig, true)
 	th.Equals(t, expectedAnswer, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskSaveConfig(t *testing.T) {
 	const expectedAnswer = cli.ResponseYes
-	initQuestionTest(t, expectedAnswer+"\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskSaveConfig()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskSaveConfig(testQMHelper)
 	th.Equals(t, expectedAnswer, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskInstanceId_Success(t *testing.T) {
@@ -861,10 +1024,15 @@ func TestAskInstanceId_Success(t *testing.T) {
 		},
 	}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer, err := question.AskInstanceId(testEC2)
+	answer, err := question.AskInstanceId(testEC2, testQMHelper)
 	th.Ok(t, err)
 	th.Equals(t, expectedInstance, *answer)
 }
@@ -874,10 +1042,15 @@ func TestAskInstanceId_NoInstance(t *testing.T) {
 		Instances: []*ec2.Instance{},
 	}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceId(testEC2)
+	_, err := question.AskInstanceId(testEC2, testQMHelper)
 	th.Nok(t, err)
 }
 
@@ -886,44 +1059,60 @@ func TestAskInstanceId_DescribeInstancesPagesError(t *testing.T) {
 		DescribeInstancesPagesError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceId(testEC2)
+	_, err := question.AskInstanceId(testEC2, testQMHelper)
 	th.Nok(t, err)
 }
 
 func TestAskInstanceIds_Success(t *testing.T) {
-	const expectedInstance = "i-12345"
+	expectedInstances := []string{"i-12345"}
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Instances: []*ec2.Instance{
 			{
-				InstanceId: aws.String(expectedInstance),
+				InstanceId: aws.String(expectedInstances[0]),
 			},
 			{
 				InstanceId: aws.String("i-67890"),
 			},
 		},
 	}
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
 	addedInstances := []string{"i-67890"}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
-
-	answer, err := question.AskInstanceIds(testEC2, addedInstances)
+	answer, err := question.AskInstanceIds(testEC2, testQMHelper, addedInstances)
 	th.Ok(t, err)
-	th.Equals(t, expectedInstance, *answer)
+	th.Equals(t, expectedInstances, answer)
 }
 
 func TestAskInstanceIds_NoInstance(t *testing.T) {
 	testEC2.Svc = &th.MockedEC2Svc{}
 	addedInstances := []string{}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceIds(testEC2, addedInstances)
+	_, err := question.AskInstanceIds(testEC2, testQMHelper, addedInstances)
 	th.Nok(t, err)
 }
 
@@ -933,10 +1122,15 @@ func TestAskInstanceIds_DescribeInstancesPagesError(t *testing.T) {
 	}
 	addedInstances := []string{}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceIds(testEC2, addedInstances)
+	_, err := question.AskInstanceIds(testEC2, testQMHelper, addedInstances)
 	th.Nok(t, err)
 }
 
@@ -977,27 +1171,42 @@ var testSelector = &th.MockedSelector{
 }
 
 func TestAskInstanceTypeInstanceSelector_Success(t *testing.T) {
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
+	answer, err := question.AskInstanceTypeInstanceSelector(testEC2, testQMHelper, testSelector, "2", "4")
 	th.Ok(t, err)
 	th.Equals(t, testInstanceType, *answer)
 }
 
 func TestAskInstanceTypeInstanceSelector_BadVcpus(t *testing.T) {
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "a", "4")
+	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testQMHelper, testSelector, "a", "4")
 	th.Nok(t, err)
 }
 
 func TestAskInstanceTypeInstanceSelector_BadMemory(t *testing.T) {
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "a")
+	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testQMHelper, testSelector, "2", "a")
 	th.Nok(t, err)
 }
 
@@ -1006,10 +1215,15 @@ func TestAskInstanceTypeInstanceSelector_NoResult(t *testing.T) {
 		InstanceTypes: []*instancetypes.Details{},
 	}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
+	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testQMHelper, testSelector, "2", "4")
 	th.Nok(t, err)
 }
 
@@ -1019,10 +1233,15 @@ func TestAskInstanceTypeInstanceSelector_SelectorError(t *testing.T) {
 		SelectorError: errors.New("Test error"),
 	}
 
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testSelector, "2", "4")
+	_, err := question.AskInstanceTypeInstanceSelector(testEC2, testQMHelper, testSelector, "2", "4")
 	th.Nok(t, err)
 }
 
@@ -1049,10 +1268,22 @@ func TestAskIamProfile_Success(t *testing.T) {
 		InstanceProfiles: testProfiles,
 	}
 	iam := &iamhelper.IAMHelper{Client: mockedIam}
-	initQuestionTest(t, "2\n")
-	defer cleanupQuestionTest()
 
-	answer, err := question.AskIamProfile(iam, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskIamProfile(testQMHelper, iam, "")
 	th.Ok(t, err)
 	th.Equals(t, expectedProfileName, answer)
 }
@@ -1062,29 +1293,57 @@ func TestAskIamProfile_Error(t *testing.T) {
 		ListInstanceProfilesError: errors.New("Test error"),
 	}
 	iam := &iamhelper.IAMHelper{Client: mockedIam}
-	initQuestionTest(t, "1\n")
-	defer cleanupQuestionTest()
 
-	_, err := question.AskIamProfile(iam, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	_, err := question.AskIamProfile(testQMHelper, iam, "")
 	th.Nok(t, err)
 }
 
 func TestAskCapacityType(t *testing.T) {
+	testRegion := "us-east-1"
 	expectedCapacity := question.DefaultCapacityTypeText.Spot
-	initQuestionTest(t, "2\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskCapacityType(testInstanceType, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskCapacityType(testQMHelper, testInstanceType, testRegion, "")
 	th.Equals(t, expectedCapacity, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskBootScriptConfirmation(t *testing.T) {
 	expectedConfirmation := cli.ResponseYes
-	initQuestionTest(t, cli.ResponseYes+"\n")
-	defer cleanupQuestionTest()
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyUp,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
-	answer := question.AskBootScriptConfirmation(testEC2, "")
+	answer, err := question.AskBootScriptConfirmation(testEC2, testQMHelper, "")
 	th.Equals(t, expectedConfirmation, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskBootScript(t *testing.T) {
@@ -1093,33 +1352,103 @@ func TestAskBootScript(t *testing.T) {
 	if err != nil {
 		t.Errorf("There was an error creating tempfile: %v", err)
 	}
-	initQuestionTest(t, expectedBootScript.Name()+"\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskBootScript(testEC2, "")
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune(expectedBootScript.Name()),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskBootScript(testEC2, testQMHelper, "")
 	th.Equals(t, expectedBootScript.Name(), answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskUserTagsConfirmation(t *testing.T) {
 	expectedConfirmation := cli.ResponseNo
-	initQuestionTest(t, cli.ResponseNo+"\n")
-	defer cleanupQuestionTest()
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	userTags := make(map[string]string)
 
-	answer := question.AskUserTagsConfirmation(testEC2, userTags)
+	answer, err := question.AskUserTagsConfirmation(testEC2, testQMHelper, userTags)
 	th.Equals(t, expectedConfirmation, answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskUserTags(t *testing.T) {
-	expectedTags := "Key1|Value1,Key2|Value2,Key3|Value3,Key4|Value4"
-	initQuestionTest(t, expectedTags+"\n")
-	defer cleanupQuestionTest()
+	expectedTags := "Key1|Value1, Key2|Value2"
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Runes: []rune("Key1"),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Runes: []rune("Value1"),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Runes: []rune("Key2"),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Runes: []rune("Value2"),
+				Type:  tea.KeyRunes,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyRight,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	userTags := make(map[string]string)
 
-	answer := question.AskUserTags(testEC2, userTags)
+	answer, err := question.AskUserTags(testEC2, testQMHelper, userTags)
 	th.Equals(t, expectedTags, answer)
+
+	th.Ok(t, err)
 }
 
 func initQuestionTest(t *testing.T, input string) {
@@ -1141,8 +1470,14 @@ Question Default Testing
 
 func TestAskRegion_WithDefault(t *testing.T) {
 	const defaultRegion = "us-west-1"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Regions: []*ec2.Region{
@@ -1161,7 +1496,7 @@ func TestAskRegion_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskRegion(testEC2, defaultRegion)
+	answer, err := question.AskRegion(testEC2, testQMHelper, defaultRegion)
 	th.Ok(t, err)
 
 	th.Equals(t, defaultRegion, *answer)
@@ -1169,8 +1504,14 @@ func TestAskRegion_WithDefault(t *testing.T) {
 
 func TestAskLaunchTemplate_WithDefault(t *testing.T) {
 	const defaultTemplateId = "lt-67890"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplates: []*ec2.LaunchTemplate{
@@ -1187,15 +1528,15 @@ func TestAskLaunchTemplate_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer := question.AskLaunchTemplate(testEC2, defaultTemplateId)
+	answer, err := question.AskLaunchTemplate(testEC2, testQMHelper, defaultTemplateId)
 	th.Equals(t, defaultTemplateId, *answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskLaunchTemplateVersion_WithDefault(t *testing.T) {
 	const testTemplateId = "lt-12345"
 	const defaultVersion = 2
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
@@ -1213,15 +1554,21 @@ func TestAskLaunchTemplateVersion_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskLaunchTemplateVersion(testEC2, testTemplateId, strconv.Itoa(defaultVersion))
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskLaunchTemplateVersion(testEC2, testQMHelper, testTemplateId, strconv.Itoa(defaultVersion))
 	th.Ok(t, err)
 	th.Equals(t, strconv.Itoa(defaultVersion), *answer)
 }
 
 func TestAskIfEnterInstanceType_WithDefault(t *testing.T) {
 	const defaultInstanceType = "t3.medium"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -1236,15 +1583,21 @@ func TestAskIfEnterInstanceType_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskIfEnterInstanceType(testEC2, defaultInstanceType)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskIfEnterInstanceType(testEC2, testQMHelper, defaultInstanceType)
 	th.Ok(t, err)
 	th.Equals(t, defaultInstanceType, *answer)
 }
 
 func TestAskInstanceType_WithDefault(t *testing.T) {
 	const defaultInstanceType = "t1.micro"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -1259,7 +1612,15 @@ func TestAskInstanceType_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskInstanceType(testEC2, defaultInstanceType)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskInstanceType(testEC2, testQMHelper, defaultInstanceType)
 	th.Ok(t, err)
 	th.Equals(t, defaultInstanceType, *answer)
 }
@@ -1267,8 +1628,6 @@ func TestAskInstanceType_WithDefault(t *testing.T) {
 func TestAskImage_WithDefault(t *testing.T) {
 	const defaultImage = "ami-12345"
 	const testInstanceType = ec2.InstanceTypeT2Micro
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
@@ -1294,7 +1653,15 @@ func TestAskImage_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskImage(testEC2, testInstanceType, defaultImage)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskImage(testEC2, testQMHelper, testInstanceType, defaultImage)
 	th.Ok(t, err)
 	th.Equals(t, defaultImage, *answer.ImageId)
 }
@@ -1322,18 +1689,22 @@ func TestAskIamProfile_WithDefault(t *testing.T) {
 		InstanceProfiles: testProfiles,
 	}
 	iam := &iamhelper.IAMHelper{Client: mockedIam}
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
-	answer, err := question.AskIamProfile(iam, defaultProfileName)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskIamProfile(testQMHelper, iam, defaultProfileName)
 	th.Ok(t, err)
 	th.Equals(t, defaultProfileName, answer)
 }
 
 func TestAskVpc_WithDefault(t *testing.T) {
 	const defaultVpc = "vpc-91378"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Vpcs: []*ec2.Vpc{
@@ -1366,7 +1737,15 @@ func TestAskVpc_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskVpc(testEC2, defaultVpc)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskVpc(testEC2, testQMHelper, defaultVpc)
 	th.Ok(t, err)
 	th.Equals(t, defaultVpc, *answer)
 }
@@ -1374,8 +1753,6 @@ func TestAskVpc_WithDefault(t *testing.T) {
 func TestAskSubnet_WithDefault(t *testing.T) {
 	const testVpc = "vpc-12345"
 	const defaultSubnet = "subnet-12345"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		Subnets: []*ec2.Subnet{
@@ -1412,15 +1789,21 @@ func TestAskSubnet_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnet(testEC2, testVpc, defaultSubnet)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskSubnet(testEC2, testQMHelper, testVpc, defaultSubnet)
 	th.Ok(t, err)
 	th.Equals(t, defaultSubnet, *answer)
 }
 
 func TestAskSubnetPlaceholder_WithDefault(t *testing.T) {
 	const defaultAz = "us-east-2"
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
 	testEC2.Svc = &th.MockedEC2Svc{
 		AvailabilityZones: []*ec2.AvailabilityZone{
@@ -1443,7 +1826,18 @@ func TestAskSubnetPlaceholder_WithDefault(t *testing.T) {
 		},
 	}
 
-	answer, err := question.AskSubnetPlaceholder(testEC2, defaultAz)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskSubnetPlaceholder(testEC2, testQMHelper, defaultAz)
 	th.Ok(t, err)
 	th.Equals(t, defaultAz, *answer)
 }
@@ -1451,11 +1845,19 @@ func TestAskSubnetPlaceholder_WithDefault(t *testing.T) {
 func TestAskBootScriptConfirmation_WithDefault(t *testing.T) {
 	defaultBootScript := "BootScript/FilePath"
 	defaultConfirmation := cli.ResponseYes
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
-	confirmation := question.AskBootScriptConfirmation(testEC2, defaultBootScript)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	confirmation, err := question.AskBootScriptConfirmation(testEC2, testQMHelper, defaultBootScript)
 	th.Equals(t, defaultConfirmation, confirmation)
+
+	th.Ok(t, err)
 }
 
 func TestAskBootScript_WithDefault(t *testing.T) {
@@ -1464,30 +1866,61 @@ func TestAskBootScript_WithDefault(t *testing.T) {
 	if err != nil {
 		t.Errorf("There was an error creating tempfile: %v", err)
 	}
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskBootScript(testEC2, defaultBootScript.Name())
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskBootScript(testEC2, testQMHelper, defaultBootScript.Name())
 	th.Equals(t, defaultBootScript.Name(), answer)
+
+	th.Ok(t, err)
 }
 
 func TestAskUserTagsConfirmation_WithDefault(t *testing.T) {
 	defaultConfirmation := cli.ResponseYes
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	userTags := make(map[string]string)
 	userTags["key"] = "value"
 
-	confirmation := question.AskUserTagsConfirmation(testEC2, userTags)
+	confirmation, err := question.AskUserTagsConfirmation(testEC2, testQMHelper, userTags)
 	th.Equals(t, defaultConfirmation, confirmation)
+
+	th.Ok(t, err)
 }
 
 func TestAskUserTags_WithDefault(t *testing.T) {
-	expectedTagString := "Key1|Value1,Key2|Value2,Key3|Value3,Key4|Value4"
+	expectedTagString := "Key1|Value1, Key2|Value2, Key3|Value3, Key4|Value4"
 	expectedTags := strings.Split(expectedTagString, ",")
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
+
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyDown,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyRight,
+			},
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
 
 	userTags := make(map[string]string)
 	userTags["Key1"] = "Value1"
@@ -1495,7 +1928,8 @@ func TestAskUserTags_WithDefault(t *testing.T) {
 	userTags["Key3"] = "Value3"
 	userTags["Key4"] = "Value4"
 
-	answer := question.AskUserTags(testEC2, userTags)
+	answer, err := question.AskUserTags(testEC2, testQMHelper, userTags)
+	log.Println(answer)
 	actualTags := strings.Split(answer, ",")
 
 	th.Assert(t, len(actualTags) == 4, "ActualTags length should be 4")
@@ -1503,20 +1937,31 @@ func TestAskUserTags_WithDefault(t *testing.T) {
 		thisTagMatches := false
 		for _, actualTag := range actualTags {
 			if expectedTag == actualTag {
-				th.Equals(t, expectedTag, actualTag)
+				th.Equals(t, strings.TrimSpace(expectedTag), strings.TrimSpace(actualTag))
 				thisTagMatches = true
 				break
 			}
 		}
 		th.Assert(t, thisTagMatches, fmt.Sprintf("Unable to find matching actual tag for expected tag %s", expectedTag))
 	}
+
+	th.Ok(t, err)
 }
 
 func TestAskCapacityType_WithDefault(t *testing.T) {
+	testRegion := "us-east-1"
 	defaultCapacity := question.DefaultCapacityTypeText.Spot
-	initQuestionTest(t, "\n")
-	defer cleanupQuestionTest()
 
-	answer := question.AskCapacityType(testInstanceType, defaultCapacity)
+	testQMHelper.Svc = &th.MockedQMHelperSvc{
+		UserInputs: []tea.Msg{
+			tea.KeyMsg{
+				Type: tea.KeyEnter,
+			},
+		},
+	}
+
+	answer, err := question.AskCapacityType(testQMHelper, testInstanceType, testRegion, defaultCapacity)
 	th.Equals(t, defaultCapacity, answer)
+
+	th.Ok(t, err)
 }
