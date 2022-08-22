@@ -123,3 +123,20 @@ func Equals(tb testing.TB, exp, act interface{}) {
 		tb.FailNow()
 	}
 }
+
+// StringArrayEquivalent compares two string arrays and asserts that the arrays contain exactly the same items,
+// ignoring order, trimming space, and comparing case-insensitive.
+func StringArrayEquivalent(tb testing.TB, exp []string, act []string) {
+	Assert(tb, len(exp) == len(act), fmt.Sprintf("Expected %d items, but only found %d", len(exp), len(act)))
+
+	for _, expectedItem := range exp {
+		thisItemMatches := false
+		for _, actualItem := range act {
+			if strings.EqualFold(strings.TrimSpace(expectedItem), strings.TrimSpace(actualItem)) {
+				thisItemMatches = true
+				break
+			}
+		}
+		Assert(tb, thisItemMatches, fmt.Sprintf("Unable to find matching actual item for expected item %s", expectedItem))
+	}
+}

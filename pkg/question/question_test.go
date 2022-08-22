@@ -15,9 +15,7 @@ package question_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -706,7 +704,7 @@ func TestAskSecurityGroups_Success(t *testing.T) {
 	}
 
 	answer, err := question.AskSecurityGroups(testQMHelper, testSecurityGroups, defaultGroups)
-	th.Equals(t, expectedGroups, answer)
+	th.StringArrayEquivalent(t, expectedGroups, answer)
 
 	th.Ok(t, err)
 }
@@ -1929,21 +1927,9 @@ func TestAskUserTags_WithDefault(t *testing.T) {
 	userTags["Key4"] = "Value4"
 
 	answer, err := question.AskUserTags(testEC2, testQMHelper, userTags)
-	log.Println(answer)
 	actualTags := strings.Split(answer, ",")
 
-	th.Assert(t, len(actualTags) == 4, "ActualTags length should be 4")
-	for _, expectedTag := range expectedTags {
-		thisTagMatches := false
-		for _, actualTag := range actualTags {
-			if expectedTag == actualTag {
-				th.Equals(t, strings.TrimSpace(expectedTag), strings.TrimSpace(actualTag))
-				thisTagMatches = true
-				break
-			}
-		}
-		th.Assert(t, thisTagMatches, fmt.Sprintf("Unable to find matching actual tag for expected tag %s", expectedTag))
-	}
+	th.StringArrayEquivalent(t, expectedTags, actualTags)
 
 	th.Ok(t, err)
 }
