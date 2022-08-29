@@ -19,10 +19,10 @@ import (
 
 // Enum values for response messages
 const (
-	ResponseYes = "yes"
-	ResponseNo  = "no"
-	ResponseNew = "new"
-	ResponseAll = "all"
+	ResponseYes = "Yes"
+	ResponseNo  = "No"
+	ResponseNew = "New"
+	ResponseAll = "All"
 )
 
 // Enum values for displaying resource types in CLI

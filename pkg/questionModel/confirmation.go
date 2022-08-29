@@ -35,11 +35,14 @@ type Confirmation struct {
 
 // InitializeModel initializes the model based on the passed in question input
 func (c *Confirmation) InitializeModel(input *QuestionInput) {
+	questionString := "Please confirm if you would like to launch instance with following options:"
+	if c.allowEdit {
+		questionString = questionString + "\n(Or select a configuration to repeat a question)"
+	}
 	configList := SingleSelectList{}
 	configList.InitializeModel(&QuestionInput{
-		HeaderStrings: []string{"Configuration", "Value"},
-		QuestionString: "Please confirm if you would like to launch instance with following options" +
-			"(Or select a configuration to repeat a question):",
+		HeaderStrings:  []string{"Configuration", "Value"},
+		QuestionString: questionString,
 		Rows:           input.Rows,
 		IndexedOptions: input.IndexedOptions,
 	})

@@ -21,6 +21,7 @@ import (
 	"simple-ec2/pkg/config"
 	"simple-ec2/pkg/ec2helper"
 	"simple-ec2/pkg/question"
+	"simple-ec2/pkg/questionModel"
 	"simple-ec2/pkg/tag"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -58,16 +59,17 @@ func terminate(cmd *cobra.Command, args []string) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
+	qh := questionModel.NewQuestionModelHelper()
 
 	if isInteractive {
-		terminateInteractive(h)
+		terminateInteractive(h, qh)
 	} else {
 		terminateNonInteractive(h)
 	}
 }
 
 // Terminate instances interactively
-func terminateInteractive(h *ec2helper.EC2Helper) {
+func terminateInteractive(h *ec2helper.EC2Helper, qh *questionModel.QuestionModelHelper) {
 	// If region is not specified in flags, ask region
 	var region *string
 	var err error
@@ -77,7 +79,7 @@ func terminateInteractive(h *ec2helper.EC2Helper) {
 		if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 			defaultsConfig = config.NewSimpleInfo()
 		}
-		region, err = question.AskRegion(h, defaultsConfig.Region)
+		region, err = question.AskRegion(h, qh, defaultsConfig.Region)
 		if cli.ShowError(err, "Asking region failed") {
 			return
 		}
@@ -88,23 +90,18 @@ func terminateInteractive(h *ec2helper.EC2Helper) {
 	h.ChangeRegion(*region)
 
 	// Keep asking for instance ids for termination
-	instanceIds := []string{}
-	for {
-		// Ask instance ID
-		instanceIdAnswer, err := question.AskInstanceIds(h, instanceIds)
-		if cli.ShowError(err, "Terminate Error") {
-			return
-		}
-
-		if instanceIdAnswer == nil || *instanceIdAnswer == cli.ResponseNo {
-			break
-		} else {
-			instanceIds = append(instanceIds, *instanceIdAnswer)
-		}
+	instanceIdAnswer, err := question.AskInstanceIds(h, qh, []string{})
+	if cli.ShowError(err, "Terminate Error") {
+		return
 	}
 
-	if question.AskTerminationConfirmation(instanceIds) == cli.ResponseYes {
-		cli.ShowError(h.TerminateInstances(instanceIds), "Terminating instances failed")
+	confirmationAnswer, err := question.AskTerminationConfirmation(qh, instanceIdAnswer)
+	if cli.ShowError(err, "Asking termination confirmation failed") {
+		return
+	}
+
+	if confirmationAnswer == cli.ResponseYes {
+		cli.ShowError(h.TerminateInstances(instanceIdAnswer), "Terminating instances failed")
 	}
 }
 

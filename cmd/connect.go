@@ -22,6 +22,7 @@ import (
 	"simple-ec2/pkg/ec2helper"
 	ec2ichelper "simple-ec2/pkg/ec2instanceconnecthelper"
 	"simple-ec2/pkg/question"
+	"simple-ec2/pkg/questionModel"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/spf13/cobra"
@@ -56,16 +57,17 @@ func connect(cmd *cobra.Command, args []string) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{SharedConfigState: session.SharedConfigEnable}))
 	ec2helper.GetDefaultRegion(sess)
 	h := ec2helper.New(sess)
+	qh := questionModel.NewQuestionModelHelper()
 
 	if isInteractive {
-		connectInteractive(h)
+		connectInteractive(h, qh)
 	} else {
 		connectNonInteractive(h)
 	}
 }
 
 // Connect instances interactively
-func connectInteractive(h *ec2helper.EC2Helper) {
+func connectInteractive(h *ec2helper.EC2Helper, qh *questionModel.QuestionModelHelper) {
 	// If region is not specified in flags, ask region
 	var region *string
 	var err error
@@ -75,7 +77,7 @@ func connectInteractive(h *ec2helper.EC2Helper) {
 		if cli.ShowError(err, "Default config file not loaded; using system defaults instead") {
 			defaultsConfig = config.NewSimpleInfo()
 		}
-		region, err = question.AskRegion(h, defaultsConfig.Region)
+		region, err = question.AskRegion(h, qh, defaultsConfig.Region)
 		if cli.ShowError(err, "Asking region failed") {
 			return
 		}
@@ -86,7 +88,7 @@ func connectInteractive(h *ec2helper.EC2Helper) {
 	h.ChangeRegion(*region)
 
 	// Ask instance ID
-	instanceId, err := question.AskInstanceId(h)
+	instanceId, err := question.AskInstanceId(h, qh)
 	if cli.ShowError(err, "Asking instance ID failed") {
 		return
 	}

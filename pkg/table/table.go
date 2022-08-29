@@ -20,6 +20,7 @@ import (
 
 	"simple-ec2/pkg/cli"
 	"simple-ec2/pkg/ec2helper"
+	"simple-ec2/pkg/questionModel"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/olekukonko/tablewriter"
@@ -74,10 +75,9 @@ func AppendTemplateEbs(data [][]string, mappings []*ec2.LaunchTemplateBlockDevic
 }
 
 // Append all  EBS blocks, if applicable
-func AppendEbs(data [][]string, mappings []*ec2.BlockDeviceMapping) [][]string {
+func AppendEbs(data [][]string, mappings []*ec2.BlockDeviceMapping) ([][]string, questionModel.Row) {
+	ebsData := [][]string{}
 	if mappings != nil && len(mappings) > 0 {
-
-		ebsData := [][]string{}
 		for _, block := range mappings {
 			ebsName := fmt.Sprintf("%s", *block.DeviceName)
 			if block.Ebs != nil {
@@ -94,13 +94,13 @@ func AppendEbs(data [][]string, mappings []*ec2.BlockDeviceMapping) [][]string {
 		data = append(data, ebsData...)
 	}
 
-	return data
+	return data, ebsData
 }
 
 // Append all security groups
-func AppendSecurityGroups(data [][]string, securityGroups []*ec2.SecurityGroup) [][]string {
+func AppendSecurityGroups(data [][]string, securityGroups []*ec2.SecurityGroup) ([][]string, questionModel.Row) {
+	securityGroupData := [][]string{}
 	if securityGroups != nil && len(securityGroups) > 0 {
-		securityGroupData := [][]string{}
 		for _, group := range securityGroups {
 			groupName := *group.GroupId
 			groupTagName := ec2helper.GetTagName(group.Tags)
@@ -113,7 +113,7 @@ func AppendSecurityGroups(data [][]string, securityGroups []*ec2.SecurityGroup) 
 		data = append(data, securityGroupData...)
 	}
 
-	return data
+	return data, securityGroupData
 }
 
 // Append all launch template network interfaces, if applicable
@@ -174,8 +174,9 @@ Append all instances. When a list of already added instance IDs is provided, the
 which instance IDs are already added to selection and exclude the added instance IDs from the table
 */
 func AppendInstances(data [][]string, indexedOptions []string, instances []*ec2.Instance,
-	addedInstanceIds []string) ([][]string, []string, int) {
+	addedInstanceIds []string) ([][]string, []string, int, []questionModel.Row) {
 	counter := 0
+	rows := []questionModel.Row{}
 	for _, instance := range instances {
 		if addedInstanceIds != nil {
 			// If this instance is already added, just don't display it here
@@ -196,7 +197,7 @@ func AppendInstances(data [][]string, indexedOptions []string, instances []*ec2.
 		if instanceTagName != nil {
 			instanceName = fmt.Sprintf("%s(%s)", *instanceTagName, *instance.InstanceId)
 		}
-		firstRow := []string{fmt.Sprintf("%d.", counter+1), instanceName, "", ""}
+		firstRow := []string{instanceName, "", ""}
 		indexedOptions = append(indexedOptions, *instance.InstanceId)
 		counter++
 
@@ -210,18 +211,20 @@ func AppendInstances(data [][]string, indexedOptions []string, instances []*ec2.
 
 		// Append the first tag, if applicable
 		if len(displayTags) > 0 {
-			firstRow[2] = *displayTags[0].Key
-			firstRow[3] = *displayTags[0].Value
+			firstRow[1] = *displayTags[0].Key
+			firstRow[2] = *displayTags[0].Value
 		}
 
 		// Append the main row
-		data = append(data, firstRow)
+		rowData := [][]string{firstRow}
 
 		// Append subrows, if applicable
 		for i := 1; i < len(displayTags); i++ {
-			data = append(data, []string{"", "", *displayTags[i].Key, *displayTags[i].Value})
+			rowData = append(rowData, []string{"", *displayTags[i].Key, *displayTags[i].Value})
 		}
+		data = append(data, rowData...)
+		rows = append(rows, rowData)
 	}
 
-	return data, indexedOptions, counter
+	return data, indexedOptions, counter, rows
 }
