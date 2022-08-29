@@ -1,7 +1,7 @@
-** amazon-ec2-instance-selector; version 2.3.0 -- https://github.com/aws/amazon-ec2-instance-selector
-** aws-sdk-go; version 1.44.3 -- https://github.com/aws/aws-sdk-go
-** cobra; version 1.4.0 -- https://github.com/spf13/cobra
-** spinner; version 1.18.1 -- https://github.com/briandowns/spinner
+** amazon-ec2-instance-selector; version 2.4.0 -- https://github.com/aws/amazon-ec2-instance-selector
+** aws-sdk-go; version 1.44.86 -- https://github.com/aws/aws-sdk-go
+** cobra; version 1.5.0 -- https://github.com/spf13/cobra
+** spinner; version 1.19.0 -- https://github.com/briandowns/spinner
 
 Apache License
 
@@ -218,8 +218,8 @@ limitations under the License.
 
 ------
 
-** crypto; version v0.0.0-20220427172511-eb4f295cb31f -- https://pkg.go.dev/golang.org/x/crypto
-** exp; version v0.0.0-20220613132600-b0d781184e0d -- https://pkg.go.dev/golang.org/x/exp
+** crypto; version v0.0.0-20220826181053-bd7e27e6170d -- https://pkg.go.dev/golang.org/x/crypto
+** exp; version v0.0.0-20220827204233-334a2380cb91 -- https://pkg.go.dev/golang.org/x/exp
 Copyright (c) 2009 The Go Authors. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -332,7 +332,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ------
 
 ** bubbles; version 0.13.0 -- https://github.com/charmbracelet/bubbles
-** bubbletea; version 0.22.0 -- https://github.com/charmbracelet/bubbletea
+** bubbletea; version 0.22.1 -- https://github.com/charmbracelet/bubbletea
 MIT License
 
 Copyright (c) 2020 Charmbracelet, Inc
