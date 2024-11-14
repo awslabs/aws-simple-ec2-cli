@@ -408,6 +408,12 @@ func getDescribeImagesInputs(rootDeviceType string, architectures []*string) *ma
 						Name:   aws.String("architecture"),
 						Values: architectures,
 					},
+					{
+						Name: aws.String("owner-alias"),
+						Values: []*string{
+							aws.String("amazon"),
+						},
+					},
 				},
 			}
 		}
