@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"simple-ec2/pkg/cfn"
 	"simple-ec2/pkg/config"
@@ -370,10 +371,12 @@ func TestLaunchInstance(t *testing.T) {
 }
 
 func ValidateInstanceMatchesDesiredSpecs(t *testing.T, instanceID string, detailedConfig *config.DetailedInfo) {
+	time.Sleep(5 * time.Second)
 	instance, err := h.GetInstanceById(instanceID)
 	if err != nil {
 		th.Nok(t, err)
 	}
+	th.Assert(t, instance != nil, "Instance should not be nil")
 	th.AssertStringsEqual(t, *detailedConfig.InstanceTypeInfo.InstanceType, *instance.InstanceType, "Instance type does not match")
 	th.AssertStringsEqual(t, *detailedConfig.Subnet.SubnetId, *instance.SubnetId, "Subnet ID does not match")
 	th.AssertStringsEqual(t, *detailedConfig.Vpc.VpcId, *instance.VpcId, "VPC ID does not match")
