@@ -65,7 +65,9 @@ previous-release-tag:
 	@echo ${PREVIOUS_RELEASE_TAG}
 
 clean:
-	rm -rf ${BUILD_DIR_PATH}/ && go clean -testcache ./...
+	rm -rf ${BUILD_DIR_PATH}/
+	go clean -testcache
+	go clean -cache
 
 compile:
 	go build ${EMBED_FLAGS} -o ${BUILD_DIR_PATH}/${CLI_BINARY_NAME} ${MAKEFILE_PATH}/main.go
