@@ -343,6 +343,7 @@ func TestAskImage_Success(t *testing.T) {
 	const expectedImage = "ami-12345"
 	const testInstanceType = ec2.InstanceTypeT2Micro
 
+	testEC2 = ec2helper.New(session.Must(session.NewSession()))
 	testEC2.Svc = &th.MockedEC2Svc{
 		InstanceTypes: []*ec2.InstanceTypeInfo{
 			{

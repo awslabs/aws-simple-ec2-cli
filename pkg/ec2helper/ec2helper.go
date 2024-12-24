@@ -35,6 +35,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/google/uuid"
 )
 
@@ -352,74 +353,135 @@ func (h *EC2Helper) getInstanceTypes(input *ec2.DescribeInstanceTypesInput) ([]*
 // Define all OS and corresponding AMI name formats
 var osDescs = map[string]map[string]string{
 	"Amazon Linux": {
-		"ebs":            "amzn-ami-hvm-????.??.?.????????.?-*-gp2",
-		"instance-store": "amzn-ami-hvm-????.??.?.????????.?-*-s3",
+		"ebs":            "amzn-ami-hvm-*",
+		"instance-store": "amzn-ami-hvm-*",
 	},
 	"Amazon Linux 2": {
-		"ebs": "amzn2-ami-hvm-2.?.????????.?-*-gp2",
+		"ebs": "amzn2-ami-hvm-*",
 	},
 	"Red Hat": {
-		"ebs": "RHEL-?.?.?_HVM-????????-*-?-Hourly2-GP2",
+		"ebs": "RHEL-9*",
 	},
 	"SUSE Linux": {
-		"ebs": "suse-sles-??-sp?-v????????-hvm-ssd-*",
+		"ebs": "suse-sles-*",
 	},
-	// Ubuntu 18.04 LTS
 	"Ubuntu": {
-		"ebs":            "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-*-server-????????",
-		"instance-store": "ubuntu/images/hvm-instance/ubuntu-bionic-18.04-*-server-????????",
+		"ebs":            "ubuntu/images/*",
+		"instance-store": "ubuntu/images/*",
 	},
-	// 64 bit Microsoft Windows Server with Desktop Experience Locale English AMI
 	"Windows": {
-		"ebs": "Windows_Server-????-English-Full-Base-????.??.??",
+		"ebs": "Windows_Server-*-English-Full-Base*",
+	},
+}
+
+// Define all OS and corresponding AMI public parameters path in Parameter Store
+var osSsmPath = map[string]map[string]string{
+	"Amazon Linux": {
+		"ebs":            "/aws/service/ami-amazon-linux-latest",
+		"instance-store": "/aws/service/ami-amazon-linux-latest",
+	},
+	"Amazon Linux 2": {
+		"ebs": "/aws/service/ami-amazon-linux-latest",
+	},
+	"Red Hat": {
+		"ebs": "",
+	},
+	"SUSE Linux": {
+		"ebs": "/aws/service/suse/sles",
+	},
+	"Ubuntu": {
+		"ebs":            "/aws/service/canonical/ubuntu/server/24.04/stable/current",
+		"instance-store": "/aws/service/canonical/ubuntu/server/24.04/stable/current",
+	},
+	"Windows": {
+		"ebs": "/aws/service/ami-windows-latest",
 	},
 }
 
 // Get the appropriate input for describing images
-func getDescribeImagesInputs(rootDeviceType string, architectures []*string) *map[string]ec2.DescribeImagesInput {
+func (h *EC2Helper) getDescribeImagesInputs(rootDeviceType string, architectures []*string) *map[string]ec2.DescribeImagesInput {
+	ssmClient := ssm.New(h.Sess)
+
 	// Construct all the inputs
 	imageInputs := map[string]ec2.DescribeImagesInput{}
 	for osName, rootDeviceTypes := range osDescs {
 
 		// Only add inputs if the corresponding root device type is applicable for the specified os
 		desc, found := rootDeviceTypes[rootDeviceType]
-		if found {
-			imageInputs[osName] = ec2.DescribeImagesInput{
-				Filters: []*ec2.Filter{
-					{
-						Name: aws.String("name"),
-						Values: []*string{
-							aws.String(desc),
-						},
-					},
-					{
-						Name: aws.String("state"),
-						Values: []*string{
-							aws.String("available"),
-						},
-					},
-					{
-						Name: aws.String("root-device-type"),
-						Values: []*string{
-							aws.String(rootDeviceType),
-						},
-					},
-					{
-						Name:   aws.String("architecture"),
-						Values: architectures,
-					},
-					{
-						Name: aws.String("owner-alias"),
-						Values: []*string{
-							aws.String("amazon"),
-						},
+		if !found {
+			continue
+		}
+		imageInputs[osName] = ec2.DescribeImagesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name: aws.String("name"),
+					Values: []*string{
+						aws.String(desc),
 					},
 				},
-			}
+				{
+					Name: aws.String("state"),
+					Values: []*string{
+						aws.String("available"),
+					},
+				},
+				{
+					Name: aws.String("root-device-type"),
+					Values: []*string{
+						aws.String(rootDeviceType),
+					},
+				},
+				{
+					Name:   aws.String("architecture"),
+					Values: architectures,
+				},
+				{
+					Name: aws.String("owner-alias"),
+					Values: []*string{
+						aws.String("amazon"),
+					},
+				},
+			},
+		}
+		ssmPath, found := osSsmPath[osName][rootDeviceType]
+		if !found || ssmPath == "" {
+			continue
+		}
+		if imageIds, err := getImageIdsFromSSM(ssmClient, ssmPath); err == nil {
+			input := imageInputs[osName]
+			input.ImageIds = imageIds
+			imageInputs[osName] = input
 		}
 	}
 
 	return &imageInputs
+}
+
+func getImageIdsFromSSM(ssmClient *ssm.SSM, ssmPath string) ([]*string, error) {
+	var imageIds []*string
+
+	input := &ssm.GetParametersByPathInput{
+		Path:           aws.String(ssmPath),
+		Recursive:      aws.Bool(true),
+		WithDecryption: aws.Bool(false),
+	}
+
+	err := ssmClient.GetParametersByPathPages(input,
+		func(page *ssm.GetParametersByPathOutput, lastPage bool) bool {
+			for _, parameter := range page.Parameters {
+				if !strings.HasPrefix(*parameter.Value, "ami") {
+					continue
+				}
+				imageIds = append(imageIds, parameter.Value)
+			}
+			return !lastPage
+		})
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting parameters from SSM: %v", err)
+	}
+
+	return imageIds, nil
 }
 
 // Sort interface for images
@@ -436,9 +498,9 @@ Empty result is allowed.
 func (h *EC2Helper) GetLatestImages(rootDeviceType *string, architectures []*string) (*map[string]*ec2.Image, error) {
 	var inputs *map[string]ec2.DescribeImagesInput
 	if rootDeviceType == nil {
-		inputs = getDescribeImagesInputs("ebs", architectures)
+		inputs = h.getDescribeImagesInputs("ebs", architectures)
 	} else {
-		inputs = getDescribeImagesInputs(*rootDeviceType, architectures)
+		inputs = h.getDescribeImagesInputs(*rootDeviceType, architectures)
 	}
 
 	images := map[string]*ec2.Image{}
