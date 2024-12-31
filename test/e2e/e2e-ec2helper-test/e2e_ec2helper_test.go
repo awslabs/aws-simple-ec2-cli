@@ -29,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/ssm"
 )
 
 const testStackName = "simple-ec2-e2e-ec2helper-test"
@@ -155,8 +156,21 @@ func TestGetInstanceTypesFromInstanceSelector(t *testing.T) {
 func TestGetLatestImages(t *testing.T) {
 	th.Assert(t, h != nil, "EC2Helper was not initialized successfully")
 
-	_, err := h.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
+	osNames := []string{
+		"Amazon Linux",
+		"Amazon Linux 2",
+		"Red Hat",
+		"SUSE Linux",
+		"Ubuntu",
+		"Windows",
+	}
+
+	imagesMap, err := h.GetLatestImages(nil, aws.StringSlice([]string{"x86_64"}))
 	th.Ok(t, err)
+
+	for _, os := range osNames {
+		th.Assert(t, (*imagesMap)[os] != nil, fmt.Sprintf("GetLatestImages should fetch image for %s", os))
+	}
 }
 
 func TestGetDefaultImageForAmd(t *testing.T) {
@@ -401,6 +415,20 @@ func ValidateInstanceTags(t *testing.T, actualInstanceTags []*ec2.Tag, launchReq
 		}
 	}
 	th.Assert(t, countOfExpectedTags == countOfActualTagsMatched, "Didn't find all of the expected tags on the actual instance")
+}
+
+func TestGetImageIdsFromSSM(t *testing.T) {
+	ssmClient := ssm.New(h.Sess)
+	validSsmPath := "/aws/service/ami-amazon-linux-latest"
+	imageIds, err := h.GetImageIdsFromSSM(ssmClient, validSsmPath)
+	th.Ok(t, err)
+	th.Assert(t, imageIds != nil, "imageIds should not be nil")
+	th.Assert(t, len(imageIds) > 0, "imageIds should not be empty")
+
+	invalidSsmPath := "/aws/service/ami-amazon-linux"
+	_, err = h.GetImageIdsFromSSM(ssmClient, invalidSsmPath)
+	expectedErrorMsg := fmt.Sprintf("%s is not a valid namespace", invalidSsmPath[1:])
+	th.Assert(t, strings.Contains(err.Error(), expectedErrorMsg), "Error message should contain invalid SSM path (namespace) information")
 }
 
 func TestTerminateInstances(t *testing.T) {

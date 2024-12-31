@@ -399,7 +399,7 @@ var osSsmPath = map[string]map[string]string{
 }
 
 // Get the appropriate input for describing images
-func (h *EC2Helper) getDescribeImagesInputs(rootDeviceType string, architectures []*string) *map[string]ec2.DescribeImagesInput {
+func (h *EC2Helper) GetDescribeImagesInputs(rootDeviceType string, architectures []*string) *map[string]ec2.DescribeImagesInput {
 	ssmClient := ssm.New(h.Sess)
 
 	// Construct all the inputs
@@ -447,7 +447,7 @@ func (h *EC2Helper) getDescribeImagesInputs(rootDeviceType string, architectures
 		if !found || ssmPath == "" {
 			continue
 		}
-		if imageIds, err := getImageIdsFromSSM(ssmClient, ssmPath); err == nil {
+		if imageIds, err := h.GetImageIdsFromSSM(ssmClient, ssmPath); err == nil {
 			input := imageInputs[osName]
 			input.ImageIds = imageIds
 			imageInputs[osName] = input
@@ -457,7 +457,7 @@ func (h *EC2Helper) getDescribeImagesInputs(rootDeviceType string, architectures
 	return &imageInputs
 }
 
-func getImageIdsFromSSM(ssmClient *ssm.SSM, ssmPath string) ([]*string, error) {
+func (h *EC2Helper) GetImageIdsFromSSM(ssmClient *ssm.SSM, ssmPath string) ([]*string, error) {
 	var imageIds []*string
 
 	input := &ssm.GetParametersByPathInput{
@@ -498,9 +498,9 @@ Empty result is allowed.
 func (h *EC2Helper) GetLatestImages(rootDeviceType *string, architectures []*string) (*map[string]*ec2.Image, error) {
 	var inputs *map[string]ec2.DescribeImagesInput
 	if rootDeviceType == nil {
-		inputs = h.getDescribeImagesInputs("ebs", architectures)
+		inputs = h.GetDescribeImagesInputs("ebs", architectures)
 	} else {
-		inputs = h.getDescribeImagesInputs(*rootDeviceType, architectures)
+		inputs = h.GetDescribeImagesInputs(*rootDeviceType, architectures)
 	}
 
 	images := map[string]*ec2.Image{}
