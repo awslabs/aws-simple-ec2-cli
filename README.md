@@ -11,8 +11,44 @@
 	</a>
 </p>
 
+<h2>⚠️ REPOSITORY ARCHIVE NOTICE</h2>
 
+<h3> Status: The repository will be archived on 06/02/2025 </h3>
 
+AWS is no longer actively developing this project, and will archive this repository on 06/02/2025. If you have questions about this change, please raise a customer issue.
+
+## Important Notices
+
+* ⛔ No new feature requests will be accepted
+* 🚫 No bug fixes will be implemented
+* 📝 No documentation updates will be made
+* ❌ Issues and Pull Requests will not be reviewed or merged
+* 🔒 Repository will be set to read-only during archival period
+
+## Migration Guide
+
+### Recommended Alternative: AWS CLI
+The AWS Command Line Interface (AWS CLI) is the recommended and officially supported tool for managing EC2 instances. It provides all the functionality of Simple EC2 CLI with additional features and ongoing support.
+
+### Key Benefits of AWS CLI:
+* Official AWS support and regular updates
+* Comprehensive EC2 instance management capabilities
+* Consistent interface across all AWS services
+* Enhanced security features
+
+### Common Commands:
+* Launch an instance
+    ```
+     aws ec2 run-instances —image-id <ami-xxxxx> —instance-type t2.micro —key-name <MyKeyPair> 
+     ```
+* List instances
+    ```
+     aws ec2 describe-instances
+     ```
+* Delete an instance
+    ```
+    aws ec2 terminate-instances --instance-ids <i-xxxxxx>
+    ```
 
 <div>
   <hr>
