@@ -13,7 +13,7 @@
 
 <h2>⚠️ REPOSITORY ARCHIVE NOTICE</h2>
 
-<h3> Status: The repository will be archived on 06/02/2025 </h3>
+<h3> Status: The repository archived on 06/02/2025 </h3>
 
 AWS is no longer actively developing this project, and will archive this repository on 06/02/2025. If you have questions about this change, please raise a customer issue.
 
